@@ -26,6 +26,10 @@ export type ActivityType =
 export type SourceKind = "open_data_api" | "web_scrape" | "enrichment";
 export type SyncRunStatus = "running" | "success" | "failed";
 
+// supabase-js's generated-types contract expects each table to declare its foreign-key
+// relationships (used for typed nested `select()` joins). None are modeled by hand here.
+type NoRelationships = { Relationships: [] };
+
 export type Database = {
   public: {
     Tables: {
@@ -49,6 +53,7 @@ export type Database = {
           created_at?: string;
         };
         Update: Partial<Database["public"]["Tables"]["sources"]["Insert"]>;
+        Relationships: [];
       };
       companies: {
         Row: {
@@ -88,6 +93,7 @@ export type Database = {
           updated_at?: string;
         };
         Update: Partial<Database["public"]["Tables"]["companies"]["Insert"]>;
+        Relationships: [];
       };
       licenses: {
         Row: {
@@ -123,6 +129,7 @@ export type Database = {
           created_at?: string;
         };
         Update: Partial<Database["public"]["Tables"]["licenses"]["Insert"]>;
+        Relationships: [];
       };
       leads: {
         Row: {
@@ -146,6 +153,7 @@ export type Database = {
           updated_at?: string;
         };
         Update: Partial<Database["public"]["Tables"]["leads"]["Insert"]>;
+        Relationships: [];
       };
       contacts: {
         Row: {
@@ -177,6 +185,7 @@ export type Database = {
           updated_at?: string;
         };
         Update: Partial<Database["public"]["Tables"]["contacts"]["Insert"]>;
+        Relationships: [];
       };
       activities: {
         Row: {
@@ -198,6 +207,7 @@ export type Database = {
           created_at?: string;
         };
         Update: Partial<Database["public"]["Tables"]["activities"]["Insert"]>;
+        Relationships: [];
       };
       sync_runs: {
         Row: {
@@ -223,6 +233,7 @@ export type Database = {
           error?: string | null;
         };
         Update: Partial<Database["public"]["Tables"]["sync_runs"]["Insert"]>;
+        Relationships: [];
       };
     };
     Views: Record<string, never>;

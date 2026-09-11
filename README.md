@@ -60,6 +60,33 @@ Two ways to get `supabase/migrations/*.sql` applied to the linked Supabase proje
 
 After applying, `/api/health` should return `"schema": "applied"`.
 
+## Calgary Open Data ingestion (Step 3)
+
+`app/api/cron/sync-calgary-licenses/route.ts` pulls recently-issued licenses from
+`data.calgary.ca` and upserts them into `licenses` + `companies`. It's wired into
+`vercel.json` to run daily and requires `CRON_SECRET` to be set (Vercel Cron sends
+`Authorization: Bearer $CRON_SECRET` automatically).
+
+**Field mapping needs a one-time live check.** The column names in
+`lib/sources/calgary.ts` (`getbusid`, `tradename`, `first_iss_dt`, etc.) come from the
+dataset's published column list, not a live API response — this was built in a sandbox
+that can't reach `data.calgary.ca`. Before trusting the daily sync in production, run:
+
+```bash
+curl "https://data.calgary.ca/resource/vdjc-pybd.json?\$limit=1"
+```
+
+and compare the JSON keys against `CANDIDATE_FIELDS` in that file. If anything differs,
+add the real key as another candidate (or reorder) — no data is lost either way, since
+the full raw record is always stored in `licenses.raw`, but a wrong guess means a
+derived column (like `issue_date`) stays null until fixed.
+
+Manually trigger a sync once deployed (or locally with `CRON_SECRET` set):
+
+```bash
+curl -H "Authorization: Bearer $CRON_SECRET" "https://<your-deployment>/api/cron/sync-calgary-licenses?days=7"
+```
+
 ## Note on `vercel.json` crons
 
 The cron paths in `vercel.json` (`/api/cron/sync-calgary-licenses`, `/api/cron/enrich-leads`) don't

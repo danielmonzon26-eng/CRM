@@ -27,8 +27,9 @@ or reviewable before the next step starts.
 2. ✅ **Database schema** — Supabase migrations: `companies`, `licenses` (raw source records),
    `leads` (qualified/working set), `contacts`, `activities`, `sync_runs`, `sources`. RLS policies
    for authenticated team members. *(this step)*
-3. **Calgary Open Data ingestion** — SODA API client, `/api/cron/sync-calgary-licenses` route,
-   upsert logic, new-license detection.
+3. ✅ **Calgary Open Data ingestion** — SODA API client, `/api/cron/sync-calgary-licenses` route,
+   upsert logic, new-license detection. *(this step — field-name mapping needs live
+   verification, see README)*
 4. **Lead qualification/scoring** — rules engine to flag "new and growing": recent issue date,
    target NAICS/business-type match, license status, renewal/growth signals; writes qualified
    companies into `leads`.
@@ -44,4 +45,4 @@ or reviewable before the next step starts.
 10. **Deployment walkthrough** — step-by-step: create Supabase project, run migrations, connect
     Vercel↔GitHub, set env vars/secrets, verify cron runs, go-live checklist.
 
-Supabase project: `kteeooyybpwnnowkuwra` (see `supabase/config.toml`). We are starting Step 3 next.
+Supabase project: `kteeooyybpwnnowkuwra` (see `supabase/config.toml`). We are starting Step 4 next.
