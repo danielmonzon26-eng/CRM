@@ -18,18 +18,31 @@ export async function GET() {
     );
   }
 
-  try {
-    const supabase = createAdminClient();
-    // auth.getSession() with the service role client just confirms the client can
-    // reach the Supabase project; no schema is required to exist yet at this step.
-    const { error } = await supabase.auth.getSession();
-    if (error) throw error;
+  const supabase = createAdminClient();
 
-    return NextResponse.json({ ok: true, supabase: "reachable" });
-  } catch (err) {
+  const { error: authError } = await supabase.auth.getSession();
+  if (authError) {
     return NextResponse.json(
-      { ok: false, error: err instanceof Error ? err.message : "Unknown error" },
+      { ok: false, error: `Supabase unreachable: ${authError.message}` },
       { status: 500 }
     );
   }
+
+  const { count, error: schemaError } = await supabase
+    .from("sources")
+    .select("*", { count: "exact", head: true });
+
+  if (schemaError) {
+    return NextResponse.json(
+      {
+        ok: false,
+        supabase: "reachable",
+        schema: "not applied",
+        error: `Run supabase/migrations against this project: ${schemaError.message}`,
+      },
+      { status: 500 }
+    );
+  }
+
+  return NextResponse.json({ ok: true, supabase: "reachable", schema: "applied", sources: count });
 }

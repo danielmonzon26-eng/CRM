@@ -39,12 +39,26 @@ See `.env.example` for the full list and where to find each value. Required for 
 
 ```
 app/                  Next.js App Router pages and API routes
-  api/health/         Env + Supabase connectivity check
+  api/health/         Env + Supabase connectivity + schema check
 lib/supabase/         Supabase client helpers (browser, server, admin/service-role)
-supabase/migrations/  SQL migrations (added in Step 2)
+supabase/migrations/  SQL migrations
+supabase/config.toml  Links this repo to the Supabase project (for CLI / GitHub integration)
 middleware.ts         Refreshes the Supabase auth session on every request
 vercel.json           Cron job schedule (routes added in Steps 3 and 5)
 ```
+
+## Applying database migrations
+
+Two ways to get `supabase/migrations/*.sql` applied to the linked Supabase project, in order:
+
+1. **Supabase GitHub integration (recommended, since this repo is already connected)** — in the
+   Supabase dashboard under Project Settings → Integrations → GitHub, connect this repository.
+   Once connected, merging migration files into the tracked branch auto-applies them.
+2. **Manual, for immediate testing** — open the Supabase dashboard → SQL Editor, paste the
+   contents of `supabase/migrations/0001_init_schema.sql`, run it, then do the same for
+   `0002_seed_sources.sql`.
+
+After applying, `/api/health` should return `"schema": "applied"`.
 
 ## Note on `vercel.json` crons
 
