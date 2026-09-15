@@ -129,6 +129,21 @@ second provider can slot in alongside Hunter rather than replacing it.
 curl -H "Authorization: Bearer $CRON_SECRET" "https://<your-deployment>/api/cron/enrich-leads?limit=20"
 ```
 
+## CRM frontend (Step 6)
+
+`/` is the pipeline board (columns: New, Researching, Contacted, Qualified, Won, Lost,
+Unqualified) — each card shows the score, primary contact, and a status dropdown that
+updates immediately. `/leads/[id]` is the detail view: full score breakdown, all
+contacts found, and an activity timeline with a note box.
+
+**⚠️ No access control yet.** These pages and their Server Actions currently read/write
+through the service-role Supabase client directly (not a signed-in user's session),
+because RLS denies the `anon` role entirely and there's no login yet (that's Step 7).
+Practically: **anyone who can reach the deployed URL can view and edit every lead** —
+don't share the Vercel URL publicly, and consider turning on [Vercel Deployment
+Protection](https://vercel.com/docs/deployment-protection) (password or SSO) until Step
+7 ships real authentication.
+
 ## Note on `vercel.json` crons
 
 The cron paths in `vercel.json` (`/api/cron/sync-calgary-licenses`, `/api/cron/enrich-leads`) don't
