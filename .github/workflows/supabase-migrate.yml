@@ -1,0 +1,49 @@
+name: Apply Supabase migrations
+
+# GitHub Actions runners have normal internet access, unlike the sandbox this repo is
+# developed from — this is the reliable path to actually reach the Supabase database
+# when that sandbox's network policy blocks it directly.
+#
+# Requires a repository secret `SUPABASE_DB_URL`: the Postgres connection string from
+# Supabase dashboard -> Project Settings -> Database -> Connection string (URI). Prefer
+# the direct connection (not the transaction pooler) since this runs multi-statement
+# .sql files.
+
+on:
+  workflow_dispatch: {}
+  push:
+    branches:
+      - claude/calgary-business-leads-qgm9oy
+      - main
+    paths:
+      - "supabase/migrations/**"
+
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Ensure psql is available
+        run: command -v psql || (sudo apt-get update && sudo apt-get install -y postgresql-client)
+
+      - name: Apply migrations in order
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          set -euo pipefail
+          if [ -z "${SUPABASE_DB_URL:-}" ]; then
+            echo "::error::SUPABASE_DB_URL repository secret is not set. Add it under Settings > Secrets and variables > Actions."
+            exit 1
+          fi
+          shopt -s nullglob
+          for f in supabase/migrations/*.sql; do
+            echo "Applying $f"
+            psql "$SUPABASE_DB_URL" -v ON_ERROR_STOP=1 -f "$f"
+          done
+
+      - name: Verify schema
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          psql "$SUPABASE_DB_URL" -c "select key, name from public.sources;"

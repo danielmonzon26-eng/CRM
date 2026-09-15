@@ -49,12 +49,21 @@ vercel.json           Cron job schedule (routes added in Steps 3 and 5)
 
 ## Applying database migrations
 
-Two ways to get `supabase/migrations/*.sql` applied to the linked Supabase project, in order:
+Three ways to get `supabase/migrations/*.sql` applied to the linked Supabase project:
 
-1. **Supabase GitHub integration (recommended, since this repo is already connected)** — in the
-   Supabase dashboard under Project Settings → Integrations → GitHub, connect this repository.
-   Once connected, merging migration files into the tracked branch auto-applies them.
-2. **Manual, for immediate testing** — open the Supabase dashboard → SQL Editor, paste the
+1. **GitHub Actions (`.github/workflows/supabase-migrate.yml`)** — runs `psql` against every
+   file in `supabase/migrations/` in order, using a repo secret. One-time setup: add a repository
+   secret named `SUPABASE_DB_URL` (Settings → Secrets and variables → Actions → New repository
+   secret) with the connection string from Supabase dashboard → Project Settings → Database →
+   Connection string → URI (prefer the direct connection over the transaction pooler, since this
+   runs multi-statement files). It then runs automatically whenever `supabase/migrations/**`
+   changes on `main` or this project's dev branch, or on demand via Actions → Apply Supabase
+   migrations → Run workflow. Migrations are idempotent (`if not exists` / `on conflict do
+   nothing`), so re-runs are safe.
+2. **Supabase GitHub integration** — in the Supabase dashboard under Project Settings →
+   Integrations → GitHub, connect this repository; Supabase then auto-applies migrations on its
+   own when they land on the tracked branch.
+3. **Manual, for immediate testing** — open the Supabase dashboard → SQL Editor, paste the
    contents of `supabase/migrations/0001_init_schema.sql`, run it, then do the same for
    `0002_seed_sources.sql`.
 
