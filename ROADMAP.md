@@ -33,8 +33,10 @@ or reviewable before the next step starts.
 4. ✅ **Lead qualification/scoring** — rules engine to flag "new and growing": recent issue date,
    target NAICS/business-type match, license status, renewal/growth signals; writes qualified
    companies into `leads`. *(this step — customize TARGET_INDUSTRIES, see README)*
-5. **Contact enrichment pipeline** — Hunter.io domain/email search + web-search-assisted exec
-   lookup (name, title, LinkedIn, email, phone confidence), `/api/cron/enrich-leads` route.
+5. ✅ **Contact enrichment pipeline** — Hunter.io domain/email search (name, title, email,
+   confidence, phone/LinkedIn when Hunter has them), `/api/cron/enrich-leads` route. Web-search-
+   assisted lookup (LinkedIn crawling, "About" pages) deferred — needs a search API key not yet
+   provided; see README. *(this step)*
 6. **CRM frontend** — leads pipeline board (New → Researching → Contacted → Qualified → Won/Lost),
    lead detail view with contacts + activity timeline, search/filter, manual notes & status changes.
 7. **Auth & team roles** — Supabase Auth login, admin vs. rep roles, lead assignment.
@@ -45,4 +47,4 @@ or reviewable before the next step starts.
 10. **Deployment walkthrough** — step-by-step: create Supabase project, run migrations, connect
     Vercel↔GitHub, set env vars/secrets, verify cron runs, go-live checklist.
 
-Supabase project: `kteeooyybpwnnowkuwra` (see `supabase/config.toml`). We are starting Step 5 next.
+Supabase project: `kteeooyybpwnnowkuwra` (see `supabase/config.toml`). We are starting Step 6 next.

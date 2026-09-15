@@ -103,6 +103,32 @@ industries equally) to match your real target verticals.
 curl -H "Authorization: Bearer $CRON_SECRET" "https://<your-deployment>/api/cron/score-leads"
 ```
 
+## Contact enrichment (Step 5)
+
+`app/api/cron/enrich-leads/route.ts` finds decision-maker contacts (CEO/owner first, then
+business development, then marketing, then other management — see
+`lib/enrichment/rank.ts`) for any lead without contacts yet, via Hunter.io's Domain Search
+API. Requires `HUNTER_API_KEY` (sign up at hunter.io; the free tier includes a small
+monthly search allowance, enough to test with before deciding on a paid plan).
+
+Since Calgary's license data doesn't include a website, this passes the company **name**
+to Hunter (its Domain Search API accepts a bare company name and resolves the domain
+itself) — once resolved, the domain is saved back onto the company so future runs skip
+straight to it.
+
+**This is Hunter.io only, not full open-web search.** Hunter's own database only covers
+companies with an existing indexed email footprint, so brand-new or very small
+businesses often come back empty — that's expected and gets logged as an activity on the
+lead, not treated as an error. To go further (crawl a company's "About/Team" page,
+search LinkedIn directly), you'd add a second provider — that needs its own API key
+(Google Programmable Search, Bing Web Search, or SerpAPI are the common choices) which
+this project doesn't have yet. `lib/enrichment/hunter.ts` and `rank.ts` are written so a
+second provider can slot in alongside Hunter rather than replacing it.
+
+```bash
+curl -H "Authorization: Bearer $CRON_SECRET" "https://<your-deployment>/api/cron/enrich-leads?limit=20"
+```
+
 ## Note on `vercel.json` crons
 
 The cron paths in `vercel.json` (`/api/cron/sync-calgary-licenses`, `/api/cron/enrich-leads`) don't
