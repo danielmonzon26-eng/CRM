@@ -30,9 +30,9 @@ or reviewable before the next step starts.
 3. ✅ **Calgary Open Data ingestion** — SODA API client, `/api/cron/sync-calgary-licenses` route,
    upsert logic, new-license detection. *(this step — field-name mapping needs live
    verification, see README)*
-4. **Lead qualification/scoring** — rules engine to flag "new and growing": recent issue date,
+4. ✅ **Lead qualification/scoring** — rules engine to flag "new and growing": recent issue date,
    target NAICS/business-type match, license status, renewal/growth signals; writes qualified
-   companies into `leads`.
+   companies into `leads`. *(this step — customize TARGET_INDUSTRIES, see README)*
 5. **Contact enrichment pipeline** — Hunter.io domain/email search + web-search-assisted exec
    lookup (name, title, LinkedIn, email, phone confidence), `/api/cron/enrich-leads` route.
 6. **CRM frontend** — leads pipeline board (New → Researching → Contacted → Qualified → Won/Lost),
@@ -45,4 +45,4 @@ or reviewable before the next step starts.
 10. **Deployment walkthrough** — step-by-step: create Supabase project, run migrations, connect
     Vercel↔GitHub, set env vars/secrets, verify cron runs, go-live checklist.
 
-Supabase project: `kteeooyybpwnnowkuwra` (see `supabase/config.toml`). We are starting Step 4 next.
+Supabase project: `kteeooyybpwnnowkuwra` (see `supabase/config.toml`). We are starting Step 5 next.

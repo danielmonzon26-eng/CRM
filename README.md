@@ -87,6 +87,22 @@ Manually trigger a sync once deployed (or locally with `CRON_SECRET` set):
 curl -H "Authorization: Bearer $CRON_SECRET" "https://<your-deployment>/api/cron/sync-calgary-licenses?days=7"
 ```
 
+## Lead scoring (Step 4)
+
+`app/api/cron/score-leads/route.ts` scores every company from its license history and
+promotes anything crossing `MIN_SCORE_TO_QUALIFY` into the `leads` working set. Re-running
+it never resets a lead's pipeline `status` — only `score`/`score_reasons` refresh on an
+existing lead.
+
+**Customize `TARGET_INDUSTRIES` in `lib/leads/scoring.ts`** — it ships with a generic
+placeholder list (technology, consulting, marketing, etc.) since this was built without
+knowing Catapult Ready's actual program focus. Edit that array (or empty it to score all
+industries equally) to match your real target verticals.
+
+```bash
+curl -H "Authorization: Bearer $CRON_SECRET" "https://<your-deployment>/api/cron/score-leads"
+```
+
 ## Note on `vercel.json` crons
 
 The cron paths in `vercel.json` (`/api/cron/sync-calgary-licenses`, `/api/cron/enrich-leads`) don't
