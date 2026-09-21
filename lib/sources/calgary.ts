@@ -15,6 +15,8 @@
  * the underlying data — it can be re-backfilled from `raw` after fixing the mapping.
  */
 
+import type { FetchResult, NormalizedRecord, SourceAdapter } from "./types";
+
 const DATASET_URL = "https://data.calgary.ca/resource/vdjc-pybd.json";
 const PAGE_SIZE = 1000;
 const MAX_PAGES_PER_CALL = 30; // safety cap so one invocation can't run unbounded
@@ -41,18 +43,7 @@ function pick(record: CalgaryLicenseRecord, keys: readonly string[]): string | n
   return null;
 }
 
-export type MappedLicense = {
-  externalId: string;
-  businessName: string;
-  licenseType: string | null;
-  status: string | null;
-  issueDate: string | null; // ISO date, or null if unparseable
-  address: string | null;
-  community: string | null;
-  raw: CalgaryLicenseRecord;
-};
-
-export function mapCalgaryRecord(record: CalgaryLicenseRecord): MappedLicense | null {
+export function mapCalgaryRecord(record: CalgaryLicenseRecord): NormalizedRecord | null {
   const externalId = pick(record, CANDIDATE_FIELDS.externalId);
   const businessName = pick(record, CANDIDATE_FIELDS.businessName);
   if (!externalId || !businessName) return null; // can't dedupe/display without these
@@ -78,7 +69,7 @@ export function mapCalgaryRecord(record: CalgaryLicenseRecord): MappedLicense | 
  * date a few days in the past (not just "yesterday") so the run is resilient to the
  * source lagging or a missed cron invocation.
  */
-export async function fetchCalgaryLicensesSince(
+async function fetchCalgaryLicensesSince(
   sinceDate: string
 ): Promise<{ records: CalgaryLicenseRecord[]; truncated: boolean }> {
   const appToken = process.env.CALGARY_OPEN_DATA_APP_TOKEN;
@@ -116,3 +107,16 @@ export async function fetchCalgaryLicensesSince(
 
   return { records, truncated };
 }
+
+export const calgaryLicensesAdapter: SourceAdapter = {
+  key: "calgary_business_licenses",
+  name: "Calgary Business Licences (Open Data)",
+  kind: "open_data_api",
+  async fetchSince(sinceDate: string): Promise<FetchResult> {
+    const { records, truncated } = await fetchCalgaryLicensesSince(sinceDate);
+    const normalized = records
+      .map(mapCalgaryRecord)
+      .filter((r): r is NormalizedRecord => r !== null);
+    return { records: normalized, truncated };
+  },
+};

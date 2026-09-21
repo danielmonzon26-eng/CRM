@@ -44,8 +44,11 @@ or reviewable before the next step starts.
    table + RLS-enforced role checks), lead assignment, CRM data layer switched from
    service-role to session-scoped queries. Needs one-time Supabase dashboard config — see
    README. *(this step)*
-8. **Additional source adapters** — pluggable adapter interface so new target sites (incl.
-   JS-rendered ones needing Playwright) can be added without touching core pipeline code.
+8. ✅ **Additional source adapters** — pluggable `SourceAdapter` interface + registry;
+   `/api/cron/sync-sources` runs every registered adapter through the same
+   matching/scoring pipeline. Calgary refactored onto it as the first adapter; a
+   Playwright-based template (serverless Chromium via `@sparticuz/chromium`) is ready
+   to copy for the next JS-rendered target once one is named. *(this step)*
 9. **Notifications & reporting** — daily digest (email or in-app) of new leads, basic dashboard
    stats (new this week, in pipeline, contacted, converted).
 10. **Deployment walkthrough** — step-by-step: create Supabase project, run migrations, connect
@@ -54,4 +57,4 @@ or reviewable before the next step starts.
 Supabase project: `kteeooyybpwnnowkuwra` (see `supabase/config.toml`). Schema is applied and
 verified live as of the `supabase-migrate.yml` GitHub Actions run on 2026-09-21 (uses the
 Session pooler connection — the direct-connection host is IPv6-only and unreachable from
-GitHub's runners). We are starting Step 8 next.
+GitHub's runners). We are starting Step 9 next.

@@ -10,9 +10,11 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@sparticuz/chromium": "^153.0.0",
     "@supabase/ssr": "^0.12.7",
     "@supabase/supabase-js": "^2.45.4",
     "next": "15.5.25",
+    "playwright-core": "^1.63.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"
   },

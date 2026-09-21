@@ -70,12 +70,29 @@ Three ways to get `supabase/migrations/*.sql` applied to the linked Supabase pro
 
 After applying, `/api/health` should return `"schema": "applied"`.
 
-## Calgary Open Data ingestion (Step 3)
+## Data source adapters (Steps 3 & 8)
 
-`app/api/cron/sync-calgary-licenses/route.ts` pulls recently-issued licenses from
-`data.calgary.ca` and upserts them into `licenses` + `companies`. It's wired into
-`vercel.json` to run daily and requires `CRON_SECRET` to be set (Vercel Cron sends
-`Authorization: Bearer $CRON_SECRET` automatically).
+`app/api/cron/sync-sources/route.ts` is a single generic ingestion route that runs
+every adapter registered in `lib/sources/registry.ts` against records from the last
+`?days=N` (default 7), upserting into `licenses` + `companies` through the same
+matching pipeline regardless of source. It's wired into `vercel.json` to run daily and
+requires `CRON_SECRET` (Vercel Cron sends `Authorization: Bearer $CRON_SECRET`
+automatically). `?source=<key>` runs just one adapter, useful when testing a new one.
+
+**Adding a new source is a two-step, no-core-changes process:**
+1. Implement `SourceAdapter` (`lib/sources/types.ts`) — `fetchSince(sinceDate)` returns
+   `NormalizedRecord[]`. See `lib/sources/calgary.ts` for a plain-`fetch` open-data-API
+   example, or copy `lib/sources/template-playwright-adapter.ts` for a JS-rendered site
+   (uses headless Chromium via Playwright — see below).
+2. Add it to the `SOURCE_ADAPTERS` array in `lib/sources/registry.ts`.
+
+The sync route auto-creates the `sources` table row from the adapter's own
+`key`/`name`/`kind` — no migration needed per new source.
+
+### Calgary Business Licences (the first adapter)
+
+`lib/sources/calgary.ts` pulls recently-issued licenses from `data.calgary.ca`'s SODA
+API.
 
 **Field mapping needs a one-time live check.** The column names in
 `lib/sources/calgary.ts` (`getbusid`, `tradename`, `first_iss_dt`, etc.) come from the
@@ -91,11 +108,33 @@ add the real key as another candidate (or reorder) — no data is lost either wa
 the full raw record is always stored in `licenses.raw`, but a wrong guess means a
 derived column (like `issue_date`) stays null until fixed.
 
-Manually trigger a sync once deployed (or locally with `CRON_SECRET` set):
+Manually trigger a sync once deployed (or locally with `CRON_SECRET` set) — omit
+`source` to run every registered adapter:
 
 ```bash
-curl -H "Authorization: Bearer $CRON_SECRET" "https://<your-deployment>/api/cron/sync-calgary-licenses?days=7"
+curl -H "Authorization: Bearer $CRON_SECRET" "https://<your-deployment>/api/cron/sync-sources?days=7&source=calgary_business_licenses"
 ```
+
+### Adding a JS-rendered source with Playwright
+
+`lib/sources/browser.ts` launches a serverless-compatible headless Chromium
+(`@sparticuz/chromium` + `playwright-core`) for adapters that need to render JS rather
+than call a plain API. `lib/sources/template-playwright-adapter.ts` is a copy-paste
+starting point — it's not registered, so it does nothing until you point it at a real
+target and add it to the registry. Before scraping any specific site, check its Terms
+of Service and `/robots.txt`; some sites (LinkedIn is a common example) explicitly
+prohibit automated scraping regardless of technical feasibility.
+
+Notes for when you build one:
+- Test locally by setting `PLAYWRIGHT_EXECUTABLE_PATH` to a local Chromium (from `npx
+  playwright install chromium`) — `@sparticuz/chromium`'s binary is Linux-only, built
+  for the Vercel/Lambda runtime.
+- The Chromium binary is large (~50MB+); if a Vercel function size limit is hit,
+  `@sparticuz/chromium-min` plus externally-hosted binaries is the documented fallback
+  (see the [package README](https://github.com/Sparticuz/chromium)) — not implemented
+  here since it's only needed if/when that limit is actually hit.
+- A slow-to-render target may need a longer `maxDuration` than the 60s used elsewhere,
+  which requires a paid Vercel plan past the Hobby tier's cap.
 
 ## Lead scoring (Step 4)
 
@@ -174,8 +213,3 @@ updates immediately. `/leads/[id]` is the detail view: full score breakdown, all
 contacts found, an assignee picker, and an activity timeline with a note box. All of it
 now sits behind the Step 7 login — see below.
 
-## Note on `vercel.json` crons
-
-The cron paths in `vercel.json` (`/api/cron/sync-calgary-licenses`, `/api/cron/enrich-leads`) don't
-exist yet — they're built in Steps 3 and 5. Until then, if this is deployed to Vercel, those crons
-will just hit a 404 harmlessly once a day.

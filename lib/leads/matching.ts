@@ -1,18 +1,18 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/supabase/types";
-import type { MappedLicense } from "@/lib/sources/calgary";
+import type { NormalizedRecord } from "@/lib/sources/types";
 import { normalizeName } from "@/lib/text";
 
 /**
- * Finds an existing company matching this license's business name + address, or
+ * Finds an existing company matching this record's business name + address, or
  * creates one. Intentionally simple exact-match dedupe for Step 3 — a business
- * appearing under slightly different spellings across licenses will create separate
+ * appearing under slightly different spellings across sources will create separate
  * company rows for now. Revisit with fuzzy matching if that turns out to matter once
- * real data is flowing.
+ * real data is flowing. Source-agnostic: works for any adapter's NormalizedRecord.
  */
 export async function matchOrCreateCompany(
   supabase: SupabaseClient<Database>,
-  license: MappedLicense
+  license: NormalizedRecord
 ): Promise<string> {
   const normalized = normalizeName(license.businessName);
 
