@@ -189,23 +189,30 @@ alter table public.contacts enable row level security;
 alter table public.activities enable row level security;
 alter table public.sync_runs enable row level security;
 
+drop policy if exists "authenticated read sources" on public.sources;
 create policy "authenticated read sources" on public.sources
   for select to authenticated using (true);
 
+drop policy if exists "authenticated all companies" on public.companies;
 create policy "authenticated all companies" on public.companies
   for all to authenticated using (true) with check (true);
 
+drop policy if exists "authenticated all licenses" on public.licenses;
 create policy "authenticated all licenses" on public.licenses
   for all to authenticated using (true) with check (true);
 
+drop policy if exists "authenticated all leads" on public.leads;
 create policy "authenticated all leads" on public.leads
   for all to authenticated using (true) with check (true);
 
+drop policy if exists "authenticated all contacts" on public.contacts;
 create policy "authenticated all contacts" on public.contacts
   for all to authenticated using (true) with check (true);
 
+drop policy if exists "authenticated all activities" on public.activities;
 create policy "authenticated all activities" on public.activities
   for all to authenticated using (true) with check (true);
 
+drop policy if exists "authenticated read sync_runs" on public.sync_runs;
 create policy "authenticated read sync_runs" on public.sync_runs
   for select to authenticated using (true);

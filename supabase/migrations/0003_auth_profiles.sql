@@ -49,9 +49,11 @@ alter table public.profiles enable row level security;
 
 -- Any signed-in team member can see who's on the team (needed for the lead-assignee
 -- picker), but only admins can change a role -- enforced here, not just in the UI.
+drop policy if exists "profiles readable by authenticated" on public.profiles;
 create policy "profiles readable by authenticated" on public.profiles
   for select to authenticated using (true);
 
+drop policy if exists "profiles updatable by admins" on public.profiles;
 create policy "profiles updatable by admins" on public.profiles
   for update to authenticated using (
     exists (select 1 from public.profiles p where p.id = auth.uid() and p.role = 'admin')
