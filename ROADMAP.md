@@ -40,7 +40,10 @@ or reviewable before the next step starts.
 6. ✅ **CRM frontend** — leads pipeline board (New → Researching → Contacted → Qualified →
    Won/Lost), lead detail view with contacts + activity timeline, manual notes & status changes.
    No auth yet — see README security note. *(this step)*
-7. **Auth & team roles** — Supabase Auth login, admin vs. rep roles, lead assignment.
+7. ✅ **Auth & team roles** — Supabase Auth magic-link login, admin vs. rep roles (`profiles`
+   table + RLS-enforced role checks), lead assignment, CRM data layer switched from
+   service-role to session-scoped queries. Needs one-time Supabase dashboard config — see
+   README. *(this step)*
 8. **Additional source adapters** — pluggable adapter interface so new target sites (incl.
    JS-rendered ones needing Playwright) can be added without touching core pipeline code.
 9. **Notifications & reporting** — daily digest (email or in-app) of new leads, basic dashboard
@@ -51,4 +54,4 @@ or reviewable before the next step starts.
 Supabase project: `kteeooyybpwnnowkuwra` (see `supabase/config.toml`). Schema is applied and
 verified live as of the `supabase-migrate.yml` GitHub Actions run on 2026-09-21 (uses the
 Session pooler connection — the direct-connection host is IPv6-only and unreachable from
-GitHub's runners). We are starting Step 7 next.
+GitHub's runners). We are starting Step 8 next.

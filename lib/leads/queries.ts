@@ -1,14 +1,23 @@
-import { createAdminClient } from "@/lib/supabase/admin";
+import { createClient } from "@/lib/supabase/server";
 import { fetchAllPages } from "@/lib/supabase/paginate";
-import type { ActivityType, LeadStatus } from "@/lib/supabase/types";
+import type { ActivityType, LeadStatus, UserRole } from "@/lib/supabase/types";
 import type { ScoreReason } from "@/lib/leads/scoring";
 
 /**
- * Reads here use the service-role client, not a signed-in user's session — there is
- * no auth yet (Step 7). RLS denies the anon role entirely, so this is the only way to
- * read data before then. Once Step 7 lands, this should move to the session-scoped
- * server client (lib/supabase/server.ts) so RLS actually governs access per user.
+ * Reads here use the session-scoped server client (lib/supabase/server.ts), so RLS
+ * governs access per signed-in user rather than bypassing it. Every function in this
+ * file must therefore be called from a request context with a valid session (a Server
+ * Component or Server Action on a route the middleware already protects).
  */
+
+export type TeamMember = { id: string; email: string | null; fullName: string | null; role: UserRole };
+
+export async function getTeamMembers(): Promise<TeamMember[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase.from("profiles").select("id, email, full_name, role").order("email");
+  if (error) throw error;
+  return data.map((p) => ({ id: p.id, email: p.email, fullName: p.full_name, role: p.role }));
+}
 
 export type BoardLead = {
   id: string;
@@ -22,7 +31,7 @@ export type BoardLead = {
 };
 
 export async function getLeadsBoard(): Promise<BoardLead[]> {
-  const supabase = createAdminClient();
+  const supabase = await createClient();
 
   const leads = await fetchAllPages((from, to) =>
     supabase.from("leads").select("id, status, score, company_id").range(from, to)
@@ -76,6 +85,7 @@ export type LeadDetail = {
   status: LeadStatus;
   score: number;
   scoreReasons: ScoreReason[];
+  assignedTo: string | null;
   company: {
     id: string;
     name: string;
@@ -100,7 +110,7 @@ export type LeadDetail = {
 };
 
 export async function getLeadDetail(leadId: string): Promise<LeadDetail | null> {
-  const supabase = createAdminClient();
+  const supabase = await createClient();
 
   const { data: lead, error: leadError } = await supabase.from("leads").select("*").eq("id", leadId).maybeSingle();
   if (leadError) throw leadError;
@@ -121,6 +131,7 @@ export async function getLeadDetail(leadId: string): Promise<LeadDetail | null> 
     status: lead.status,
     score: lead.score,
     scoreReasons: Array.isArray(lead.score_reasons) ? (lead.score_reasons as ScoreReason[]) : [],
+    assignedTo: lead.assigned_to,
     company,
     contacts: contacts ?? [],
     activities: activities ?? [],

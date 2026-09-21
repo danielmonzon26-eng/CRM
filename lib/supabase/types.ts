@@ -25,6 +25,7 @@ export type ActivityType =
 
 export type SourceKind = "open_data_api" | "web_scrape" | "enrichment";
 export type SyncRunStatus = "running" | "success" | "failed";
+export type UserRole = "admin" | "rep";
 
 // supabase-js's generated-types contract expects each table to declare its foreign-key
 // relationships (used for typed nested `select()` joins). None are modeled by hand here.
@@ -233,6 +234,26 @@ export type Database = {
           error?: string | null;
         };
         Update: Partial<Database["public"]["Tables"]["sync_runs"]["Insert"]>;
+        Relationships: [];
+      };
+      profiles: {
+        Row: {
+          id: string;
+          email: string | null;
+          full_name: string | null;
+          role: UserRole;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id: string;
+          email?: string | null;
+          full_name?: string | null;
+          role?: UserRole;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["profiles"]["Insert"]>;
         Relationships: [];
       };
     };

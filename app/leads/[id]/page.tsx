@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { StatusSelect } from "@/components/status-select";
-import { getLeadDetail } from "@/lib/leads/queries";
+import { AssigneeSelect } from "@/components/assignee-select";
+import { getLeadDetail, getTeamMembers } from "@/lib/leads/queries";
 import { NoteForm } from "./note-form";
 
 export const dynamic = "force-dynamic";
@@ -25,7 +26,7 @@ function formatActivity(type: string): string {
 
 export default async function LeadDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const lead = await getLeadDetail(id);
+  const [lead, members] = await Promise.all([getLeadDetail(id), getTeamMembers()]);
   if (!lead) notFound();
 
   return (
@@ -51,8 +52,9 @@ export default async function LeadDetailPage({ params }: { params: Promise<{ id:
             </a>
           )}
         </div>
-        <div className="w-40 shrink-0">
+        <div className="flex w-40 shrink-0 flex-col gap-2">
           <StatusSelect leadId={lead.id} status={lead.status} />
+          <AssigneeSelect leadId={lead.id} assignedTo={lead.assignedTo} members={members} />
         </div>
       </div>
 

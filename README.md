@@ -139,20 +139,40 @@ second provider can slot in alongside Hunter rather than replacing it.
 curl -H "Authorization: Bearer $CRON_SECRET" "https://<your-deployment>/api/cron/enrich-leads?limit=20"
 ```
 
+## Auth & team roles (Step 7)
+
+Real login via Supabase Auth magic links, replacing the no-auth gap from Step 6. A
+`profiles` table (role: `admin` | `rep`) is auto-created per signup by a database
+trigger; RLS enforces that only admins can change roles (`/team` page), not just the UI.
+All CRM reads/writes now go through the session-scoped client
+(`lib/supabase/server.ts`), so RLS actually governs access — the service-role client is
+used only by the cron routes now.
+
+**One-time Supabase dashboard setup required for login to work at all:**
+1. Authentication → URL Configuration → add `<your-site-url>/auth/callback` to the
+   **Redirect URLs** allowlist (both `http://localhost:3000/auth/callback` for local dev
+   and your production URL) — magic links fail with a redirect error otherwise.
+2. Set `NEXT_PUBLIC_SITE_URL` (see `.env.example`) in production so magic-link emails
+   point at the right domain regardless of how the request arrived.
+
+**Bootstrap admin:** `supabase/migrations/0003_auth_profiles.sql` hardcodes
+`daniel.monzon26@gmail.com` (pulled from this session's account context) as the one
+email that becomes `admin` automatically on first sign-in — everyone else defaults to
+`rep`. Edit that email in the migration if you want to sign in as admin with a
+different address, or just promote further admins from the `/team` page once you have
+one working admin account.
+
+**Email delivery:** magic links send through Supabase's built-in email service by
+default, which is rate-limited on the free tier and can land in spam. Configure a
+custom SMTP provider under Authentication → Emails once you're onboarding a real team.
+
 ## CRM frontend (Step 6)
 
 `/` is the pipeline board (columns: New, Researching, Contacted, Qualified, Won, Lost,
 Unqualified) — each card shows the score, primary contact, and a status dropdown that
 updates immediately. `/leads/[id]` is the detail view: full score breakdown, all
-contacts found, and an activity timeline with a note box.
-
-**⚠️ No access control yet.** These pages and their Server Actions currently read/write
-through the service-role Supabase client directly (not a signed-in user's session),
-because RLS denies the `anon` role entirely and there's no login yet (that's Step 7).
-Practically: **anyone who can reach the deployed URL can view and edit every lead** —
-don't share the Vercel URL publicly, and consider turning on [Vercel Deployment
-Protection](https://vercel.com/docs/deployment-protection) (password or SSO) until Step
-7 ships real authentication.
+contacts found, an assignee picker, and an activity timeline with a note box. All of it
+now sits behind the Step 7 login — see below.
 
 ## Note on `vercel.json` crons
 
