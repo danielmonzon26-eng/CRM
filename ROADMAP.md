@@ -48,4 +48,7 @@ or reviewable before the next step starts.
 10. **Deployment walkthrough** — step-by-step: create Supabase project, run migrations, connect
     Vercel↔GitHub, set env vars/secrets, verify cron runs, go-live checklist.
 
-Supabase project: `kteeooyybpwnnowkuwra` (see `supabase/config.toml`). We are starting Step 7 next.
+Supabase project: `kteeooyybpwnnowkuwra` (see `supabase/config.toml`). Schema is applied and
+verified live as of the `supabase-migrate.yml` GitHub Actions run on 2026-09-21 (uses the
+Session pooler connection — the direct-connection host is IPv6-only and unreachable from
+GitHub's runners). We are starting Step 7 next.
