@@ -53,10 +53,20 @@ or reviewable before the next step starts.
    qualified, won) on the pipeline board; daily email digest of newly-promoted leads via
    Resend (`/api/cron/daily-digest`, degrades to compute-only without `RESEND_API_KEY`).
    *(this step)*
-10. **Deployment walkthrough** — step-by-step: create Supabase project, run migrations, connect
-    Vercel↔GitHub, set env vars/secrets, verify cron runs, go-live checklist.
+10. ✅ **Deployment walkthrough** — go-live checklist covering Vercel env vars, Supabase
+    Auth redirect URLs, verifying the deployed `/api/health`, bootstrap admin sign-in, and
+    manually firing all four crons once before trusting the schedule. See README.
+    *(this step — the dashboard actions themselves are one-time steps only you can
+    perform; this session has no Vercel/Supabase dashboard access)*
 
 Supabase project: `kteeooyybpwnnowkuwra` (see `supabase/config.toml`). Schema is applied and
 verified live as of the `supabase-migrate.yml` GitHub Actions run on 2026-09-21 (uses the
 Session pooler connection — the direct-connection host is IPv6-only and unreachable from
-GitHub's runners). We are starting Step 10 next.
+GitHub's runners).
+
+All 10 steps are now built. `claude/calgary-business-leads-qgm9oy` is this repo's only
+branch (and therefore its GitHub default branch), so it's almost certainly already
+Vercel's Production Branch — confirm under Project → Settings → Git. Remaining work is
+the one-time dashboard checklist in README.md, plus the open follow-ups flagged
+throughout this roadmap (Calgary field-name live check, real `TARGET_INDUSTRIES`, a
+named second data source, digest recipient scope).

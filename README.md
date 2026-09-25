@@ -233,3 +233,75 @@ address `onboarding@resend.dev` for testing before you've verified one.
 curl -H "Authorization: Bearer $CRON_SECRET" "https://<your-deployment>/api/cron/daily-digest"
 ```
 
+## Deployment & go-live checklist (Step 10)
+
+`claude/calgary-business-leads-qgm9oy` is currently this repo's **only** branch, which
+makes it the GitHub default branch — so if Vercel's project import used the default
+setting, this branch is already wired as the **Production Branch**, and every push here
+already triggers a production deploy (not just a preview). Confirm that under Vercel →
+Project → Settings → Git → Production Branch; no merge-to-`main` step is needed unless
+you want to rename branches later.
+
+Everything below is one-time dashboard configuration only you can do (this session has
+no Vercel/Supabase dashboard access) — check each off as you go:
+
+**1. Vercel environment variables** — Project → Settings → Environment Variables. Add
+each of these for both **Production** and **Preview** environments:
+
+| Variable | Value source |
+|---|---|
+| `NEXT_PUBLIC_SUPABASE_URL` | Supabase → Project Settings → API |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase → Project Settings → API |
+| `SUPABASE_SERVICE_ROLE_KEY` | Supabase → Project Settings → API (service_role, secret) |
+| `CRON_SECRET` | Any random string — Vercel Cron sends it automatically as `Authorization: Bearer <value>`. A generated one is in the chat reply for this step; do not commit it to the repo. |
+| `CALGARY_OPEN_DATA_APP_TOKEN` | Optional but recommended: https://data.calgary.ca/profile/edit/developer_settings |
+| `HUNTER_API_KEY` | hunter.io dashboard |
+| `NEXT_PUBLIC_SITE_URL` | Your Vercel production URL, e.g. `https://<project>.vercel.app` |
+| `RESEND_API_KEY` | Optional — resend.com dashboard |
+| `DIGEST_FROM_EMAIL` | Optional — a Resend-verified domain, or `onboarding@resend.dev` for testing |
+
+After adding/changing env vars, redeploy (Vercel doesn't apply them to an already-built
+deployment) — Deployments → latest → ⋯ → Redeploy.
+
+**2. Supabase Auth redirect URLs** — Authentication → URL Configuration → Redirect URLs,
+add `https://<your-vercel-domain>/auth/callback` (keep the `localhost:3000` one too for
+local dev). Without this, magic-link login fails with a redirect error in production.
+
+**3. Verify the deploy** — once redeployed with env vars set:
+```bash
+curl https://<your-vercel-domain>/api/health
+```
+should return `{"ok":true,"supabase":"reachable","schema":"applied"}`.
+
+**4. Sign in once as bootstrap admin** — visit `/login`, request a magic link with
+`daniel.monzon26@gmail.com` (the email hardcoded as admin in `0003_auth_profiles.sql`),
+click the link, confirm you land on the pipeline board and `/team` shows your account
+as `admin`.
+
+**5. Verify each cron manually** before trusting the schedule — run these once against
+the live deployment with your real `CRON_SECRET`:
+```bash
+curl -H "Authorization: Bearer $CRON_SECRET" "https://<domain>/api/cron/sync-sources?days=7"
+curl -H "Authorization: Bearer $CRON_SECRET" "https://<domain>/api/cron/score-leads"
+curl -H "Authorization: Bearer $CRON_SECRET" "https://<domain>/api/cron/enrich-leads?limit=5"
+curl -H "Authorization: Bearer $CRON_SECRET" "https://<domain>/api/cron/daily-digest"
+```
+Check the pipeline board fills in after the first two, and that `sync_runs` rows show
+`status = 'success'` (Supabase → Table Editor).
+
+**6. Confirm the schedule is registered** — Vercel → Project → Settings → Cron Jobs
+should list all four paths from `vercel.json` with their next-run times. Cron runs also
+show up under Deployments → (deployment) → Functions logs after they first fire on
+schedule.
+
+**Go-live checklist summary:**
+- [ ] Env vars set in Vercel (Production + Preview)
+- [ ] Redeployed after setting env vars
+- [ ] Supabase redirect URL added for the production domain
+- [ ] `/api/health` returns `schema: "applied"`
+- [ ] Signed in once as bootstrap admin, confirmed `/team` shows `admin`
+- [ ] All four cron routes manually verified once
+- [ ] Cron Jobs tab in Vercel shows all four schedules
+- [ ] (Later, not blocking) live-verify Calgary field names, set real `TARGET_INDUSTRIES`,
+      decide on digest recipient scope — see the open items called out earlier in this file
+
