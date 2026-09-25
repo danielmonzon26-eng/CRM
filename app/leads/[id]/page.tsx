@@ -4,6 +4,7 @@ import { StatusSelect } from "@/components/status-select";
 import { AssigneeSelect } from "@/components/assignee-select";
 import { getLeadDetail, getTeamMembers } from "@/lib/leads/queries";
 import { NoteForm } from "./note-form";
+import { RevenueForm } from "./revenue-form";
 
 export const dynamic = "force-dynamic";
 
@@ -52,9 +53,14 @@ export default async function LeadDetailPage({ params }: { params: Promise<{ id:
             </a>
           )}
         </div>
-        <div className="flex w-40 shrink-0 flex-col gap-2">
+        <div className="flex w-48 shrink-0 flex-col gap-2">
           <StatusSelect leadId={lead.id} status={lead.status} />
           <AssigneeSelect leadId={lead.id} assignedTo={lead.assignedTo} members={members} />
+          <RevenueForm
+            leadId={lead.id}
+            companyId={lead.company.id}
+            value={lead.company.estimated_annual_revenue}
+          />
         </div>
       </div>
 

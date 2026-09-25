@@ -44,6 +44,31 @@ export async function addLeadNote(leadId: string, body: string) {
   revalidatePath(`/leads/${leadId}`);
 }
 
+export async function updateCompanyRevenue(leadId: string, companyId: string, value: number | null) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  const { error } = await supabase
+    .from("companies")
+    .update({ estimated_annual_revenue: value })
+    .eq("id", companyId);
+  if (error) throw error;
+
+  await supabase.from("activities").insert({
+    lead_id: leadId,
+    actor_id: user?.id ?? null,
+    type: "note",
+    body:
+      value !== null
+        ? `Estimated annual revenue set to $${value.toLocaleString()}`
+        : "Estimated annual revenue cleared",
+  });
+
+  revalidatePath(`/leads/${leadId}`);
+}
+
 export async function assignLead(leadId: string, assigneeId: string | null) {
   const supabase = await createClient();
 

@@ -71,6 +71,7 @@ export type Database = {
           community: string | null;
           industry: string | null;
           naics_code: string | null;
+          estimated_annual_revenue: number | null;
           first_seen_at: string;
           created_at: string;
           updated_at: string;
@@ -89,6 +90,7 @@ export type Database = {
           community?: string | null;
           industry?: string | null;
           naics_code?: string | null;
+          estimated_annual_revenue?: number | null;
           first_seen_at?: string;
           created_at?: string;
           updated_at?: string;

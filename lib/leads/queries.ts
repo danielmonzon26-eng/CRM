@@ -129,6 +129,7 @@ export type LeadDetail = {
     website: string | null;
     domain: string | null;
     phone: string | null;
+    estimated_annual_revenue: number | null;
   };
   contacts: {
     id: string;

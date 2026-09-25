@@ -29,7 +29,7 @@ export async function GET(request: NextRequest) {
   const supabase = createAdminClient();
 
   const companies = await fetchAllPages((from, to) =>
-    supabase.from("companies").select("id, industry").range(from, to)
+    supabase.from("companies").select("id, industry, estimated_annual_revenue").range(from, to)
   );
 
   const licenseRows = await fetchAllPages((from, to) =>
@@ -58,7 +58,7 @@ export async function GET(request: NextRequest) {
 
   for (const company of companies) {
     const licenses = licensesByCompany.get(company.id) ?? [];
-    const { score, reasons } = scoreCompany(licenses, company.industry);
+    const { score, reasons } = scoreCompany(licenses, company.industry, company.estimated_annual_revenue);
 
     const { data: existingLead, error: findError } = await supabase
       .from("leads")

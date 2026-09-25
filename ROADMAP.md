@@ -32,7 +32,11 @@ or reviewable before the next step starts.
    verification, see README)*
 4. ✅ **Lead qualification/scoring** — rules engine to flag "new and growing": recent issue date,
    target NAICS/business-type match, license status, renewal/growth signals; writes qualified
-   companies into `leads`. *(this step — customize TARGET_INDUSTRIES, see README)*
+   companies into `leads`. `TARGET_INDUSTRIES` now set to Catapult Ready's real verticals
+   (Manufacturing, Agriculture, E-commerce, Oil & Gas Service, Trades, Defence, Packaging,
+   Brick and Mortar Retail); a manual `estimated_annual_revenue` field (migration 0004)
+   gives a scoring bonus toward the $2M+ target once a rep researches and fills it in
+   — see README.
 5. ✅ **Contact enrichment pipeline** — Hunter.io domain/email search (name, title, email,
    confidence, phone/LinkedIn when Hunter has them), `/api/cron/enrich-leads` route. Web-search-
    assisted lookup (LinkedIn crawling, "About" pages) deferred — needs a search API key not yet

@@ -143,10 +143,24 @@ promotes anything crossing `MIN_SCORE_TO_QUALIFY` into the `leads` working set. 
 it never resets a lead's pipeline `status` — only `score`/`score_reasons` refresh on an
 existing lead.
 
-**Customize `TARGET_INDUSTRIES` in `lib/leads/scoring.ts`** — it ships with a generic
-placeholder list (technology, consulting, marketing, etc.) since this was built without
-knowing Catapult Ready's actual program focus. Edit that array (or empty it to score all
-industries equally) to match your real target verticals.
+**`TARGET_INDUSTRIES` in `lib/leads/scoring.ts`** is now set to Catapult Ready's real
+verticals — Manufacturing, Agriculture, E-commerce, Oil & Gas Service, Trades, Defence,
+Packaging, and Brick and Mortar Retail — each as a keyword list matched (case-insensitive
+substring) against the company's `industry` field and every license's `license_type`.
+Those keywords are still a best guess: Calgary's actual license-type category text
+hasn't been confirmed against a live API response yet (see the Calgary adapter section
+below), so once real values are visible in `licenses.raw`, tighten or widen a vertical's
+keyword list to match what's actually there.
+
+**$2M+ annual revenue** was also requested as a target criterion, but no connected data
+source provides company revenue — not Calgary Open Data (a license registry, not
+financials) and not Hunter.io (contact enrichment only). Rather than fake it, revenue is
+a manual field: `companies.estimated_annual_revenue` (migration `0004`), editable from
+the "Est. revenue $" box on each lead's detail page. When a rep fills it in and it's
+≥ $2M, scoring adds a bonus; when it's left unknown (the default), it's neutral, never a
+penalty. If you get access to a firmographics/revenue data provider (Dun & Bradstreet,
+ZoomInfo, Clearbit, etc.) later, this is the field a new enrichment step would populate
+automatically instead.
 
 ```bash
 curl -H "Authorization: Bearer $CRON_SECRET" "https://<your-deployment>/api/cron/score-leads"
@@ -302,6 +316,7 @@ schedule.
 - [ ] Signed in once as bootstrap admin, confirmed `/team` shows `admin`
 - [ ] All four cron routes manually verified once
 - [ ] Cron Jobs tab in Vercel shows all four schedules
-- [ ] (Later, not blocking) live-verify Calgary field names, set real `TARGET_INDUSTRIES`,
-      decide on digest recipient scope — see the open items called out earlier in this file
+- [ ] (Later, not blocking) live-verify Calgary field names against real `TARGET_INDUSTRIES`
+      keyword lists, decide on digest recipient scope — see the open items called out
+      earlier in this file
 
