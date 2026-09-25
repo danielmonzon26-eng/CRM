@@ -156,11 +156,26 @@ keyword list to match what's actually there.
 source provides company revenue — not Calgary Open Data (a license registry, not
 financials) and not Hunter.io (contact enrichment only). Rather than fake it, revenue is
 a manual field: `companies.estimated_annual_revenue` (migration `0004`), editable from
-the "Est. revenue $" box on each lead's detail page. When a rep fills it in and it's
-≥ $2M, scoring adds a bonus; when it's left unknown (the default), it's neutral, never a
-penalty. If you get access to a firmographics/revenue data provider (Dun & Bradstreet,
-ZoomInfo, Clearbit, etc.) later, this is the field a new enrichment step would populate
-automatically instead.
+the "Est. revenue $" box on each lead's detail page. It's a **hard requirement**: once a
+rep records a figure below $2M, `scoreCompany` forces that company's score to 0 — it
+can never (re)qualify regardless of how strong its other signals are. Left unknown (the
+default, since nothing populates it automatically), revenue has no effect — a
+newly-ingested company is still scored and can still promote on its other signals, since
+there's nothing to gate on until someone researches it.
+
+This is explicitly a "for now" choice, not a settled rule — worth revisiting:
+- A company **already promoted to `leads`** before a rep records sub-$2M revenue keeps
+  whatever pipeline `status` a rep left it at; `score-leads` only refreshes its
+  `score`/`score_reasons` (per the Step 4 invariant that re-scoring never resets a rep's
+  manual progress), so it'll show `score: 0` and a "Disqualified" reason on its detail
+  page but won't automatically jump to the `unqualified` column. Say the word if you'd
+  rather that be automatic.
+- If you get access to a firmographics/revenue data provider (Dun & Bradstreet,
+  ZoomInfo, Clearbit, etc.) later, `estimated_annual_revenue` is the field a new
+  enrichment step would populate automatically instead of a rep typing it in.
+- If the hard gate turns out too strict (e.g. a strong lead worth pursuing anyway),
+  swap the `return { score: 0, reasons }` in `lib/leads/scoring.ts` back to a bonus/no-op
+  — it's a one-block change.
 
 ```bash
 curl -H "Authorization: Bearer $CRON_SECRET" "https://<your-deployment>/api/cron/score-leads"

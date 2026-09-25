@@ -31,13 +31,22 @@ export const TARGET_INDUSTRIES: Record<string, string[]> = {
 export const MIN_SCORE_TO_QUALIFY = 40;
 
 /**
- * Catapult Ready also wants $2M+ in annual revenue. Neither Calgary Open Data nor
- * Hunter.io provides company revenue, so this can't be scored automatically yet — it's
- * a manual research field a rep fills in on the lead detail page (`companies.annual_revenue_estimate`,
- * added in migration 0004). When present, it's a scoring bonus; when null (the common
- * case until someone researches it), it's neutral rather than a penalty.
+ * Catapult Ready requires $2M+ in annual revenue. Neither Calgary Open Data nor
+ * Hunter.io provides company revenue, so it can't be known at ingestion time — it's a
+ * manual research field a rep fills in on the lead detail page
+ * (`companies.estimated_annual_revenue`, added in migration 0004).
+ *
+ * This is a hard requirement, not just a scoring bonus: once a rep records a figure
+ * below this threshold, the company is disqualified (score forced to 0, so it can
+ * never cross MIN_SCORE_TO_QUALIFY) regardless of how strong its other signals are.
+ * Until it's researched (null), there's nothing to gate on, so revenue stays neutral —
+ * a newly-ingested company is still scored/promoted on its other signals as before.
+ * This is an explicit, revisitable choice (the user may want a softer bonus again, or
+ * to also auto-move an already-promoted lead to "unqualified" once disqualified this
+ * way — currently it doesn't, see README) — not a fixed rule to build further logic on
+ * without checking back in.
  */
-export const MIN_ANNUAL_REVENUE_FOR_BONUS = 2_000_000;
+export const MIN_ANNUAL_REVENUE_TO_QUALIFY = 2_000_000;
 
 export type ScoreReason = { reason: string; points: number };
 
@@ -111,12 +120,20 @@ export function scoreCompany(
     }
   }
 
-  if (annualRevenueEstimate !== null && annualRevenueEstimate >= MIN_ANNUAL_REVENUE_FOR_BONUS) {
-    score += 20;
-    reasons.push({
-      reason: `Estimated annual revenue $${annualRevenueEstimate.toLocaleString()} meets the $2M+ target`,
-      points: 20,
-    });
+  if (annualRevenueEstimate !== null) {
+    if (annualRevenueEstimate >= MIN_ANNUAL_REVENUE_TO_QUALIFY) {
+      score += 20;
+      reasons.push({
+        reason: `Estimated annual revenue $${annualRevenueEstimate.toLocaleString()} meets the $2M+ target`,
+        points: 20,
+      });
+    } else {
+      reasons.push({
+        reason: `Disqualified: estimated annual revenue $${annualRevenueEstimate.toLocaleString()} is below the $2M+ target`,
+        points: -score,
+      });
+      return { score: 0, reasons };
+    }
   }
 
   return { score: Math.min(score, 100), reasons };
