@@ -163,19 +163,21 @@ default, since nothing populates it automatically), revenue has no effect — a
 newly-ingested company is still scored and can still promote on its other signals, since
 there's nothing to gate on until someone researches it.
 
+A company **already promoted to `leads`** that later gets marked sub-$2M is
+auto-moved to the `unqualified` column by `score-leads` (with an activity logged
+explaining why) — this is the one exception to the Step 4 invariant that re-scoring
+never touches a rep's manual pipeline status. It does **not** override `won` or `lost`
+— a deal a rep already closed is never silently reopened or relabeled — and it's a
+no-op if the lead is already `unqualified`.
+
 This is explicitly a "for now" choice, not a settled rule — worth revisiting:
-- A company **already promoted to `leads`** before a rep records sub-$2M revenue keeps
-  whatever pipeline `status` a rep left it at; `score-leads` only refreshes its
-  `score`/`score_reasons` (per the Step 4 invariant that re-scoring never resets a rep's
-  manual progress), so it'll show `score: 0` and a "Disqualified" reason on its detail
-  page but won't automatically jump to the `unqualified` column. Say the word if you'd
-  rather that be automatic.
 - If you get access to a firmographics/revenue data provider (Dun & Bradstreet,
   ZoomInfo, Clearbit, etc.) later, `estimated_annual_revenue` is the field a new
   enrichment step would populate automatically instead of a rep typing it in.
 - If the hard gate turns out too strict (e.g. a strong lead worth pursuing anyway),
-  swap the `return { score: 0, reasons }` in `lib/leads/scoring.ts` back to a bonus/no-op
-  — it's a one-block change.
+  swap the `return { score: 0, reasons, disqualified: true }` in `lib/leads/scoring.ts`
+  back to a bonus/no-op — it's a one-block change, and the auto-move in
+  `score-leads/route.ts` only fires when `disqualified` is true, so it'd stop on its own.
 
 ```bash
 curl -H "Authorization: Bearer $CRON_SECRET" "https://<your-deployment>/api/cron/score-leads"

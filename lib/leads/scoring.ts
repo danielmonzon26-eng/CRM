@@ -72,7 +72,7 @@ export function scoreCompany(
   licenses: LicenseForScoring[],
   industry: string | null,
   annualRevenueEstimate: number | null = null
-): { score: number; reasons: ScoreReason[] } {
+): { score: number; reasons: ScoreReason[]; disqualified: boolean } {
   const reasons: ScoreReason[] = [];
   let score = 0;
 
@@ -132,9 +132,9 @@ export function scoreCompany(
         reason: `Disqualified: estimated annual revenue $${annualRevenueEstimate.toLocaleString()} is below the $2M+ target`,
         points: -score,
       });
-      return { score: 0, reasons };
+      return { score: 0, reasons, disqualified: true };
     }
   }
 
-  return { score: Math.min(score, 100), reasons };
+  return { score: Math.min(score, 100), reasons, disqualified: false };
 }
