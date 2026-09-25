@@ -10,6 +10,40 @@ import type { ScoreReason } from "@/lib/leads/scoring";
  * Component or Server Action on a route the middleware already protects).
  */
 
+export type PipelineStats = {
+  total: number;
+  newThisWeek: number;
+  byStatus: Record<LeadStatus, number>;
+};
+
+const EMPTY_STATUS_COUNTS: Record<LeadStatus, number> = {
+  new: 0,
+  researching: 0,
+  contacted: 0,
+  qualified: 0,
+  unqualified: 0,
+  won: 0,
+  lost: 0,
+};
+
+export async function getPipelineStats(): Promise<PipelineStats> {
+  const supabase = await createClient();
+  const rows = await fetchAllPages((from, to) =>
+    supabase.from("leads").select("status, created_at").range(from, to)
+  );
+
+  const byStatus = { ...EMPTY_STATUS_COUNTS };
+  const weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+  let newThisWeek = 0;
+
+  for (const row of rows) {
+    byStatus[row.status]++;
+    if (new Date(row.created_at).getTime() >= weekAgo) newThisWeek++;
+  }
+
+  return { total: rows.length, newThisWeek, byStatus };
+}
+
 export type TeamMember = { id: string; email: string | null; fullName: string | null; role: UserRole };
 
 export async function getTeamMembers(): Promise<TeamMember[]> {

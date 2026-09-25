@@ -209,7 +209,27 @@ custom SMTP provider under Authentication → Emails once you're onboarding a re
 
 `/` is the pipeline board (columns: New, Researching, Contacted, Qualified, Won, Lost,
 Unqualified) — each card shows the score, primary contact, and a status dropdown that
-updates immediately. `/leads/[id]` is the detail view: full score breakdown, all
+updates immediately. A stats bar (Step 9) sits above it: total leads, new this week,
+contacted, qualified, won. `/leads/[id]` is the detail view: full score breakdown, all
 contacts found, an assignee picker, and an activity timeline with a note box. All of it
 now sits behind the Step 7 login — see below.
+
+## Notifications & reporting (Step 9)
+
+The pipeline-board stats bar (above) is the always-on, no-setup half of this step. The
+other half, `app/api/cron/daily-digest/route.ts`, emails the team a summary of leads
+promoted in the last 24 hours via [Resend](https://resend.com) — sign up, then set
+`RESEND_API_KEY` (see `.env.example`). Without that key, the cron still runs and
+computes the digest content, it just doesn't send — useful for checking the query is
+right before signing up for an email provider. Recipients are every team member's email
+from `profiles` (i.e. everyone, not just admins); narrow that in
+`app/api/cron/daily-digest/route.ts` if you'd rather only admins get it, or route by
+`assigned_to` once lead assignment is actually being used day-to-day.
+
+`DIGEST_FROM_EMAIL` must be a domain you've verified in Resend, or their shared sandbox
+address `onboarding@resend.dev` for testing before you've verified one.
+
+```bash
+curl -H "Authorization: Bearer $CRON_SECRET" "https://<your-deployment>/api/cron/daily-digest"
+```
 

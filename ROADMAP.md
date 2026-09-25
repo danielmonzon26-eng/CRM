@@ -49,12 +49,14 @@ or reviewable before the next step starts.
    matching/scoring pipeline. Calgary refactored onto it as the first adapter; a
    Playwright-based template (serverless Chromium via `@sparticuz/chromium`) is ready
    to copy for the next JS-rendered target once one is named. *(this step)*
-9. **Notifications & reporting** — daily digest (email or in-app) of new leads, basic dashboard
-   stats (new this week, in pipeline, contacted, converted).
+9. ✅ **Notifications & reporting** — in-app stats bar (total, new this week, contacted,
+   qualified, won) on the pipeline board; daily email digest of newly-promoted leads via
+   Resend (`/api/cron/daily-digest`, degrades to compute-only without `RESEND_API_KEY`).
+   *(this step)*
 10. **Deployment walkthrough** — step-by-step: create Supabase project, run migrations, connect
     Vercel↔GitHub, set env vars/secrets, verify cron runs, go-live checklist.
 
 Supabase project: `kteeooyybpwnnowkuwra` (see `supabase/config.toml`). Schema is applied and
 verified live as of the `supabase-migrate.yml` GitHub Actions run on 2026-09-21 (uses the
 Session pooler connection — the direct-connection host is IPv6-only and unreachable from
-GitHub's runners). We are starting Step 9 next.
+GitHub's runners). We are starting Step 10 next.
