@@ -108,6 +108,7 @@ async function runAdapter(supabase: SupabaseClient<Database>, adapter: SourceAda
           issue_date: record.issueDate,
           address: record.address,
           community: record.community,
+          is_home_based: record.isHomeBased,
           raw: record.raw,
           fetched_at: new Date().toISOString(),
         },

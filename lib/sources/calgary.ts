@@ -4,15 +4,14 @@
  * Dataset: https://data.calgary.ca/Business-and-Economic-Activity/Calgary-Business-Licences/vdjc-pybd
  * Docs:    https://dev.socrata.com/foundry/data.calgary.ca/vdjc-pybd
  *
- * IMPORTANT — field names below (GETBUSID, TRADENAME, ADDRESS, COMDISTNM, LICENCETYPES,
- * FIRST_ISS_DT, JOBSTATUSDESC, ...) come from the dataset's published column list, with
- * SODA's usual convention of lowercasing them for the JSON API. This has NOT been
- * confirmed against a live API response — the sandbox this was built in can't reach
- * data.calgary.ca. Before relying on this in production, hit the endpoint once
- * (`curl "https://data.calgary.ca/resource/vdjc-pybd.json?$limit=1"`) and diff the
- * keys against CANDIDATE_FIELDS below; adjust if any are off. The raw record is always
- * stored verbatim in `licenses.raw`, so a wrong guess here loses a derived column, not
- * the underlying data — it can be re-backfilled from `raw` after fixing the mapping.
+ * Field mapping CONFIRMED against a live record on 2026-09-25 (via the GitHub Actions
+ * workflow verify-calgary-fields.yml — this sandbox still can't reach data.calgary.ca
+ * directly). A real record's keys: getbusid, tradename, homeoccind, address, comdistcd,
+ * comdistnm, licencetypes, first_iss_dt, exp_dt, jobstatusdesc, point, globalid, plus
+ * several `:@computed_region_*` geo columns not used here. Every CANDIDATE_FIELDS guess
+ * below matched on its first try. The raw record is always stored verbatim in
+ * `licenses.raw` regardless, so any future dataset change loses a derived column at
+ * worst, not the underlying data.
  */
 
 import type { FetchResult, NormalizedRecord, SourceAdapter } from "./types";
@@ -33,6 +32,10 @@ const CANDIDATE_FIELDS = {
   issueDate: ["first_iss_dt", "issueddate", "issue_date", "startdate"],
   address: ["address", "addressline1"],
   community: ["comdistnm", "comm_name", "community"],
+  // "Home Occupation Indicator" -- Y means the license is for a home-based business,
+  // N means a commercial/physical premises. This is Calgary's own brick-and-mortar
+  // signal, more reliable than guessing from license-type keywords.
+  homeOccupation: ["homeoccind"],
 } as const;
 
 function pick(record: CalgaryLicenseRecord, keys: readonly string[]): string | null {
@@ -40,6 +43,14 @@ function pick(record: CalgaryLicenseRecord, keys: readonly string[]): string | n
     const value = record[key];
     if (value !== undefined && value !== null && value !== "") return value;
   }
+  return null;
+}
+
+function parseHomeOccupation(value: string | null): boolean | null {
+  if (value === null) return null;
+  const normalized = value.trim().toUpperCase();
+  if (normalized === "Y") return true;
+  if (normalized === "N") return false;
   return null;
 }
 
@@ -59,6 +70,7 @@ export function mapCalgaryRecord(record: CalgaryLicenseRecord): NormalizedRecord
     issueDate,
     address: pick(record, CANDIDATE_FIELDS.address),
     community: pick(record, CANDIDATE_FIELDS.community),
+    isHomeBased: parseHomeOccupation(pick(record, CANDIDATE_FIELDS.homeOccupation)),
     raw: record,
   };
 }

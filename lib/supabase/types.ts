@@ -111,6 +111,7 @@ export type Database = {
           issue_date: string | null;
           address: string | null;
           community: string | null;
+          is_home_based: boolean | null;
           raw: Record<string, unknown>;
           fetched_at: string;
           created_at: string;
@@ -127,6 +128,7 @@ export type Database = {
           issue_date?: string | null;
           address?: string | null;
           community?: string | null;
+          is_home_based?: boolean | null;
           raw?: Record<string, unknown>;
           fetched_at?: string;
           created_at?: string;

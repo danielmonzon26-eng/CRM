@@ -94,19 +94,17 @@ The sync route auto-creates the `sources` table row from the adapter's own
 `lib/sources/calgary.ts` pulls recently-issued licenses from `data.calgary.ca`'s SODA
 API.
 
-**Field mapping needs a one-time live check.** The column names in
-`lib/sources/calgary.ts` (`getbusid`, `tradename`, `first_iss_dt`, etc.) come from the
-dataset's published column list, not a live API response — this was built in a sandbox
-that can't reach `data.calgary.ca`. Before trusting the daily sync in production, run:
-
-```bash
-curl "https://data.calgary.ca/resource/vdjc-pybd.json?\$limit=1"
-```
-
-and compare the JSON keys against `CANDIDATE_FIELDS` in that file. If anything differs,
-add the real key as another candidate (or reorder) — no data is lost either way, since
-the full raw record is always stored in `licenses.raw`, but a wrong guess means a
-derived column (like `issue_date`) stays null until fixed.
+**Field mapping confirmed live 2026-09-25** via `.github/workflows/verify-calgary-fields.yml`
+(this sandbox still can't reach `data.calgary.ca` directly, so this workflow does the
+same job the migration one does for Supabase — runs somewhere with real internet
+access). Every `CANDIDATE_FIELDS` guess in `lib/sources/calgary.ts` matched a real
+record's keys on the first try: `getbusid`, `tradename`, `address`, `comdistnm`,
+`licencetypes`, `first_iss_dt`, `jobstatusdesc`. It also turned up a field not
+previously mapped, `homeoccind` ("Home Occupation Indicator", Y/N) — now used as
+`licenses.is_home_based`, a real brick-and-mortar signal in scoring (see below) instead
+of a keyword guess. Re-run that workflow any time (Actions → Verify Calgary Open Data
+field names → Run workflow) if the dataset's schema ever changes — no data is lost
+either way, since the full raw record is always stored in `licenses.raw`.
 
 Manually trigger a sync once deployed (or locally with `CRON_SECRET` set) — omit
 `source` to run every registered adapter:
@@ -145,12 +143,21 @@ existing lead.
 
 **`TARGET_INDUSTRIES` in `lib/leads/scoring.ts`** is now set to Catapult Ready's real
 verticals — Manufacturing, Agriculture, E-commerce, Oil & Gas Service, Trades, Defence,
-Packaging, and Brick and Mortar Retail — each as a keyword list matched (case-insensitive
-substring) against the company's `industry` field and every license's `license_type`.
-Those keywords are still a best guess: Calgary's actual license-type category text
-hasn't been confirmed against a live API response yet (see the Calgary adapter section
-below), so once real values are visible in `licenses.raw`, tighten or widen a vertical's
-keyword list to match what's actually there.
+and Packaging — each as a keyword list matched (case-insensitive substring) against the
+company's `industry` field and every license's `license_type`. The `license_type`
+*field name* was confirmed live (see the Calgary adapter section above), but only one
+example category value has actually been seen ("MOTOR VEHICLE DEALER - PREMISES") — the
+full vocabulary Calgary uses across categories is still unconfirmed, so these keyword
+lists remain an educated guess. Tighten or widen a vertical's keywords once more real
+values are visible in `licenses.raw` (e.g. after the first live sync runs).
+
+**Brick and mortar** was also requested as a target — this one turned out to have a
+real, confirmed signal rather than needing a keyword guess: Calgary's own
+`homeoccind` field (Home Occupation Indicator, Y/N), mapped to `licenses.is_home_based`.
+A company with any license where that's `false` gets a scoring bonus for operating from
+a commercial/physical premises rather than a home-based business — more accurate than
+matching a "retail" keyword, since a manufacturer or oil & gas service shop is
+brick-and-mortar too, just not retail.
 
 **$2M+ annual revenue** was also requested as a target criterion, but no connected data
 source provides company revenue — not Calgary Open Data (a license registry, not

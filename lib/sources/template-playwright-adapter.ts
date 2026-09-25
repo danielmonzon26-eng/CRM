@@ -49,6 +49,7 @@ export const templatePlaywrightAdapter: SourceAdapter = {
           issueDate: null, // this source may not expose a date at all — leave null
           address: r.address,
           community: null,
+          isHomeBased: null,
           raw: r,
         }));
 

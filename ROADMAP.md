@@ -27,16 +27,19 @@ or reviewable before the next step starts.
 2. ✅ **Database schema** — Supabase migrations: `companies`, `licenses` (raw source records),
    `leads` (qualified/working set), `contacts`, `activities`, `sync_runs`, `sources`. RLS policies
    for authenticated team members. *(this step)*
-3. ✅ **Calgary Open Data ingestion** — SODA API client, `/api/cron/sync-calgary-licenses` route,
-   upsert logic, new-license detection. *(this step — field-name mapping needs live
-   verification, see README)*
+3. ✅ **Calgary Open Data ingestion** — SODA API client, `/api/cron/sync-sources` route,
+   upsert logic, new-license detection. Field-name mapping confirmed live 2026-09-25 via
+   `.github/workflows/verify-calgary-fields.yml` — every guessed field matched, plus a
+   bonus `homeoccind` field now feeding the brick-and-mortar scoring signal (Step 4).
 4. ✅ **Lead qualification/scoring** — rules engine to flag "new and growing": recent issue date,
    target NAICS/business-type match, license status, renewal/growth signals; writes qualified
-   companies into `leads`. `TARGET_INDUSTRIES` now set to Catapult Ready's real verticals
-   (Manufacturing, Agriculture, E-commerce, Oil & Gas Service, Trades, Defence, Packaging,
-   Brick and Mortar Retail); a manual `estimated_annual_revenue` field (migration 0004)
-   gives a scoring bonus toward the $2M+ target once a rep researches and fills it in
-   — see README.
+   companies into `leads`. `TARGET_INDUSTRIES` set to Catapult Ready's real verticals
+   (Manufacturing, Agriculture, E-commerce, Oil & Gas Service, Trades, Defence, Packaging);
+   Brick and Mortar is scored separately via Calgary's real `homeoccind` field rather than a
+   keyword guess. A manual `estimated_annual_revenue` field (migration 0004) is a **hard**
+   $2M+ qualification gate — a company recorded below it is disqualified (score forced to 0)
+   and, if already a lead, auto-moved to `unqualified` (never overriding `won`/`lost`) — see
+   README.
 5. ✅ **Contact enrichment pipeline** — Hunter.io domain/email search (name, title, email,
    confidence, phone/LinkedIn when Hunter has them), `/api/cron/enrich-leads` route. Web-search-
    assisted lookup (LinkedIn crawling, "About" pages) deferred — needs a search API key not yet
@@ -71,6 +74,8 @@ GitHub's runners).
 All 10 steps are now built. `claude/calgary-business-leads-qgm9oy` is this repo's only
 branch (and therefore its GitHub default branch), so it's almost certainly already
 Vercel's Production Branch — confirm under Project → Settings → Git. Remaining work is
-the one-time dashboard checklist in README.md, plus the open follow-ups flagged
-throughout this roadmap (Calgary field-name live check, real `TARGET_INDUSTRIES`, a
-named second data source, digest recipient scope).
+the one-time dashboard checklist in README.md, plus open follow-ups: the vocabulary used
+inside `licencetypes` is still only seen for one example value (tighten
+`TARGET_INDUSTRIES` keywords as real values show up), no second (JS-rendered) data
+source has been named yet, and the daily digest still goes to every team member rather
+than admins-only or by assignment.

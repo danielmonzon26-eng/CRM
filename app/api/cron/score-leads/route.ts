@@ -44,7 +44,7 @@ export async function GET(request: NextRequest) {
   const licenseRows = await fetchAllPages((from, to) =>
     supabase
       .from("licenses")
-      .select("company_id, issue_date, license_status, license_type")
+      .select("company_id, issue_date, license_status, license_type, is_home_based")
       .not("company_id", "is", null)
       .range(from, to)
   );
@@ -57,6 +57,7 @@ export async function GET(request: NextRequest) {
       issue_date: row.issue_date,
       license_status: row.license_status,
       license_type: row.license_type,
+      is_home_based: row.is_home_based,
     });
     licensesByCompany.set(row.company_id, list);
   }

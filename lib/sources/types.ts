@@ -7,6 +7,8 @@ export type NormalizedRecord = {
   issueDate: string | null; // 'YYYY-MM-DD', or null if unknown/unparseable
   address: string | null;
   community: string | null;
+  /** True = operates from a home address, false = commercial/physical premises, null = unknown. */
+  isHomeBased: boolean | null;
   raw: Record<string, unknown>;
 };
 

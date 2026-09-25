@@ -2,11 +2,13 @@
  * "New and growing" scoring for Calgary companies, based on their license history.
  *
  * Catapult Ready's target verticals, as keyword sets matched (case-insensitive
- * substring) against the company's `industry` (raw Calgary license type text) plus
- * every license's `license_type`. Matching is heuristic since the real Calgary
- * license-type category names haven't been confirmed against a live API response yet
- * (see README) — widen/narrow a vertical's keyword list once real values are visible
- * in `licenses.raw`.
+ * substring) against the company's `industry` (raw Calgary `licencetypes` text) plus
+ * every license's `license_type`. The FIELD name (`licencetypes`) was confirmed live on
+ * 2026-09-25 (see calgary.ts), but only one example value has actually been seen
+ * ("MOTOR VEHICLE DEALER - PREMISES") — the full vocabulary Calgary uses for this field
+ * across categories is still unconfirmed, so these keyword lists remain an educated
+ * guess. Widen/narrow a vertical's keywords once more real values are visible in
+ * `licenses.raw` (e.g. after the first live sync runs).
  */
 export const TARGET_INDUSTRIES: Record<string, string[]> = {
   Manufacturing: ["manufactur"],
@@ -24,8 +26,17 @@ export const TARGET_INDUSTRIES: Record<string, string[]> = {
   ],
   Defence: ["defence", "defense", "aerospace", "military"],
   Packaging: ["packaging", "packing"],
-  "Brick and Mortar Retail": ["retail"],
 };
+
+/**
+ * "Brick and mortar" bonus: unlike the keyword-matched verticals above, Calgary's
+ * dataset carries a real, confirmed field for this -- `homeoccind` ("Home Occupation
+ * Indicator", Y/N), mapped onto `licenses.is_home_based`. false/N means the license is
+ * for a commercial/physical premises rather than a home-based business, which is a
+ * far more reliable brick-and-mortar signal than guessing from keywords like "retail"
+ * (a manufacturer or oil & gas service shop is brick-and-mortar too, just not retail).
+ */
+export const BRICK_AND_MORTAR_BONUS_POINTS = 15;
 
 /** Minimum score for a company to be auto-promoted into the `leads` working set. */
 export const MIN_SCORE_TO_QUALIFY = 40;
@@ -54,6 +65,7 @@ export type LicenseForScoring = {
   issue_date: string | null;
   license_status: string | null;
   license_type: string | null;
+  is_home_based: boolean | null;
 };
 
 function daysAgo(isoDate: string): number {
@@ -118,6 +130,15 @@ export function scoreCompany(
       reasons.push({ reason: `Matches target industry "${vertical}" (keyword "${hit}")`, points: 25 });
       break; // only credit one vertical match even if the text hits more than one
     }
+  }
+
+  const hasPhysicalPremises = licenses.some((l) => l.is_home_based === false);
+  if (hasPhysicalPremises) {
+    score += BRICK_AND_MORTAR_BONUS_POINTS;
+    reasons.push({
+      reason: "Operates from a commercial/physical premises, not home-based (brick and mortar)",
+      points: BRICK_AND_MORTAR_BONUS_POINTS,
+    });
   }
 
   if (annualRevenueEstimate !== null) {
