@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { fetchAllPages } from "@/lib/supabase/paginate";
 import type { ActivityType, LeadStatus, UserRole } from "@/lib/supabase/types";
 import type { ScoreReason } from "@/lib/leads/scoring";
@@ -7,7 +8,8 @@ import type { ScoreReason } from "@/lib/leads/scoring";
  * Reads here use the session-scoped server client (lib/supabase/server.ts), so RLS
  * governs access per signed-in user rather than bypassing it. Every function in this
  * file must therefore be called from a request context with a valid session (a Server
- * Component or Server Action on a route the middleware already protects).
+ * Component or Server Action on a route the middleware already protects) --
+ * EXCEPT getPipelineStats/getLeadsBoard, see the TEMPORARY note on each below.
  */
 
 export type PipelineStats = {
@@ -26,8 +28,15 @@ const EMPTY_STATUS_COUNTS: Record<LeadStatus, number> = {
   lost: 0,
 };
 
+/**
+ * TEMPORARY (requested 2026-10-06): uses the service-role client, not the
+ * session-scoped one, because the pipeline board ("/") was made viewable without
+ * login in middleware.ts for a first look at the UI -- an anonymous request has no
+ * session, so the normal session-scoped client would return zero rows under RLS.
+ * Switch back to createClient() once "/" requires login again.
+ */
 export async function getPipelineStats(): Promise<PipelineStats> {
-  const supabase = await createClient();
+  const supabase = createAdminClient();
   const rows = await fetchAllPages((from, to) =>
     supabase.from("leads").select("status, created_at").range(from, to)
   );
@@ -64,8 +73,9 @@ export type BoardLead = {
   contactCount: number;
 };
 
+/** TEMPORARY (requested 2026-10-06): see getPipelineStats' note above -- same reason. */
 export async function getLeadsBoard(): Promise<BoardLead[]> {
-  const supabase = await createClient();
+  const supabase = createAdminClient();
 
   const leads = await fetchAllPages((from, to) =>
     supabase.from("leads").select("id, status, score, company_id").range(from, to)
