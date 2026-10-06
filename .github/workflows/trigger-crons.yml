@@ -1,0 +1,38 @@
+name: Trigger CRM crons manually
+
+# One-off runner for the ingestion/scoring crons, for when you want to populate the
+# pipeline on demand instead of waiting for the daily Vercel Cron schedule in
+# vercel.json. Same workaround as supabase-migrate.yml and verify-calgary-fields.yml:
+# GitHub-hosted runners have normal internet access, which this sandbox doesn't.
+on:
+  workflow_dispatch:
+    inputs:
+      base_url:
+        description: "Deployed app base URL"
+        required: true
+        default: "https://crm-two-delta-91.vercel.app"
+      cron_secret:
+        description: "CRON_SECRET value (must match the Vercel env var)"
+        required: true
+      days:
+        description: "Sync window in days for sync-sources"
+        required: false
+        default: "30"
+
+jobs:
+  run-crons:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Sync sources (ingestion)
+        run: |
+          set -euo pipefail
+          curl -sS -f -H "Authorization: Bearer ${{ github.event.inputs.cron_secret }}" \
+            "${{ github.event.inputs.base_url }}/api/cron/sync-sources?days=${{ github.event.inputs.days }}" \
+            | tee sync-result.json
+
+      - name: Score leads
+        run: |
+          set -euo pipefail
+          curl -sS -f -H "Authorization: Bearer ${{ github.event.inputs.cron_secret }}" \
+            "${{ github.event.inputs.base_url }}/api/cron/score-leads" \
+            | tee score-result.json
