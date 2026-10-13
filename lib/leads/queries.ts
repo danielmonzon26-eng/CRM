@@ -88,22 +88,14 @@ export async function getLeadsBoard(): Promise<BoardLead[]> {
   );
   if (leads.length === 0) return [];
 
-  const companyIds = [...new Set(leads.map((l) => l.company_id))];
-  const { data: companies, error: companiesError } = await supabase
-    .from("companies")
-    .select("id, name, community, industry")
-    .in("id", companyIds);
-  if (companiesError) throw companiesError;
+  const companies = await fetchAllPages((from, to) =>
+    supabase.from("companies").select("id, name, community, industry").range(from, to)
+  );
   const companyById = new Map(companies.map((c) => [c.id, c]));
 
-  const { data: contacts, error: contactsError } = await supabase
-    .from("contacts")
-    .select("lead_id, full_name, title, is_primary")
-    .in(
-      "lead_id",
-      leads.map((l) => l.id)
-    );
-  if (contactsError) throw contactsError;
+  const contacts = await fetchAllPages((from, to) =>
+    supabase.from("contacts").select("lead_id, full_name, title, is_primary").range(from, to)
+  );
 
   const contactsByLead = new Map<string, { full_name: string; title: string | null; is_primary: boolean }[]>();
   for (const c of contacts) {

@@ -30,18 +30,12 @@ export async function getContactsList(search?: string): Promise<ContactListRow[]
   const contacts = await fetchAllPages((from, to) => contactQuery.range(from, to));
   if (contacts.length === 0) return [];
 
-  const leadIds = [...new Set(contacts.map((c) => c.lead_id))];
   const leads = await fetchAllPages((from, to) =>
-    supabase.from("leads").select("id, company_id, status").in("id", leadIds).range(from, to)
+    supabase.from("leads").select("id, company_id, status").range(from, to)
   );
   const leadById = new Map(leads.map((l) => [l.id, l]));
 
-  const companyIds = [...new Set(leads.map((l) => l.company_id))];
-  const { data: companies, error: companiesError } = await supabase
-    .from("companies")
-    .select("id, name")
-    .in("id", companyIds);
-  if (companiesError) throw companiesError;
+  const companies = await fetchAllPages((from, to) => supabase.from("companies").select("id, name").range(from, to));
   const companyById = new Map(companies.map((c) => [c.id, c.name]));
 
   return contacts

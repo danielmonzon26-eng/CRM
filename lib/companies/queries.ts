@@ -28,21 +28,17 @@ export async function getCompaniesList(search?: string): Promise<CompanyListRow[
   const companies = await fetchAllPages((from, to) => companyQuery.range(from, to));
   if (companies.length === 0) return [];
 
-  const companyIds = companies.map((c) => c.id);
   const leads = await fetchAllPages((from, to) =>
-    supabase.from("leads").select("id, company_id, status, score").in("company_id", companyIds).range(from, to)
+    supabase.from("leads").select("id, company_id, status, score").range(from, to)
   );
   const leadByCompany = new Map(leads.map((l) => [l.company_id, l]));
 
-  const leadIds = leads.map((l) => l.id);
+  const contacts = await fetchAllPages((from, to) =>
+    supabase.from("contacts").select("lead_id").range(from, to)
+  );
   const contactCounts = new Map<string, number>();
-  if (leadIds.length > 0) {
-    const contacts = await fetchAllPages((from, to) =>
-      supabase.from("contacts").select("lead_id").in("lead_id", leadIds).range(from, to)
-    );
-    for (const c of contacts) {
-      contactCounts.set(c.lead_id, (contactCounts.get(c.lead_id) ?? 0) + 1);
-    }
+  for (const c of contacts) {
+    contactCounts.set(c.lead_id, (contactCounts.get(c.lead_id) ?? 0) + 1);
   }
 
   return companies.map((c) => {
