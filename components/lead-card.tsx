@@ -27,6 +27,10 @@ export function LeadCard({ lead }: { lead: BoardLead }) {
         </p>
       )}
 
+      {lead.dealValue != null && (
+        <p className="mt-1 text-xs font-medium text-emerald-700">${lead.dealValue.toLocaleString()}</p>
+      )}
+
       <div className="mt-2">
         <StatusSelect leadId={lead.id} status={lead.status} />
       </div>

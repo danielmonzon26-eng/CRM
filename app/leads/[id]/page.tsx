@@ -2,9 +2,13 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { StatusSelect } from "@/components/status-select";
 import { AssigneeSelect } from "@/components/assignee-select";
+import { TaskList } from "@/components/task-list";
+import { TaskForm } from "@/components/task-form";
 import { getLeadDetail, getTeamMembers } from "@/lib/leads/queries";
+import { getTasksForSubject } from "@/lib/tasks/queries";
 import { NoteForm } from "./note-form";
 import { RevenueForm } from "./revenue-form";
+import { DealValueForm } from "./deal-value-form";
 
 export const dynamic = "force-dynamic";
 
@@ -20,6 +24,8 @@ function formatActivity(type: string): string {
       return "Call";
     case "sync_matched":
       return "Data sync";
+    case "task_completed":
+      return "Task completed";
     default:
       return "Note";
   }
@@ -27,7 +33,7 @@ function formatActivity(type: string): string {
 
 export default async function LeadDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const [lead, members] = await Promise.all([getLeadDetail(id), getTeamMembers()]);
+  const [lead, members, tasks] = await Promise.all([getLeadDetail(id), getTeamMembers(), getTasksForSubject({ leadId: id })]);
   if (!lead) notFound();
 
   return (
@@ -52,6 +58,11 @@ export default async function LeadDetailPage({ params }: { params: Promise<{ id:
               {lead.company.website}
             </a>
           )}
+          <p className="mt-1">
+            <Link href={`/companies/${lead.company.id}`} className="text-sm text-slate-500 hover:underline">
+              View company record →
+            </Link>
+          </p>
         </div>
         <div className="flex w-48 shrink-0 flex-col gap-2">
           <StatusSelect leadId={lead.id} status={lead.status} />
@@ -62,6 +73,10 @@ export default async function LeadDetailPage({ params }: { params: Promise<{ id:
             value={lead.company.estimated_annual_revenue}
           />
         </div>
+      </div>
+
+      <div className="mt-4">
+        <DealValueForm leadId={lead.id} dealValue={lead.dealValue} expectedCloseDate={lead.expectedCloseDate} />
       </div>
 
       <section className="mt-6 rounded-lg border border-slate-200 bg-white p-4">
@@ -110,6 +125,16 @@ export default async function LeadDetailPage({ params }: { params: Promise<{ id:
               </div>
             </div>
           ))}
+        </div>
+      </section>
+
+      <section className="mt-6">
+        <h2 className="text-sm font-medium text-slate-700">Tasks</h2>
+        <div className="mt-2">
+          <TaskForm leadId={lead.id} />
+        </div>
+        <div className="mt-3">
+          <TaskList tasks={tasks} />
         </div>
       </section>
 

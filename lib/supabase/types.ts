@@ -21,11 +21,13 @@ export type ActivityType =
   | "enrichment_run"
   | "email_sent"
   | "call_logged"
-  | "sync_matched";
+  | "sync_matched"
+  | "task_completed";
 
 export type SourceKind = "open_data_api" | "web_scrape" | "enrichment";
 export type SyncRunStatus = "running" | "success" | "failed";
 export type UserRole = "admin" | "rep";
+export type TaskType = "todo" | "call" | "email" | "meeting";
 
 // supabase-js's generated-types contract expects each table to declare its foreign-key
 // relationships (used for typed nested `select()` joins). None are modeled by hand here.
@@ -144,6 +146,8 @@ export type Database = {
           score: number;
           score_reasons: unknown[];
           assigned_to: string | null;
+          deal_value: number | null;
+          expected_close_date: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -154,6 +158,8 @@ export type Database = {
           score?: number;
           score_reasons?: unknown[];
           assigned_to?: string | null;
+          deal_value?: number | null;
+          expected_close_date?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -238,6 +244,38 @@ export type Database = {
           error?: string | null;
         };
         Update: Partial<Database["public"]["Tables"]["sync_runs"]["Insert"]>;
+        Relationships: [];
+      };
+      tasks: {
+        Row: {
+          id: string;
+          lead_id: string | null;
+          company_id: string | null;
+          title: string;
+          description: string | null;
+          task_type: TaskType;
+          due_at: string | null;
+          completed_at: string | null;
+          assigned_to: string | null;
+          created_by: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          lead_id?: string | null;
+          company_id?: string | null;
+          title: string;
+          description?: string | null;
+          task_type?: TaskType;
+          due_at?: string | null;
+          completed_at?: string | null;
+          assigned_to?: string | null;
+          created_by?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["tasks"]["Insert"]>;
         Relationships: [];
       };
       profiles: {
