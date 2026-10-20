@@ -5,10 +5,8 @@ import { Topbar } from "@/components/topbar";
 
 export async function AppShell({ children }: { children: React.ReactNode }) {
   const user = await getCurrentUser();
-  if (!user) return <>{children}</>;
-
-  const openTaskCount = await getOpenTaskCount().catch(() => 0);
-  const isAdmin = user.role === "admin";
+  const openTaskCount = user ? await getOpenTaskCount().catch(() => 0) : 0;
+  const isAdmin = user?.role === "admin";
 
   return (
     <div className="flex min-h-screen bg-gray-50">
