@@ -23,26 +23,30 @@ export function RevenueForm({
         const parsed = raw === "" ? null : Number(raw);
         startTransition(() => updateCompanyRevenue(leadId, companyId, parsed !== null && Number.isFinite(parsed) ? parsed : null));
       }}
-      className="flex items-center gap-1"
     >
-      <span className="text-xs text-slate-500">Est. revenue $</span>
-      <input
-        name="revenue"
-        type="number"
-        min={0}
-        step={1000}
-        defaultValue={value ?? ""}
-        placeholder="unknown"
-        className="w-24 rounded-md border border-slate-300 px-2 py-1 text-xs disabled:opacity-50"
-        disabled={isPending}
-      />
-      <button
-        type="submit"
-        disabled={isPending}
-        className="rounded-md border border-slate-300 px-2 py-1 text-xs text-slate-600 disabled:opacity-50"
-      >
-        Save
-      </button>
+      <label className="text-xs font-medium text-slate-500">Est. annual revenue</label>
+      <div className="mt-1 flex items-center gap-1.5">
+        <div className="relative flex-1">
+          <span className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-sm text-slate-400">$</span>
+          <input
+            name="revenue"
+            type="number"
+            min={0}
+            step={1000}
+            defaultValue={value ?? ""}
+            placeholder="unknown"
+            className="w-full rounded-md border border-slate-200 bg-white py-1.5 pl-6 pr-2 text-sm focus:border-brand-400 focus:outline-none focus:ring-1 focus:ring-brand-200 disabled:opacity-50"
+            disabled={isPending}
+          />
+        </div>
+        <button
+          type="submit"
+          disabled={isPending}
+          className="shrink-0 rounded-md border border-slate-200 px-2.5 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50 disabled:opacity-50"
+        >
+          Save
+        </button>
+      </div>
     </form>
   );
 }

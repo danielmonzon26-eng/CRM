@@ -12,7 +12,7 @@ export function RoleSelect({ profileId, role }: { profileId: string; role: UserR
       value={role}
       disabled={isPending}
       onChange={(e) => startTransition(() => updateUserRole(profileId, e.target.value as UserRole))}
-      className="rounded-md border border-slate-300 bg-white px-2 py-1 text-xs capitalize text-slate-700 disabled:opacity-50"
+      className="rounded-md border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-medium capitalize text-slate-700 focus:border-brand-400 focus:outline-none focus:ring-1 focus:ring-brand-200 disabled:opacity-50"
     >
       <option value="rep">Rep</option>
       <option value="admin">Admin</option>

@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
-import { AppHeader } from "@/components/app-header";
+import { AppShell } from "@/components/app-shell";
 
 export const metadata: Metadata = {
   title: "Calgary Lead Engine",
@@ -10,9 +10,8 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
-      <body className="bg-slate-50 text-slate-900 antialiased">
-        <AppHeader />
-        {children}
+      <body className="bg-gray-50 text-slate-900 antialiased">
+        <AppShell>{children}</AppShell>
       </body>
     </html>
   );

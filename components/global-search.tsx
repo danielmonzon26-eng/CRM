@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { Search } from "lucide-react";
 
 type SearchResult = {
   companies: { id: string; name: string; community: string | null }[];
@@ -39,7 +40,8 @@ export function GlobalSearch() {
   const hasResults = results && (results.companies.length > 0 || results.contacts.length > 0);
 
   return (
-    <div ref={containerRef} className="relative w-full max-w-xs">
+    <div ref={containerRef} className="relative w-full max-w-md">
+      <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" strokeWidth={2} />
       <input
         type="search"
         value={query}
@@ -49,15 +51,15 @@ export function GlobalSearch() {
         }}
         onFocus={() => setOpen(true)}
         placeholder="Search companies & contacts…"
-        className="w-full rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm text-slate-700 placeholder:text-slate-400"
+        className="w-full rounded-md border border-slate-200 bg-slate-50 py-1.5 pl-9 pr-3 text-sm text-slate-700 placeholder:text-slate-400 focus:border-brand-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-100"
       />
       {open && query.trim().length >= 2 && (
-        <div className="absolute left-0 right-0 top-full z-20 mt-1 max-h-96 overflow-y-auto rounded-md border border-slate-200 bg-white shadow-lg">
-          {!results && <p className="px-3 py-2 text-xs text-slate-400">Searching…</p>}
-          {results && !hasResults && <p className="px-3 py-2 text-xs text-slate-400">No matches.</p>}
+        <div className="absolute left-0 right-0 top-full z-20 mt-1.5 max-h-96 overflow-y-auto rounded-lg border border-slate-200 bg-white shadow-popover">
+          {!results && <p className="px-3 py-3 text-xs text-slate-400">Searching…</p>}
+          {results && !hasResults && <p className="px-3 py-3 text-xs text-slate-400">No matches.</p>}
           {results && results.companies.length > 0 && (
-            <div>
-              <p className="px-3 pt-2 text-[11px] uppercase tracking-wide text-slate-400">Companies</p>
+            <div className="py-1">
+              <p className="px-3 pb-1 pt-1.5 text-[11px] font-medium uppercase tracking-wide text-slate-400">Companies</p>
               {results.companies.map((c) => (
                 <button
                   key={c.id}
@@ -74,8 +76,8 @@ export function GlobalSearch() {
             </div>
           )}
           {results && results.contacts.length > 0 && (
-            <div>
-              <p className="px-3 pt-2 text-[11px] uppercase tracking-wide text-slate-400">Contacts</p>
+            <div className="border-t border-slate-100 py-1">
+              <p className="px-3 pb-1 pt-1.5 text-[11px] font-medium uppercase tracking-wide text-slate-400">Contacts</p>
               {results.contacts.map((c) => (
                 <button
                   key={c.id}

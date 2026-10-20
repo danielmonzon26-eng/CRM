@@ -1,6 +1,7 @@
 "use client";
 
 import { useTransition } from "react";
+import { LogOut } from "lucide-react";
 import { signOut } from "@/app/actions/auth";
 
 export function SignOutButton() {
@@ -10,9 +11,10 @@ export function SignOutButton() {
     <button
       onClick={() => startTransition(() => signOut())}
       disabled={isPending}
-      className="text-sm text-slate-500 hover:text-slate-900 disabled:opacity-50"
+      title="Sign out"
+      className="flex h-8 w-8 items-center justify-center rounded-md text-slate-400 hover:bg-slate-100 hover:text-slate-700 disabled:opacity-50"
     >
-      Sign out
+      <LogOut className="h-4 w-4" strokeWidth={2} />
     </button>
   );
 }

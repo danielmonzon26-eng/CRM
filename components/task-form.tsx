@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useTransition } from "react";
+import { Plus } from "lucide-react";
 import { createTask } from "@/app/actions/tasks";
 import type { TaskType } from "@/lib/supabase/types";
 
@@ -11,7 +12,7 @@ export function TaskForm({ leadId, companyId }: { leadId?: string | null; compan
   return (
     <form
       ref={formRef}
-      className="flex flex-wrap items-end gap-2 rounded-md border border-slate-200 bg-slate-50 p-3"
+      className="flex flex-wrap items-end gap-2 rounded-lg border border-slate-200 bg-slate-50 p-3"
       onSubmit={(e) => {
         e.preventDefault();
         const form = e.currentTarget;
@@ -36,21 +37,30 @@ export function TaskForm({ leadId, companyId }: { leadId?: string | null; compan
           name="title"
           placeholder="New task…"
           required
-          className="w-full rounded-md border border-slate-300 bg-white px-2 py-1.5 text-sm"
+          className="w-full rounded-md border border-slate-200 bg-white px-2.5 py-1.5 text-sm focus:border-brand-400 focus:outline-none focus:ring-1 focus:ring-brand-200"
         />
       </div>
-      <select name="taskType" defaultValue="todo" className="rounded-md border border-slate-300 bg-white px-2 py-1.5 text-sm">
+      <select
+        name="taskType"
+        defaultValue="todo"
+        className="rounded-md border border-slate-200 bg-white px-2.5 py-1.5 text-sm focus:border-brand-400 focus:outline-none focus:ring-1 focus:ring-brand-200"
+      >
         <option value="todo">To-do</option>
         <option value="call">Call</option>
         <option value="email">Email</option>
         <option value="meeting">Meeting</option>
       </select>
-      <input type="date" name="dueAt" className="rounded-md border border-slate-300 bg-white px-2 py-1.5 text-sm" />
+      <input
+        type="date"
+        name="dueAt"
+        className="rounded-md border border-slate-200 bg-white px-2.5 py-1.5 text-sm focus:border-brand-400 focus:outline-none focus:ring-1 focus:ring-brand-200"
+      />
       <button
         type="submit"
         disabled={isPending}
-        className="rounded-md bg-slate-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-slate-700 disabled:opacity-50"
+        className="flex items-center gap-1.5 rounded-md bg-brand-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-50"
       >
+        <Plus className="h-3.5 w-3.5" strokeWidth={2.5} />
         Add task
       </button>
     </form>

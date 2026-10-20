@@ -20,11 +20,11 @@ export default async function TasksPage({ searchParams }: { searchParams: Promis
   return (
     <main className="mx-auto max-w-3xl px-4 py-8">
       <header className="mb-6">
-        <h1 className="text-xl font-semibold text-slate-900">Tasks</h1>
+        <h1 className="text-xl font-semibold tracking-tight text-slate-900">Tasks</h1>
         <p className="text-sm text-slate-500">Follow-ups, calls, and to-dos across every deal.</p>
       </header>
 
-      <div className="mb-4">
+      <div className="mb-5">
         <TaskForm />
       </div>
 
@@ -35,7 +35,7 @@ export default async function TasksPage({ searchParams }: { searchParams: Promis
             href={`/tasks?filter=${tab.value}`}
             className={`-mb-px border-b-2 px-3 py-2 text-sm font-medium ${
               activeFilter === tab.value
-                ? "border-slate-900 text-slate-900"
+                ? "border-brand-600 text-brand-700"
                 : "border-transparent text-slate-500 hover:text-slate-700"
             }`}
           >

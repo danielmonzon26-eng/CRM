@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useTransition } from "react";
+import { Send } from "lucide-react";
 import { addLeadNote } from "@/app/actions/leads";
 
 export function NoteForm({ leadId }: { leadId: string }) {
@@ -23,15 +24,16 @@ export function NoteForm({ leadId }: { leadId: string }) {
         name="body"
         required
         rows={2}
-        placeholder="Add a note..."
-        className="flex-1 rounded-md border border-slate-300 px-3 py-2 text-sm"
+        placeholder="Log a note on this deal…"
+        className="flex-1 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm focus:border-brand-400 focus:outline-none focus:ring-1 focus:ring-brand-200"
       />
       <button
         type="submit"
         disabled={isPending}
-        className="self-start rounded-md bg-slate-900 px-3 py-2 text-sm text-white disabled:opacity-50"
+        className="flex h-fit shrink-0 items-center gap-1.5 self-start rounded-lg bg-brand-600 px-3 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-50"
       >
-        Add
+        <Send className="h-3.5 w-3.5" strokeWidth={2} />
+        Log
       </button>
     </form>
   );

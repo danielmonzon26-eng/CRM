@@ -20,7 +20,7 @@ export function AssigneeSelect({
       value={assignedTo ?? ""}
       disabled={isPending}
       onChange={(e) => startTransition(() => assignLead(leadId, e.target.value || null))}
-      className="rounded-md border border-slate-300 bg-white px-2 py-1 text-xs text-slate-700 disabled:opacity-50"
+      className="w-full rounded-md border border-slate-200 bg-slate-50 px-2 py-1 text-xs text-slate-700 focus:border-brand-400 focus:outline-none focus:ring-1 focus:ring-brand-200 disabled:opacity-50"
     >
       <option value="">Unassigned</option>
       {members.map((m) => (
