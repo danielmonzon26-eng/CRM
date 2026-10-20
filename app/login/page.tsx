@@ -13,14 +13,9 @@ export default function LoginPage() {
   return (
     <main className="flex min-h-screen items-center justify-center bg-gray-50 px-4">
       <div className="w-full max-w-sm rounded-2xl border border-slate-200 bg-white p-8 shadow-popover">
-        <div className="mb-6 flex items-center gap-2.5">
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-brand-600 text-sm font-bold text-white">
-            C
-          </div>
-          <div>
-            <h1 className="text-base font-semibold leading-tight text-slate-900">Calgary Lead Engine</h1>
-            <p className="text-xs leading-tight text-slate-500">Sign in to access the CRM</p>
-          </div>
+        <div className="mb-6">
+          <h1 className="text-xl font-bold tracking-wide text-slate-900">CATAPULT</h1>
+          <p className="mt-0.5 text-xs leading-tight text-slate-500">Sign in to access your CRM</p>
         </div>
 
         {sent ? (

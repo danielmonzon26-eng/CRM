@@ -8,17 +8,37 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
+        /**
+         * PROVISIONAL: approximated from the Catapult product mockup shared in
+         * chat (dark sidebar + orange-red accent), not from the official brand
+         * site -- network access to catapultready.com/blairandco.ca was blocked
+         * by this environment's egress policy. Replace with verified hex values
+         * once the real brand assets are available.
+         */
         brand: {
-          50: "#eef2ff",
-          100: "#e0e7ff",
-          200: "#c7d2fe",
-          300: "#a5b4fc",
-          400: "#818cf8",
-          500: "#6366f1",
-          600: "#4f46e5",
-          700: "#4338ca",
-          800: "#3730a3",
-          900: "#312e81",
+          50: "#fef2f0",
+          100: "#fde3de",
+          200: "#fbccc2",
+          300: "#f7a896",
+          400: "#f17b5f",
+          500: "#e8502e",
+          600: "#d33f1f",
+          700: "#b03119",
+          800: "#8f2a19",
+          900: "#77271a",
+        },
+        ink: {
+          50: "#f5f6f7",
+          100: "#e8eaec",
+          200: "#c7cbd1",
+          300: "#9aa0a9",
+          400: "#6b7280",
+          500: "#4a5160",
+          600: "#363c48",
+          700: "#272b34",
+          800: "#1b1e24",
+          900: "#121419",
+          950: "#0b0c0f",
         },
       },
       boxShadow: {

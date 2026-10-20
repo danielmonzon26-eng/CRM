@@ -19,12 +19,7 @@ export function Topbar({
   return (
     <header className="sticky top-0 z-10 flex flex-col gap-3 border-b border-slate-200 bg-white/95 px-4 py-2.5 backdrop-blur sm:px-6 lg:flex-row lg:items-center lg:gap-4 lg:py-0">
       <div className="flex h-10 items-center justify-between lg:hidden">
-        <div className="flex items-center gap-2">
-          <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-brand-600 text-xs font-bold text-white">
-            C
-          </div>
-          <span className="text-sm font-semibold text-slate-900">Calgary Lead Engine</span>
-        </div>
+        <span className="text-sm font-bold tracking-wide text-slate-900">CATAPULT</span>
       </div>
 
       <MobileNav isAdmin={isAdmin} openTaskCount={openTaskCount} />

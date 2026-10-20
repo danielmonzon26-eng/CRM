@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Calgary Lead Engine",
-  description: "Lead generation CRM for identifying new and growing Calgary businesses.",
+  title: "Catapult",
+  description: "Catapult's CRM for identifying and closing new Calgary business.",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

@@ -18,6 +18,88 @@ export type PipelineStats = {
   byStatus: Record<LeadStatus, number>;
 };
 
+export type LeadTableRow = {
+  id: string;
+  status: LeadStatus;
+  score: number;
+  createdAt: string;
+  companyId: string;
+  companyName: string;
+  community: string | null;
+  industry: string | null;
+  primaryContact: { fullName: string; title: string | null; email: string | null } | null;
+};
+
+export type LeadTablePage = {
+  rows: LeadTableRow[];
+  total: number;
+  page: number;
+  pageSize: number;
+};
+
+type LeadTableQueryRow = {
+  id: string;
+  status: LeadStatus;
+  score: number;
+  created_at: string;
+  company_id: string;
+  companies: { name: string; community: string | null; industry: string | null } | null;
+  contacts: { full_name: string; title: string | null; email: string | null; is_primary: boolean }[];
+};
+
+/**
+ * Server-side paginated + filtered lead table. Filters the embedded `companies`
+ * resource via PostgREST's `!inner` join syntax (a real SQL WHERE, not a giant
+ * `.in()` id list) so this stays cheap regardless of how many rows match.
+ */
+export async function getLeadsTable(opts: {
+  search?: string;
+  status?: LeadStatus | "all";
+  page?: number;
+  pageSize?: number;
+}): Promise<LeadTablePage> {
+  const supabase = await createClient();
+  const page = Math.max(1, opts.page ?? 1);
+  const pageSize = opts.pageSize ?? 25;
+  const from = (page - 1) * pageSize;
+  const to = from + pageSize - 1;
+
+  let query = supabase
+    .from("leads")
+    .select(
+      "id, status, score, created_at, company_id, companies!inner(name, community, industry), contacts(full_name, title, email, is_primary)",
+      { count: "exact" }
+    )
+    .order("created_at", { ascending: false });
+
+  if (opts.status && opts.status !== "all") {
+    query = query.eq("status", opts.status);
+  }
+  if (opts.search?.trim()) {
+    query = query.ilike("companies.name", `%${opts.search.trim()}%`);
+  }
+
+  const { data, error, count } = await query.range(from, to);
+  if (error) throw error;
+
+  const rows = ((data ?? []) as unknown as LeadTableQueryRow[]).map((row) => {
+    const primary = row.contacts.find((c) => c.is_primary) ?? row.contacts[0] ?? null;
+    return {
+      id: row.id,
+      status: row.status,
+      score: row.score,
+      createdAt: row.created_at,
+      companyId: row.company_id,
+      companyName: row.companies?.name ?? "Unknown company",
+      community: row.companies?.community ?? null,
+      industry: row.companies?.industry ?? null,
+      primaryContact: primary ? { fullName: primary.full_name, title: primary.title, email: primary.email } : null,
+    };
+  });
+
+  return { rows, total: count ?? 0, page, pageSize };
+}
+
 const EMPTY_STATUS_COUNTS: Record<LeadStatus, number> = {
   new: 0,
   researching: 0,

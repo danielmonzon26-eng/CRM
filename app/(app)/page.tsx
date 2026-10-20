@@ -20,10 +20,10 @@ export default async function Home() {
   const [leads, stats, forecast] = await Promise.all([getLeadsBoard(), getPipelineStats(), getPipelineForecast()]);
 
   return (
-    <main className="px-4 py-6 sm:px-6">
+    <main className="px-4 py-5 sm:px-6">
       <div className="mx-auto max-w-[1600px]">
-        <header className="mb-6">
-          <h1 className="text-xl font-semibold tracking-tight text-slate-900">Pipeline</h1>
+        <header className="mb-5">
+          <h1 className="text-xl font-semibold tracking-tight text-slate-900">Sales Dashboard</h1>
           <p className="text-sm text-slate-500">
             {leads.length} lead{leads.length === 1 ? "" : "s"} in the pipeline
           </p>

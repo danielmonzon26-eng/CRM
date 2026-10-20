@@ -12,12 +12,9 @@ export function Sidebar({ isAdmin, openTaskCount }: { isAdmin: boolean; openTask
   const pathname = usePathname();
 
   return (
-    <aside className="hidden w-60 shrink-0 flex-col border-r border-slate-200 bg-white lg:flex">
-      <div className="flex h-14 items-center gap-2 border-b border-slate-200 px-5">
-        <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-brand-600 text-sm font-bold text-white">
-          C
-        </div>
-        <span className="truncate text-sm font-semibold text-slate-900">Calgary Lead Engine</span>
+    <aside className="hidden w-60 shrink-0 flex-col bg-ink-950 lg:flex">
+      <div className="flex h-14 items-center gap-1.5 border-b border-white/10 px-5">
+        <span className="text-base font-bold tracking-wide text-white">CATAPULT</span>
       </div>
 
       <nav className="flex-1 space-y-0.5 overflow-y-auto px-3 py-4">
@@ -29,7 +26,7 @@ export function Sidebar({ isAdmin, openTaskCount }: { isAdmin: boolean; openTask
               key={item.href}
               href={item.href}
               className={`flex items-center justify-between rounded-md px-3 py-2 text-sm font-medium transition-colors ${
-                active ? "bg-brand-50 text-brand-700" : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+                active ? "bg-brand-600 text-white" : "text-ink-200 hover:bg-white/5 hover:text-white"
               }`}
             >
               <span className="flex items-center gap-2.5">
@@ -39,7 +36,7 @@ export function Sidebar({ isAdmin, openTaskCount }: { isAdmin: boolean; openTask
               {item.showTaskBadge && openTaskCount > 0 && (
                 <span
                   className={`rounded-full px-1.5 py-0.5 text-[10px] font-semibold leading-none ${
-                    active ? "bg-brand-600 text-white" : "bg-slate-200 text-slate-700"
+                    active ? "bg-white text-brand-700" : "bg-white/10 text-ink-100"
                   }`}
                 >
                   {openTaskCount}
@@ -54,8 +51,8 @@ export function Sidebar({ isAdmin, openTaskCount }: { isAdmin: boolean; openTask
             href={TEAM_LINK.href}
             className={`flex items-center gap-2.5 rounded-md px-3 py-2 text-sm font-medium transition-colors ${
               isActive(pathname, TEAM_LINK.href)
-                ? "bg-brand-50 text-brand-700"
-                : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+                ? "bg-brand-600 text-white"
+                : "text-ink-200 hover:bg-white/5 hover:text-white"
             }`}
           >
             <TEAM_LINK.icon className="h-4 w-4" strokeWidth={2} />
