@@ -69,34 +69,6 @@ export async function updateCompanyRevenue(leadId: string, companyId: string, va
   revalidatePath(`/leads/${leadId}`);
 }
 
-export async function updateDealValue(leadId: string, value: number | null) {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  const { error } = await supabase.from("leads").update({ deal_value: value }).eq("id", leadId);
-  if (error) throw error;
-
-  await supabase.from("activities").insert({
-    lead_id: leadId,
-    actor_id: user?.id ?? null,
-    type: "note",
-    body: value !== null ? `Deal value set to $${value.toLocaleString()}` : "Deal value cleared",
-  });
-
-  revalidatePath("/");
-  revalidatePath(`/leads/${leadId}`);
-}
-
-export async function updateExpectedCloseDate(leadId: string, date: string | null) {
-  const supabase = await createClient();
-  const { error } = await supabase.from("leads").update({ expected_close_date: date }).eq("id", leadId);
-  if (error) throw error;
-
-  revalidatePath(`/leads/${leadId}`);
-}
-
 export async function assignLead(leadId: string, assigneeId: string | null) {
   const supabase = await createClient();
 

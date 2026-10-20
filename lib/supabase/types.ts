@@ -22,12 +22,23 @@ export type ActivityType =
   | "email_sent"
   | "call_logged"
   | "sync_matched"
-  | "task_completed";
+  | "task_completed"
+  | "deal_created"
+  | "deal_stage_change";
 
 export type SourceKind = "open_data_api" | "web_scrape" | "enrichment";
 export type SyncRunStatus = "running" | "success" | "failed";
 export type UserRole = "admin" | "rep";
 export type TaskType = "todo" | "call" | "email" | "meeting";
+
+export type DealStage =
+  | "discovery_scheduled"
+  | "discovery_completed"
+  | "qualified_opportunity"
+  | "proposal_sent"
+  | "negotiation_decision"
+  | "closed_won"
+  | "closed_lost";
 
 // supabase-js's generated-types contract expects each table to declare its foreign-key
 // relationships (used for typed nested `select()` joins). None are modeled by hand here.
@@ -276,6 +287,80 @@ export type Database = {
           updated_at?: string;
         };
         Update: Partial<Database["public"]["Tables"]["tasks"]["Insert"]>;
+        Relationships: [];
+      };
+      deals: {
+        Row: {
+          id: string;
+          lead_id: string | null;
+          company_id: string;
+          primary_contact_id: string | null;
+          name: string;
+          owner: string | null;
+          pipeline: string;
+          stage: DealStage;
+          amount: number;
+          currency: string;
+          expected_close_date: string;
+          probability: number | null;
+          lead_source: string | null;
+          next_step: string | null;
+          next_step_due_date: string | null;
+          last_activity_at: string | null;
+          competitors: string | null;
+          lost_reason: string | null;
+          closed_at: string | null;
+          notes: string | null;
+          created_by: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          lead_id?: string | null;
+          company_id: string;
+          primary_contact_id?: string | null;
+          name: string;
+          owner?: string | null;
+          pipeline?: string;
+          stage?: DealStage;
+          amount: number;
+          currency?: string;
+          expected_close_date: string;
+          probability?: number | null;
+          lead_source?: string | null;
+          next_step?: string | null;
+          next_step_due_date?: string | null;
+          last_activity_at?: string | null;
+          competitors?: string | null;
+          lost_reason?: string | null;
+          closed_at?: string | null;
+          notes?: string | null;
+          created_by?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["deals"]["Insert"]>;
+        Relationships: [];
+      };
+      deal_stage_history: {
+        Row: {
+          id: string;
+          deal_id: string;
+          from_stage: DealStage | null;
+          to_stage: DealStage;
+          changed_by: string | null;
+          changed_at: string;
+        };
+        Insert: {
+          id?: string;
+          deal_id: string;
+          from_stage?: DealStage | null;
+          to_stage: DealStage;
+          changed_by?: string | null;
+          changed_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["deal_stage_history"]["Insert"]>;
         Relationships: [];
       };
       profiles: {

@@ -4,8 +4,11 @@ import { ArrowLeft, ArrowUpRight, Building2 } from "lucide-react";
 import { getCompanyDetail } from "@/lib/companies/queries";
 import { getContactsList } from "@/lib/contacts/queries";
 import { getTasksForSubject } from "@/lib/tasks/queries";
+import { getDealsForCompany } from "@/lib/deals/queries";
 import { TaskList } from "@/components/task-list";
 import { TaskForm } from "@/components/task-form";
+import { DealCard } from "@/components/deal-card";
+import { CreateDealForm } from "@/components/create-deal-form";
 import { getInitials } from "@/lib/text";
 
 export const dynamic = "force-dynamic";
@@ -15,11 +18,13 @@ export default async function CompanyDetailPage({ params }: { params: Promise<{ 
   const company = await getCompanyDetail(id);
   if (!company) notFound();
 
-  const [allContacts, tasks] = await Promise.all([
+  const [allContacts, tasks, deals] = await Promise.all([
     getContactsList(),
     getTasksForSubject({ companyId: id, leadId: company.leadId ?? undefined }),
+    getDealsForCompany(id),
   ]);
   const contacts = allContacts.filter((c) => c.companyId === id);
+  const primaryContact = contacts.find((c) => c.isPrimary) ?? contacts[0] ?? null;
 
   return (
     <main className="mx-auto max-w-3xl px-4 py-8">
@@ -55,7 +60,7 @@ export default async function CompanyDetailPage({ params }: { params: Promise<{ 
             href={`/leads/${company.leadId}`}
             className="flex shrink-0 items-center gap-1.5 rounded-md bg-brand-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-brand-700"
           >
-            View deal
+            View lead
             <ArrowUpRight className="h-3.5 w-3.5" strokeWidth={2} />
           </Link>
         )}
@@ -100,6 +105,24 @@ export default async function CompanyDetailPage({ params }: { params: Promise<{ 
                 </div>
               </div>
             </Link>
+          ))}
+        </div>
+      </section>
+
+      <section className="mt-8">
+        <div className="flex items-center justify-between">
+          <h2 className="text-sm font-semibold text-slate-700">Deals ({deals.length})</h2>
+          <CreateDealForm
+            companyId={company.id}
+            leadId={company.leadId}
+            primaryContactId={primaryContact?.id ?? null}
+            defaultName={company.name}
+          />
+        </div>
+        <div className="mt-2 space-y-2">
+          {deals.length === 0 && <p className="text-sm text-slate-400">No deals yet.</p>}
+          {deals.map((d) => (
+            <DealCard key={d.id} deal={d} />
           ))}
         </div>
       </section>

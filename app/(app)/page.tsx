@@ -1,6 +1,7 @@
 import { LeadCard } from "@/components/lead-card";
 import { StatsBar } from "@/components/stats-bar";
 import { getLeadsBoard, getPipelineStats } from "@/lib/leads/queries";
+import { getPipelineForecast } from "@/lib/deals/queries";
 import type { LeadStatus } from "@/lib/supabase/types";
 
 export const dynamic = "force-dynamic";
@@ -16,7 +17,7 @@ const COLUMNS: { status: LeadStatus; label: string; accent: string }[] = [
 ];
 
 export default async function Home() {
-  const [leads, stats] = await Promise.all([getLeadsBoard(), getPipelineStats()]);
+  const [leads, stats, forecast] = await Promise.all([getLeadsBoard(), getPipelineStats(), getPipelineForecast()]);
 
   return (
     <main className="px-4 py-6 sm:px-6">
@@ -28,7 +29,7 @@ export default async function Home() {
           </p>
         </header>
 
-        <StatsBar stats={stats} />
+        <StatsBar stats={stats} forecast={forecast} />
 
         {leads.length === 0 ? (
           <div className="rounded-xl border border-dashed border-slate-300 bg-white px-6 py-16 text-center">

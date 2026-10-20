@@ -16,10 +16,7 @@ export type PipelineStats = {
   total: number;
   newThisWeek: number;
   byStatus: Record<LeadStatus, number>;
-  openPipelineValue: number;
 };
-
-const OPEN_STATUSES: LeadStatus[] = ["new", "researching", "contacted", "qualified"];
 
 const EMPTY_STATUS_COUNTS: Record<LeadStatus, number> = {
   new: 0,
@@ -41,21 +38,19 @@ const EMPTY_STATUS_COUNTS: Record<LeadStatus, number> = {
 export async function getPipelineStats(): Promise<PipelineStats> {
   const supabase = createAdminClient();
   const rows = await fetchAllPages((from, to) =>
-    supabase.from("leads").select("status, created_at, deal_value").range(from, to)
+    supabase.from("leads").select("status, created_at").range(from, to)
   );
 
   const byStatus = { ...EMPTY_STATUS_COUNTS };
   const weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
   let newThisWeek = 0;
-  let openPipelineValue = 0;
 
   for (const row of rows) {
     byStatus[row.status]++;
     if (new Date(row.created_at).getTime() >= weekAgo) newThisWeek++;
-    if (OPEN_STATUSES.includes(row.status) && row.deal_value) openPipelineValue += row.deal_value;
   }
 
-  return { total: rows.length, newThisWeek, byStatus, openPipelineValue };
+  return { total: rows.length, newThisWeek, byStatus };
 }
 
 export type TeamMember = { id: string; email: string | null; fullName: string | null; role: UserRole };
@@ -71,7 +66,6 @@ export type BoardLead = {
   id: string;
   status: LeadStatus;
   score: number;
-  dealValue: number | null;
   companyName: string;
   community: string | null;
   industry: string | null;
@@ -84,7 +78,7 @@ export async function getLeadsBoard(): Promise<BoardLead[]> {
   const supabase = createAdminClient();
 
   const leads = await fetchAllPages((from, to) =>
-    supabase.from("leads").select("id, status, score, company_id, deal_value").range(from, to)
+    supabase.from("leads").select("id, status, score, company_id").range(from, to)
   );
   if (leads.length === 0) return [];
 
@@ -113,7 +107,6 @@ export async function getLeadsBoard(): Promise<BoardLead[]> {
       id: lead.id,
       status: lead.status,
       score: lead.score,
-      dealValue: lead.deal_value,
       companyName: company?.name ?? "Unknown company",
       community: company?.community ?? null,
       industry: company?.industry ?? null,
@@ -129,8 +122,6 @@ export type LeadDetail = {
   score: number;
   scoreReasons: ScoreReason[];
   assignedTo: string | null;
-  dealValue: number | null;
-  expectedCloseDate: string | null;
   company: {
     id: string;
     name: string;
@@ -178,8 +169,6 @@ export async function getLeadDetail(leadId: string): Promise<LeadDetail | null> 
     score: lead.score,
     scoreReasons: Array.isArray(lead.score_reasons) ? (lead.score_reasons as ScoreReason[]) : [],
     assignedTo: lead.assigned_to,
-    dealValue: lead.deal_value,
-    expectedCloseDate: lead.expected_close_date,
     company,
     contacts: contacts ?? [],
     activities: activities ?? [],

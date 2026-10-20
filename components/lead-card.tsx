@@ -30,13 +30,10 @@ export function LeadCard({ lead }: { lead: BoardLead }) {
         </p>
       )}
 
-      <div className="mt-2.5 flex items-center justify-between">
+      <div className="mt-2.5">
         <span className="text-xs text-slate-400">
           {lead.contactCount} contact{lead.contactCount === 1 ? "" : "s"}
         </span>
-        {lead.dealValue != null && (
-          <span className="text-xs font-semibold text-emerald-700">${lead.dealValue.toLocaleString()}</span>
-        )}
       </div>
 
       <div className="mt-2.5">

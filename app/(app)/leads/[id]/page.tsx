@@ -4,24 +4,28 @@ import {
   ArrowLeft,
   ArrowUpRight,
   Building2,
+  Handshake,
   Mail,
   Phone,
   PhoneCall,
   RefreshCw,
   Sparkles,
   StickyNote,
+  TrendingUp,
   CheckCircle2,
 } from "lucide-react";
 import { StatusSelect } from "@/components/status-select";
 import { AssigneeSelect } from "@/components/assignee-select";
 import { TaskList } from "@/components/task-list";
 import { TaskForm } from "@/components/task-form";
+import { DealCard } from "@/components/deal-card";
+import { CreateDealForm } from "@/components/create-deal-form";
 import { getLeadDetail, getTeamMembers } from "@/lib/leads/queries";
 import { getTasksForSubject } from "@/lib/tasks/queries";
+import { getDealsForLead } from "@/lib/deals/queries";
 import { getInitials } from "@/lib/text";
 import { NoteForm } from "./note-form";
 import { RevenueForm } from "./revenue-form";
-import { DealValueForm } from "./deal-value-form";
 
 export const dynamic = "force-dynamic";
 
@@ -32,12 +36,21 @@ const ACTIVITY_META: Record<string, { label: string; icon: typeof StickyNote }> 
   call_logged: { label: "Call", icon: PhoneCall },
   sync_matched: { label: "Data sync", icon: RefreshCw },
   task_completed: { label: "Task completed", icon: CheckCircle2 },
+  deal_created: { label: "Deal created", icon: Handshake },
+  deal_stage_change: { label: "Deal stage change", icon: TrendingUp },
 };
 
 export default async function LeadDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const [lead, members, tasks] = await Promise.all([getLeadDetail(id), getTeamMembers(), getTasksForSubject({ leadId: id })]);
+  const [lead, members, tasks, deals] = await Promise.all([
+    getLeadDetail(id),
+    getTeamMembers(),
+    getTasksForSubject({ leadId: id }),
+    getDealsForLead(id),
+  ]);
   if (!lead) notFound();
+
+  const primaryContact = lead.contacts.find((c) => c.is_primary) ?? lead.contacts[0] ?? null;
 
   return (
     <main className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
@@ -140,6 +153,26 @@ export default async function LeadDetailPage({ params }: { params: Promise<{ id:
           </section>
 
           <section>
+            <div className="flex items-center justify-between">
+              <h2 className="text-sm font-semibold text-slate-700">Deals</h2>
+              {deals.length === 0 && (
+                <CreateDealForm
+                  companyId={lead.company.id}
+                  leadId={lead.id}
+                  primaryContactId={primaryContact?.id ?? null}
+                  defaultName={lead.company.name}
+                />
+              )}
+            </div>
+            <div className="mt-2 space-y-2">
+              {deals.length === 0 && <p className="text-sm text-slate-400">No deal yet for this lead.</p>}
+              {deals.map((d) => (
+                <DealCard key={d.id} deal={d} />
+              ))}
+            </div>
+          </section>
+
+          <section>
             <h2 className="text-sm font-semibold text-slate-700">Tasks</h2>
             <div className="mt-2">
               <TaskForm leadId={lead.id} />
@@ -178,7 +211,7 @@ export default async function LeadDetailPage({ params }: { params: Promise<{ id:
 
         <aside className="space-y-4 lg:sticky lg:top-20 lg:self-start">
           <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-card">
-            <h2 className="text-xs font-semibold uppercase tracking-wide text-slate-400">Deal properties</h2>
+            <h2 className="text-xs font-semibold uppercase tracking-wide text-slate-400">Lead properties</h2>
             <div className="mt-3 space-y-3">
               <div>
                 <label className="text-xs font-medium text-slate-500">Status</label>
@@ -192,7 +225,6 @@ export default async function LeadDetailPage({ params }: { params: Promise<{ id:
                   <AssigneeSelect leadId={lead.id} assignedTo={lead.assignedTo} members={members} />
                 </div>
               </div>
-              <DealValueForm leadId={lead.id} dealValue={lead.dealValue} expectedCloseDate={lead.expectedCloseDate} />
               <RevenueForm leadId={lead.id} companyId={lead.company.id} value={lead.company.estimated_annual_revenue} />
             </div>
           </div>
