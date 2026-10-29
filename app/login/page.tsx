@@ -1,14 +1,18 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { MailCheck } from "lucide-react";
-import { sendMagicLink } from "./actions";
+import { signInWithPassword, requestPasswordReset } from "./actions";
 
 export default function LoginPage() {
+  const [mode, setMode] = useState<"signin" | "forgot">("signin");
   const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [sent, setSent] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+  const router = useRouter();
 
   return (
     <main className="flex min-h-screen items-center justify-center bg-gray-50 px-4">
@@ -18,11 +22,56 @@ export default function LoginPage() {
           <p className="mt-0.5 text-xs leading-tight text-slate-500">Sign in to access your CRM</p>
         </div>
 
-        {sent ? (
-          <div className="flex items-start gap-2.5 rounded-lg bg-emerald-50 p-3 text-sm text-emerald-800">
-            <MailCheck className="mt-0.5 h-4 w-4 shrink-0" strokeWidth={2} />
-            Check your email for a sign-in link.
-          </div>
+        {mode === "forgot" ? (
+          sent ? (
+            <div className="flex items-start gap-2.5 rounded-lg bg-emerald-50 p-3 text-sm text-emerald-800">
+              <MailCheck className="mt-0.5 h-4 w-4 shrink-0" strokeWidth={2} />
+              Check your email for a link to set your password.
+            </div>
+          ) : (
+            <form
+              className="flex flex-col gap-3"
+              onSubmit={(e) => {
+                e.preventDefault();
+                setError(null);
+                startTransition(async () => {
+                  const result = await requestPasswordReset(email);
+                  if (result?.error) setError(result.error);
+                  else setSent(true);
+                });
+              }}
+            >
+              <div>
+                <label className="text-xs font-medium text-slate-500">Email address</label>
+                <input
+                  type="email"
+                  required
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="you@company.com"
+                  className="mt-1 w-full rounded-md border border-slate-200 px-3 py-2 text-sm focus:border-brand-400 focus:outline-none focus:ring-2 focus:ring-brand-100"
+                />
+              </div>
+              <button
+                type="submit"
+                disabled={isPending}
+                className="rounded-md bg-brand-600 px-3 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-50"
+              >
+                {isPending ? "Sending..." : "Email me a reset link"}
+              </button>
+              {error && <p className="text-sm text-rose-600">{error}</p>}
+              <button
+                type="button"
+                onClick={() => {
+                  setMode("signin");
+                  setError(null);
+                }}
+                className="text-xs text-slate-500 hover:text-slate-700"
+              >
+                ← Back to sign in
+              </button>
+            </form>
+          )
         ) : (
           <form
             className="flex flex-col gap-3"
@@ -30,9 +79,9 @@ export default function LoginPage() {
               e.preventDefault();
               setError(null);
               startTransition(async () => {
-                const result = await sendMagicLink(email);
+                const result = await signInWithPassword(email, password);
                 if (result?.error) setError(result.error);
-                else setSent(true);
+                else router.push("/");
               });
             }}
           >
@@ -47,12 +96,35 @@ export default function LoginPage() {
                 className="mt-1 w-full rounded-md border border-slate-200 px-3 py-2 text-sm focus:border-brand-400 focus:outline-none focus:ring-2 focus:ring-brand-100"
               />
             </div>
+            <div>
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-medium text-slate-500">Password</label>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMode("forgot");
+                    setError(null);
+                    setSent(false);
+                  }}
+                  className="text-xs text-brand-600 hover:underline"
+                >
+                  Forgot password?
+                </button>
+              </div>
+              <input
+                type="password"
+                required
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="mt-1 w-full rounded-md border border-slate-200 px-3 py-2 text-sm focus:border-brand-400 focus:outline-none focus:ring-2 focus:ring-brand-100"
+              />
+            </div>
             <button
               type="submit"
               disabled={isPending}
               className="rounded-md bg-brand-600 px-3 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-50"
             >
-              {isPending ? "Sending..." : "Send sign-in link"}
+              {isPending ? "Signing in..." : "Sign in"}
             </button>
             {error && <p className="text-sm text-rose-600">{error}</p>}
           </form>

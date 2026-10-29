@@ -10,7 +10,7 @@ type CookieToSet = { name: string; value: string; options: CookieOptions };
 // TEMPORARY (requested 2026-10-06): "/" added so the pipeline board can be viewed
 // without logging in, for a first look at the UI before auth is wired back in for
 // real use. Remove "/" from this list to re-enable the login gate on the board.
-const PUBLIC_PATHS = ["/login", "/auth/callback", "/api/cron", "/api/health", "/"];
+const PUBLIC_PATHS = ["/login", "/auth/callback", "/auth/reset-password", "/api/cron", "/api/health", "/"];
 
 function isPublicPath(pathname: string): boolean {
   return PUBLIC_PATHS.some((path) => pathname === path || pathname.startsWith(`${path}/`));
