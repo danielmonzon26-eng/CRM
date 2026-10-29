@@ -26,12 +26,20 @@ export async function fetchAllPages<T>(
   for (;;) {
     let data: T[] | null = null;
     let error: PostgrestError | null = null;
+    let thrown: unknown;
 
     for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
-      ({ data, error } = await fetchPage(from, from + PAGE_SIZE - 1));
-      if (!error) break;
+      thrown = undefined;
+      try {
+        ({ data, error } = await fetchPage(from, from + PAGE_SIZE - 1));
+      } catch (e) {
+        thrown = e;
+        error = null;
+      }
+      if (!error && !thrown) break;
       if (attempt < MAX_ATTEMPTS) await sleep(RETRY_DELAY_MS * attempt);
     }
+    if (thrown) throw thrown;
     if (error) throw error;
     if (!data || data.length === 0) break;
 
