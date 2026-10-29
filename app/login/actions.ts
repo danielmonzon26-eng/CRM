@@ -25,13 +25,3 @@ export async function requestPasswordReset(email: string): Promise<{ error?: str
   if (error) return { error: error.message };
   return {};
 }
-
-/** Verifies the 6-digit code from the reset-password email and opens a recovery session. */
-export async function verifyResetCode(email: string, token: string): Promise<{ error?: string }> {
-  if (!email.trim() || !token.trim()) return { error: "Email and code are required" };
-
-  const supabase = await createClient();
-  const { error } = await supabase.auth.verifyOtp({ email: email.trim(), token: token.trim(), type: "recovery" });
-  if (error) return { error: error.message };
-  return {};
-}
