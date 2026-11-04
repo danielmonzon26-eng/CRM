@@ -10,6 +10,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Download,
+  Pencil,
   Search,
   SearchX,
   X,
@@ -17,6 +18,7 @@ import {
 import { bulkChangeLeadProgram, bulkUpdateLeads, exportLeadsBatch } from "@/app/actions/leads";
 import { CreateProposal } from "@/components/create-proposal";
 import { ProgramChips } from "@/components/lead-badges";
+import { LeadQuickEdit } from "@/components/lead-quick-edit";
 import { buttonClass } from "@/components/ui/button";
 import { useFeedback } from "@/components/ui/feedback";
 import { EmptyState } from "@/components/ui/page";
@@ -97,6 +99,7 @@ function LeadsTable({
   total,
   state,
   members,
+  facets,
   memberName,
   href,
 }: {
@@ -104,12 +107,14 @@ function LeadsTable({
   total: number;
   state: LeadViewState;
   members: Member[];
+  facets: LeadFacets;
   memberName: (id: string | null) => string | null;
   href: (patch: Partial<LeadViewState>) => string;
 }) {
   const router = useRouter();
   const { toast } = useFeedback();
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [editing, setEditing] = useState<LeadRow | null>(null);
   const [isPending, startTransition] = useTransition();
 
   useEffect(() => setSelected(new Set()), [rows]);
@@ -212,7 +217,7 @@ function LeadsTable({
       )}
 
       <div className="relative overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-card">
-        <table className="w-full min-w-[1180px] text-left text-sm">
+        <table className="w-full min-w-[1220px] text-left text-sm">
           <thead className="border-b border-slate-100 text-xs uppercase tracking-wide text-slate-500">
             <tr>
               <th scope="col" className="w-10 px-4 py-2.5">
@@ -284,22 +289,33 @@ function LeadsTable({
                   </span>
                 </td>
                 <td className="whitespace-nowrap px-3 py-2.5 text-xs text-slate-500">{lead.createdAt.slice(0, 10)}</td>
-                <td className={`sticky right-0 whitespace-nowrap border-l border-slate-100 px-3 py-2.5 transition-colors group-hover:bg-slate-50 ${selected.has(lead.id) ? "bg-brand-50" : "bg-white"}`}>
-                  {lead.proposalId && lead.proposalStage ? (
-                    <Link href={`/deals/${lead.proposalId}`} className="inline-flex items-center gap-1.5 text-sm font-medium text-slate-800 hover:text-brand-700 hover:underline">
-                      <span className={`h-2 w-2 rounded-full ${DEAL_STAGE_META[lead.proposalStage as DealStage].accent}`} />
-                      {DEAL_STAGE_META[lead.proposalStage as DealStage].label}
-                    </Link>
-                  ) : (
-                    <CreateProposal
-                      compact
-                      stayOnPage
-                      companyId={lead.companyId}
-                      leadId={lead.id}
-                      primaryContactId={lead.primaryContactId}
-                      defaultName={lead.companyName}
-                    />
-                  )}
+                <td className={`sticky right-0 whitespace-nowrap border-l border-slate-100 px-3 py-2 transition-colors group-hover:bg-slate-50 ${selected.has(lead.id) ? "bg-brand-50" : "bg-white"}`}>
+                  <div className="flex items-center justify-between gap-3">
+                    {lead.proposalId && lead.proposalStage ? (
+                      <Link href={`/deals/${lead.proposalId}`} className="inline-flex items-center gap-1.5 text-sm font-medium text-slate-800 hover:text-brand-700 hover:underline">
+                        <span className={`h-2 w-2 rounded-full ${DEAL_STAGE_META[lead.proposalStage as DealStage].accent}`} />
+                        {DEAL_STAGE_META[lead.proposalStage as DealStage].label}
+                      </Link>
+                    ) : (
+                      <CreateProposal
+                        compact
+                        stayOnPage
+                        companyId={lead.companyId}
+                        leadId={lead.id}
+                        primaryContactId={lead.primaryContactId}
+                        defaultName={lead.companyName}
+                      />
+                    )}
+                    <button
+                      type="button"
+                      title="Quick edit"
+                      aria-label={`Quick edit ${lead.companyName}`}
+                      onClick={() => setEditing(lead)}
+                      className="shrink-0 rounded-md p-1.5 text-slate-500 transition-colors hover:bg-slate-200 hover:text-slate-900"
+                    >
+                      <Pencil className="h-4 w-4" strokeWidth={2} />
+                    </button>
+                  </div>
                 </td>
               </tr>
             ))}
@@ -321,6 +337,17 @@ function LeadsTable({
           </Link>
         </nav>
       </div>
+
+      {editing && (
+        <LeadQuickEdit
+          key={editing.id}
+          leadId={editing.id}
+          companyName={editing.companyName}
+          members={members}
+          facets={facets}
+          onClosed={() => setEditing(null)}
+        />
+      )}
     </div>
   );
 }
@@ -521,7 +548,7 @@ export function LeadsWorkspace({
             action={chips.length > 0 ? <button type="button" onClick={() => { setSearch(""); clearAll(); }} className={buttonClass("secondary")}>Clear filters</button> : undefined}
           />
         ) : (
-          <LeadsTable rows={table.rows} total={table.total} state={state} members={members} memberName={memberName} href={href} />
+          <LeadsTable rows={table.rows} total={table.total} state={state} members={members} facets={facets} memberName={memberName} href={href} />
         )}
       </div>
     </div>

@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import type { ActivityType, LeadStatus, UserRole } from "@/lib/supabase/types";
+import type { QuickEditRecord } from "@/lib/leads/quick-edit";
 import type { ScoreReason } from "@/lib/leads/scoring";
 
 /**
@@ -16,6 +17,44 @@ export async function getTeamMembers(): Promise<TeamMember[]> {
   const { data, error } = await supabase.from("profiles").select("id, email, full_name, role").order("email");
   if (error) throw error;
   return data.map((p) => ({ id: p.id, email: p.email, fullName: p.full_name, role: p.role }));
+}
+
+/** Current values for the quick edit popup, including the primary contact the Leads table shows. */
+export async function getLeadQuickEdit(leadId: string): Promise<QuickEditRecord | null> {
+  const supabase = await createClient();
+
+  const { data: lead, error: leadError } = await supabase.from("leads").select("*").eq("id", leadId).maybeSingle();
+  if (leadError) throw leadError;
+  if (!lead) return null;
+
+  const [{ data: company, error: companyError }, { data: contacts, error: contactsError }] = await Promise.all([
+    supabase.from("companies").select("name, industry, community, website, phone").eq("id", lead.company_id).single(),
+    supabase.from("contacts").select("id, full_name, title, email, phone").eq("lead_id", leadId).order("is_primary", { ascending: false }).order("created_at"),
+  ]);
+  if (companyError) throw companyError;
+  if (contactsError) throw contactsError;
+
+  const contact = contacts[0] ?? null;
+  return {
+    leadId,
+    contactId: contact?.id ?? null,
+    otherContacts: Math.max(contacts.length - 1, 0),
+    values: {
+      status: lead.status,
+      assignedTo: lead.assigned_to ?? "",
+      clientType: lead.client_type ?? "",
+      programs: lead.programs,
+      companyName: company.name,
+      industry: company.industry ?? "",
+      community: company.community ?? "",
+      website: company.website ?? "",
+      companyPhone: company.phone ?? "",
+      contactName: contact?.full_name ?? "",
+      contactTitle: contact?.title ?? "",
+      contactEmail: contact?.email ?? "",
+      contactPhone: contact?.phone ?? "",
+    },
+  };
 }
 
 export type LeadDetail = {
