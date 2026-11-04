@@ -1,44 +1,30 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useMemo, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { AlertTriangle, CalendarPlus, Download, Link2, Pencil, Plus, Search, X } from "lucide-react";
-import { addBudgetLine, addBudgetMonth, renameBudget, setLineMonth } from "@/app/actions/budgets";
+import { CalendarPlus, Download, Pencil, Plus, Search, Trash2, Wallet, X } from "lucide-react";
+import { addBudgetLine, addBudgetQuarter, deleteEmptyBudget, renameBudget, setLineMonth } from "@/app/actions/budgets";
 import { BudgetHistory } from "@/components/budget-history";
 import { EditableMoney } from "@/components/budget-editable";
+import { BudgetLineRows, type EventOption } from "@/components/budget-line-rows";
 import { buttonClass } from "@/components/ui/button";
 import { useFeedback } from "@/components/ui/feedback";
 import { EmptyState } from "@/components/ui/page";
 import { monthLabel } from "@/lib/budgets/history";
 import { addCents, formatMoney, fromCents, sumMoney } from "@/lib/budgets/money";
+import { monthsToAddForNextQuarter, quarterLabel, quarterOf } from "@/lib/budgets/quarters";
 import type { BudgetChangeRow, BudgetOverview, LineSummary } from "@/lib/budgets/queries";
 import { downloadCsv } from "@/lib/csv";
 
 const CARD = "rounded-xl border border-slate-200 bg-white shadow-card";
-const SELECT = "rounded-lg border border-slate-200 bg-white px-2.5 py-2 text-sm text-slate-700 focus:border-brand-400 focus:outline-none focus:ring-2 focus:ring-brand-100";
+const SELECT = "rounded-lg border border-[#8493a8] bg-white px-2.5 py-2 text-sm text-slate-700";
 const SPENT_COLOR = "#0D9488";
 const COMMITTED_COLOR = "#2563EB";
 const REMAINING_COLOR = "#CBD5E1";
 
 type Status = "" | "over" | "near" | "unspent" | "unlinked";
 type PeriodRow = LineSummary & { periodPlan: number; periodCommitted: number; periodActual: number; periodRemaining: number };
-
-function quarterOf(month: string): string {
-  const [year, m] = month.split("-").map(Number);
-  return `${year}-Q${Math.ceil(m / 3)}`;
-}
-
-function quarterLabel(quarter: string): string {
-  const [year, q] = quarter.split("-");
-  return `${q} ${year}`;
-}
-
-function nextMonth(month: string): string {
-  const date = new Date(`${month}T12:00:00Z`);
-  date.setUTCMonth(date.getUTCMonth() + 1);
-  return `${date.toISOString().slice(0, 7)}-01`;
-}
 
 function Figure({ value, label, tone = "text-slate-900" }: { value: string; label: string; tone?: string }) {
   return (
@@ -102,7 +88,7 @@ function Donut({ actual, committed, remaining, percent }: { actual: number; comm
   );
 }
 
-function AddLineForm({ budget, sections, onClose }: { budget: BudgetOverview; sections: string[]; onClose: () => void }) {
+export function AddLineForm({ budget, sections, onClose, stayOnPage = false }: { budget: BudgetOverview; sections: string[]; onClose: () => void; stayOnPage?: boolean }) {
   const router = useRouter();
   const { toast } = useFeedback();
   const [kind, setKind] = useState<"general" | "event">("general");
@@ -125,7 +111,8 @@ function AddLineForm({ budget, sections, onClose }: { budget: BudgetOverview; se
             return;
           }
           toast(`Added "${name.trim()}"`);
-          router.push(`/budgets/lines/${result.id}`);
+          if (stayOnPage) onClose();
+          else router.push(`/budgets/lines/${result.id}`);
         });
       }}
     >
@@ -141,7 +128,7 @@ function AddLineForm({ budget, sections, onClose }: { budget: BudgetOverview; se
       <label className="text-xs font-medium text-slate-600">
         Type
         <select value={kind} onChange={(e) => setKind(e.target.value as typeof kind)} className={`${SELECT} mt-1 w-full`}>
-          <option value="general">General, by month</option>
+          <option value="general">General, by quarter</option>
           <option value="event">Event, by item</option>
         </select>
       </label>
@@ -164,8 +151,10 @@ function AddLineForm({ budget, sections, onClose }: { budget: BudgetOverview; se
   );
 }
 
-export function BudgetOverviewView({ budget, changes }: { budget: BudgetOverview; changes: BudgetChangeRow[] }) {
+export function BudgetOverviewView({ budget, changes, events }: { budget: BudgetOverview; changes: BudgetChangeRow[]; events: EventOption[] }) {
+  const router = useRouter();
   const { toast, confirm, promptText } = useFeedback();
+  const addRef = useRef<HTMLButtonElement>(null);
   const [period, setPeriod] = useState("all");
   const [section, setSection] = useState("");
   const [kind, setKind] = useState("");
@@ -230,7 +219,9 @@ export function BudgetOverviewView({ budget, changes }: { budget: BudgetOverview
   const visibleSections = sections.filter((s) => rows.some((r) => r.section === s));
   const hasFilters = Boolean(section || kind || status || search) || period !== "all";
   const periodName = period === "all" ? "All periods" : period.includes("Q") ? quarterLabel(period) : monthLabel(period);
-  const followingMonth = budget.months.length ? nextMonth(budget.months[budget.months.length - 1]) : null;
+  const quartersInView = new Set(periodMonths.map(quarterOf));
+  const rowMonths = budget.months.filter((m) => quartersInView.has(quarterOf(m)));
+  const following = budget.months.length ? monthsToAddForNextQuarter(budget.months[budget.months.length - 1]) : null;
 
   function clearFilters() {
     setPeriod("all");
@@ -247,17 +238,28 @@ export function BudgetOverviewView({ budget, changes }: { budget: BudgetOverview
     ]);
   }
 
-  async function addMonth() {
-    if (!followingMonth) return;
+  async function addQuarter() {
+    if (!following) return;
+    const label = quarterLabel(following.quarter);
     const yes = await confirm({
-      title: `Add ${monthLabel(followingMonth)} to this budget?`,
-      body: "Every line gets a new $0 month that you can then fill in.",
-      confirmLabel: "Add month",
+      title: `Add ${label} to this budget?`,
+      body: "Every line gets $0 for its months, which you can then fill in.",
+      confirmLabel: "Add quarter",
     });
     if (!yes) return;
     startTransition(async () => {
-      const result = await addBudgetMonth(budget.id, followingMonth);
-      toast(result.error ?? `Added ${monthLabel(followingMonth)}`, result.error ? "error" : "success");
+      const result = await addBudgetQuarter(budget.id, following.months);
+      toast(result.error ?? `Added ${label}`, result.error ? "error" : "success");
+    });
+  }
+
+  async function removeEmptyBudget() {
+    const yes = await confirm({ title: `Delete "${budget.name}"?`, body: "This budget has no lines or revenue, so nothing else is lost.", confirmLabel: "Delete budget", danger: true });
+    if (!yes) return;
+    startTransition(async () => {
+      const result = await deleteEmptyBudget(budget.id);
+      toast(result.error ?? "Budget deleted", result.error ? "error" : "success");
+      if (!result.error) router.refresh();
     });
   }
 
@@ -290,9 +292,9 @@ export function BudgetOverviewView({ budget, changes }: { budget: BudgetOverview
             {label}
           </button>
         ))}
-        <button type="button" disabled={isPending || !followingMonth} onClick={addMonth} className={`${buttonClass("ghost", "sm")} ml-1`}>
+        <button type="button" disabled={isPending || !following} onClick={addQuarter} className={`${buttonClass("ghost", "sm")} ml-1`}>
           <CalendarPlus className="h-3.5 w-3.5" strokeWidth={2} />
-          {followingMonth ? `Add ${monthLabel(followingMonth)}` : "Add month"}
+          {following ? `Add ${quarterLabel(following.quarter)}` : "Add quarter"}
         </button>
       </div>
 
@@ -336,20 +338,42 @@ export function BudgetOverviewView({ budget, changes }: { budget: BudgetOverview
             <Pencil className="h-4 w-4" strokeWidth={2} />
             Rename
           </button>
+          {budget.lines.length === 0 && (
+            <button type="button" onClick={removeEmptyBudget} disabled={isPending} className={buttonClass("secondary")}>
+              <Trash2 className="h-4 w-4" strokeWidth={2} />
+              Delete
+            </button>
+          )}
           <button type="button" onClick={exportCsv} disabled={rows.length === 0} className={buttonClass("secondary")}>
             <Download className="h-4 w-4" strokeWidth={2} />
             Export
           </button>
-          <button type="button" onClick={() => setIsAdding(true)} className={buttonClass("primary")}>
+          <button ref={addRef} type="button" onClick={() => setIsAdding(true)} className={buttonClass("primary")}>
             <Plus className="h-4 w-4" strokeWidth={2.25} />
             Add line
           </button>
         </div>
       </div>
 
-      {isAdding && <AddLineForm budget={budget} sections={sections} onClose={() => setIsAdding(false)} />}
+      {isAdding && (
+        <AddLineForm
+          budget={budget}
+          sections={sections}
+          onClose={() => {
+            setIsAdding(false);
+            addRef.current?.focus();
+          }}
+        />
+      )}
 
-      {rows.length === 0 ? (
+      {budget.lines.length === 0 ? (
+        <EmptyState
+          icon={Wallet}
+          title="This budget has no lines yet"
+          description="Add a line for each cost, such as ads or an event. You'll plan it by quarter or by item."
+          action={!isAdding ? <button type="button" onClick={() => setIsAdding(true)} className={buttonClass("primary")}>Add the first line</button> : undefined}
+        />
+      ) : rows.length === 0 ? (
         <EmptyState icon={Search} title="No budget lines match" description={`Nothing is planned or spent for these filters in ${periodName}.`} action={<button type="button" onClick={clearFilters} className={buttonClass("secondary")}>Clear filters</button>} />
       ) : (
         <>
@@ -368,7 +392,8 @@ export function BudgetOverviewView({ budget, changes }: { budget: BudgetOverview
                       <th scope="col" className="px-3 py-2.5 text-right font-medium">Budget</th>
                       <th scope="col" className="px-3 py-2.5 text-right font-medium">Committed</th>
                       <th scope="col" className="px-3 py-2.5 text-right font-medium">Actual</th>
-                      <th scope="col" className="px-5 py-2.5 text-right font-medium">Remaining</th>
+                      <th scope="col" className="px-3 py-2.5 text-right font-medium">Remaining</th>
+                      <th scope="col" className="w-20 px-3 py-2.5"><span className="sr-only">Actions</span></th>
                     </tr>
                   </thead>
                   {visibleSections.map((name) => {
@@ -376,37 +401,26 @@ export function BudgetOverviewView({ budget, changes }: { budget: BudgetOverview
                     return (
                       <tbody key={name} className="border-t border-slate-100">
                         <tr className="bg-slate-50">
-                          <th colSpan={5} scope="colgroup" className="px-5 py-2 text-xs font-semibold text-slate-600">{name}</th>
+                          <th colSpan={6} scope="rowgroup" className="px-5 py-2 text-xs font-semibold text-slate-600">{name}</th>
                         </tr>
                         {lines.map((line) => (
-                          <tr key={line.id} className="border-t border-slate-100 hover:bg-slate-50">
-                            <td className="px-5 py-2.5">
-                              <Link href={`/budgets/lines/${line.id}`} className="font-medium text-slate-900 hover:text-brand-700">{line.name}</Link>
-                              {line.kind === "event" &&
-                                (line.eventId ? (
-                                  <Link href={`/events/${line.eventId}?tab=budget`} className="flex items-center gap-1 text-xs text-brand-600 hover:underline">
-                                    <Link2 className="h-3 w-3" strokeWidth={2} />
-                                    {line.eventTitle}
-                                  </Link>
-                                ) : (
-                                  <p className="text-xs text-slate-500">Not linked to an event</p>
-                                ))}
-                            </td>
-                            <td className="px-3 py-2.5 text-right text-slate-700">{formatMoney(line.periodPlan)}</td>
-                            <td className="px-3 py-2.5 text-right text-slate-700">{formatMoney(line.periodCommitted)}</td>
-                            <td className="px-3 py-2.5 text-right text-slate-700">{formatMoney(line.periodActual)}</td>
-                            <td className={`px-5 py-2.5 text-right font-medium ${line.periodRemaining < 0 ? "text-rose-700" : "text-slate-900"}`}>
-                              {line.periodRemaining < 0 && <AlertTriangle className="mr-1 inline h-3.5 w-3.5" strokeWidth={2} aria-label="Over budget" />}
-                              {formatMoney(line.periodRemaining)}
-                            </td>
-                          </tr>
+                          <BudgetLineRows
+                            key={line.id}
+                            line={line}
+                            items={budget.itemsByLine[line.id] ?? []}
+                            months={rowMonths}
+                            events={events}
+                            filtered={period !== "all"}
+                            figures={{ plan: line.periodPlan, committed: line.periodCommitted, actual: line.periodActual, remaining: line.periodRemaining }}
+                          />
                         ))}
                         <tr className="border-t border-slate-200 text-xs font-medium text-slate-600">
                           <td className="px-5 py-2">Subtotal</td>
                           <td className="px-3 py-2 text-right">{formatMoney(sumMoney(lines.map((l) => l.periodPlan)))}</td>
                           <td className="px-3 py-2 text-right">{formatMoney(sumMoney(lines.map((l) => l.periodCommitted)))}</td>
                           <td className="px-3 py-2 text-right">{formatMoney(sumMoney(lines.map((l) => l.periodActual)))}</td>
-                          <td className="px-5 py-2 text-right">{formatMoney(sumMoney(lines.map((l) => l.periodRemaining)))}</td>
+                          <td className="px-3 py-2 text-right">{formatMoney(sumMoney(lines.map((l) => l.periodRemaining)))}</td>
+                          <td />
                         </tr>
                       </tbody>
                     );
@@ -417,7 +431,8 @@ export function BudgetOverviewView({ budget, changes }: { budget: BudgetOverview
                       <td className="px-3 py-3 text-right">{formatMoney(totals.plan)}</td>
                       <td className="px-3 py-3 text-right">{formatMoney(totals.committed)}</td>
                       <td className="px-3 py-3 text-right">{formatMoney(totals.actual)}</td>
-                      <td className="px-5 py-3 text-right">{formatMoney(totals.remaining)}</td>
+                      <td className="px-3 py-3 text-right">{formatMoney(totals.remaining)}</td>
+                      <td />
                     </tr>
                   </tfoot>
                 </table>
@@ -428,7 +443,7 @@ export function BudgetOverviewView({ budget, changes }: { budget: BudgetOverview
           <section className={CARD}>
             <div className="border-b border-slate-100 px-5 py-3.5">
               <h2 className="font-semibold text-slate-900">Monthly plan</h2>
-              <p className="text-xs text-slate-500">Click any general line&apos;s amount to change it. Totals update automatically. Event lines are planned from their items.</p>
+              <p className="text-xs text-slate-500">Click any general line&apos;s amount to change it. Totals update automatically. To edit an event line, open it in the table above and click an item.</p>
             </div>
             <div className="relative overflow-x-auto">
               <table className="w-full min-w-[720px] text-left text-sm">

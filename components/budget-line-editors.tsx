@@ -7,6 +7,7 @@ import {
   deleteBudgetItem,
   deleteBudgetLine,
   saveBudgetItem,
+  updateBudgetItem,
   setLineMonth,
   splitLineEvenly,
   updateBudgetExpense,
@@ -176,11 +177,11 @@ export function ItemsEditor({ lineId, items }: { lineId: string; items: ItemSumm
             {items.map((item) => (
               <tr key={item.id}>
                 <td className="px-3.5 py-1.5">
-                  <EditableText label={`${item.name} name`} value={item.name} className="text-slate-800" onSave={(value) => saveBudgetItem({ lineId, itemId: item.id, name: value, amount: String(item.amount) })} />
+                  <EditableText label={`${item.name} name`} value={item.name} className="text-slate-800" onSave={(value) => updateBudgetItem(item.id, lineId, { name: value })} />
                   {item.notes && <span className="block px-1.5 text-xs text-slate-500">{item.notes}</span>}
                 </td>
                 <td className="px-1.5 py-1.5 text-right">
-                  <EditableMoney label={`${item.name} budget`} value={item.amount} onSave={(value) => saveBudgetItem({ lineId, itemId: item.id, name: item.name, amount: value })} />
+                  <EditableMoney label={`${item.name} budget`} value={item.amount} onSave={(value) => updateBudgetItem(item.id, lineId, { amount: value })} />
                 </td>
                 <td className="px-3 py-1.5 text-right text-slate-700">{formatMoney(item.committed)}</td>
                 <td className="px-3 py-1.5 text-right text-slate-700">{formatMoney(item.actual)}</td>

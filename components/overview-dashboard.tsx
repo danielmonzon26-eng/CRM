@@ -13,6 +13,7 @@ import {
   Users,
   Wallet,
 } from "lucide-react";
+import { BudgetPicker } from "@/components/budget-switcher";
 import { formatMoney } from "@/lib/budgets/money";
 import type { DashboardData, DashboardEvent } from "@/lib/dashboard/queries";
 import { EVENT_TIME_ZONE, formatEventTime, STATUS_LABELS, STATUS_STYLES } from "@/lib/events/format";
@@ -213,7 +214,7 @@ export function OverviewDashboard({ data, firstName }: { data: DashboardData; fi
             tone="bg-emerald-50 text-emerald-700"
             value={data.budget ? `${data.budget.percentUsed}%` : "—"}
             label="Budget utilization"
-            detail={data.budget ? `${formatMoney(data.budget.spent)} of ${formatMoney(data.budget.approved)}` : "No budget imported yet"}
+            detail={data.budget ? `${formatMoney(data.budget.spent)} of ${formatMoney(data.budget.approved)}` : "No budget yet"}
             href="/budgets"
           />
           <Kpi
@@ -363,9 +364,14 @@ export function OverviewDashboard({ data, firstName }: { data: DashboardData; fi
               )}
             </Panel>
 
-            <Panel title="Budget alerts" href="/budgets" linkLabel="Budgets">
+            <Panel title="Budget alerts" subtitle={data.budget?.budgetName} href="/budgets" linkLabel="Budgets">
+              {data.budget && data.budget.budgets.length > 1 && (
+                <div className="border-b border-slate-100 px-5 py-2.5">
+                  <BudgetPicker budgets={data.budget.budgets} selectedId={data.budget.budgetId} className="w-full" />
+                </div>
+              )}
               {!data.budget ? (
-                <PanelEmpty icon={Wallet}>Alerts appear here once a budget is imported.</PanelEmpty>
+                <PanelEmpty icon={Wallet}>Alerts appear here once a budget is created.</PanelEmpty>
               ) : data.budget.alerts.length === 0 ? (
                 <PanelEmpty icon={Wallet}>No lines are near or over budget.</PanelEmpty>
               ) : (

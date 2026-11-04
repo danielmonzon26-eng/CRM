@@ -43,6 +43,9 @@ export type SyncRunStatus = "running" | "success" | "failed";
 export type UserRole = "admin" | "rep";
 export type TaskType = "todo" | "call" | "email" | "meeting";
 
+export type BudgetRevenueKind = "grant" | "sponsorship" | "other";
+export type BudgetRevenueStatus = "pending" | "approved" | "received" | "declined";
+
 export type DealStage =
   | "discovery_scheduled"
   | "discovery_completed"
@@ -483,6 +486,8 @@ export type Database = {
           name: string;
           period_label: string | null;
           source_file: string | null;
+          start_month: string | null;
+          end_month: string | null;
           notes: string | null;
           created_by: string | null;
           created_at: string;
@@ -493,6 +498,8 @@ export type Database = {
           name: string;
           period_label?: string | null;
           source_file?: string | null;
+          start_month?: string | null;
+          end_month?: string | null;
           notes?: string | null;
           created_by?: string | null;
         };
@@ -564,6 +571,34 @@ export type Database = {
           sort_order?: number;
         };
         Update: Partial<Database["public"]["Tables"]["budget_items"]["Insert"]>;
+        Relationships: [];
+      };
+      budget_revenue: {
+        Row: {
+          id: string;
+          budget_id: string;
+          kind: BudgetRevenueKind;
+          source: string;
+          amount: number;
+          status: BudgetRevenueStatus;
+          expected_on: string;
+          notes: string | null;
+          created_by: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          budget_id: string;
+          kind: BudgetRevenueKind;
+          source: string;
+          amount: number;
+          status?: BudgetRevenueStatus;
+          expected_on: string;
+          notes?: string | null;
+          created_by?: string | null;
+        };
+        Update: Partial<Database["public"]["Tables"]["budget_revenue"]["Insert"]>;
         Relationships: [];
       };
       budget_expenses: {
@@ -796,6 +831,10 @@ export type Database = {
       budget_add_line: {
         Args: { p_budget_id: string; p_kind: string; p_section: string; p_name: string; p_plan_month?: string | null };
         Returns: string;
+      };
+      budget_add_months: {
+        Args: { p_budget_id: string; p_months: string[] };
+        Returns: undefined;
       };
       budget_add_month: {
         Args: { p_budget_id: string; p_month: string };

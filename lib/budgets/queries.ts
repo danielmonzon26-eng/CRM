@@ -1,3 +1,4 @@
+import { cookies } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { fetchAllPages } from "@/lib/supabase/paginate";
 import { addCents, fromCents, sumMoney } from "@/lib/budgets/money";
@@ -6,6 +7,8 @@ import type { Database } from "@/lib/supabase/types";
 type ExpenseRow = Database["public"]["Tables"]["budget_expenses"]["Row"];
 
 const ALERT_AT_PERCENT = 90;
+
+export const BUDGET_COOKIE = "selected_budget";
 
 export type ItemSummary = {
   id: string;
@@ -48,6 +51,7 @@ export type BudgetOverview = {
   sourceFile: string | null;
   months: string[];
   lines: LineSummary[];
+  itemsByLine: Record<string, ItemSummary[]>;
   approved: number;
   committed: number;
   actual: number;
@@ -65,6 +69,29 @@ function totals(expenses: Pick<ExpenseRow, "status" | "amount">[]) {
     committed: sumMoney(expenses.filter((e) => e.status === "committed").map((e) => e.amount)),
     actual: sumMoney(expenses.filter((e) => e.status === "actual").map((e) => e.amount)),
   };
+}
+
+function summarizeItem(item: Database["public"]["Tables"]["budget_items"]["Row"], expenses: ExpenseRow[]): ItemSummary {
+  const { committed, actual } = totals(expenses.filter((e) => e.item_id === item.id));
+  return {
+    id: item.id,
+    name: item.name,
+    amount: item.amount,
+    notes: item.notes,
+    committed,
+    actual,
+    remaining: fromCents(addCents([item.amount]) - addCents([committed, actual])),
+  };
+}
+
+function monthsBetween(start: string, end: string): string[] {
+  const months: string[] = [];
+  const date = new Date(`${start}T12:00:00Z`);
+  while (date.toISOString().slice(0, 10) <= end) {
+    months.push(date.toISOString().slice(0, 10));
+    date.setUTCMonth(date.getUTCMonth() + 1);
+  }
+  return months;
 }
 
 function summarizeLine(
@@ -112,14 +139,30 @@ export async function getBudgetList(): Promise<{ id: string; name: string; perio
   return data.map((b) => ({ id: b.id, name: b.name, periodLabel: b.period_label }));
 }
 
-/** One budget with every total, or the newest budget when no id is given. */
+/**
+ * The budget this person last chose. Without a choice it's the newest budget with lines, so
+ * someone creating a new, empty budget doesn't change what everyone else sees.
+ */
+export async function getSelectedBudgetId(): Promise<string | null> {
+  const selected = (await cookies()).get(BUDGET_COOKIE)?.value;
+  const budgets = await getBudgetList();
+  if (budgets.some((b) => b.id === selected)) return selected ?? null;
+  if (budgets.length === 0) return null;
+
+  const supabase = await createClient();
+  const { data: lines, error } = await supabase.from("budget_lines").select("budget_id").in("budget_id", budgets.map((b) => b.id));
+  if (error) throw error;
+  const withLines = new Set(lines.map((l) => l.budget_id));
+  return (budgets.find((b) => withLines.has(b.id)) ?? budgets[0]).id;
+}
+
+/** One budget with every total, or the selected budget when no id is given. */
 export async function getBudgetOverview(budgetId?: string): Promise<BudgetOverview | null> {
   const supabase = await createClient();
-  let query = supabase.from("budgets").select("*").order("created_at", { ascending: false }).limit(1);
-  if (budgetId) query = query.eq("id", budgetId);
-  const { data: budgets, error } = await query;
+  const id = budgetId ?? (await getSelectedBudgetId());
+  if (!id) return null;
+  const { data: budget, error } = await supabase.from("budgets").select("*").eq("id", id).maybeSingle();
   if (error) throw error;
-  const budget = budgets[0];
   if (!budget) return null;
 
   const { data: lines, error: linesError } = await supabase
@@ -130,16 +173,17 @@ export async function getBudgetOverview(budgetId?: string): Promise<BudgetOvervi
   if (linesError) throw linesError;
   const lineIds = lines.map((l) => l.id);
 
-  const [{ data: allocations, error: allocationsError }, expenses, { data: events, error: eventsError }] = await Promise.all([
-    supabase.from("budget_allocations").select("*").in("line_id", lineIds),
+  const [allocations, items, expenses, { data: events, error: eventsError }] = await Promise.all([
+    fetchAllPages((from, to) => supabase.from("budget_allocations").select("*").in("line_id", lineIds).range(from, to)),
+    fetchAllPages((from, to) => supabase.from("budget_items").select("*").in("line_id", lineIds).order("sort_order").range(from, to)),
     fetchAllPages((from, to) => supabase.from("budget_expenses").select("*").in("line_id", lineIds).range(from, to)),
     supabase.from("events").select("id, title").in("id", lines.map((l) => l.event_id).filter((id): id is string => id !== null)),
   ]);
-  if (allocationsError) throw allocationsError;
   if (eventsError) throw eventsError;
 
   const titleById = new Map(events.map((e) => [e.id, e.title]));
-  const months = [...new Set(allocations.map((a) => a.month))].sort();
+  const period = budget.start_month && budget.end_month ? monthsBetween(budget.start_month, budget.end_month) : [];
+  const months = [...new Set([...period, ...allocations.map((a) => a.month)])].sort();
 
   const summaries = lines.map((line) =>
     summarizeLine(
@@ -166,6 +210,7 @@ export async function getBudgetOverview(budgetId?: string): Promise<BudgetOvervi
     sourceFile: budget.source_file,
     months,
     lines: summaries,
+    itemsByLine: Object.fromEntries(lines.map((line) => [line.id, items.filter((i) => i.line_id === line.id).map((i) => summarizeItem(i, expenses))])),
     approved,
     committed,
     actual,
@@ -176,6 +221,9 @@ export async function getBudgetOverview(budgetId?: string): Promise<BudgetOvervi
 }
 
 export type BudgetSnapshot = {
+  budgetId: string;
+  budgetName: string;
+  budgets: { id: string; name: string; periodLabel: string | null }[];
   approved: number;
   spent: number;
   percentUsed: number;
@@ -183,9 +231,12 @@ export type BudgetSnapshot = {
 };
 
 export async function getBudgetSnapshot(): Promise<BudgetSnapshot | null> {
-  const overview = await getBudgetOverview();
+  const [overview, budgets] = await Promise.all([getBudgetOverview(), getBudgetList()]);
   if (!overview) return null;
   return {
+    budgetId: overview.id,
+    budgetName: overview.name,
+    budgets,
     approved: overview.approved,
     spent: sumMoney([overview.committed, overview.actual]),
     percentUsed: overview.percentUsed,
@@ -238,18 +289,7 @@ async function loadLineDetail(line: Database["public"]["Tables"]["budget_lines"]
     budgetName: budget.name,
     budgetMonths: [...new Set(budgetAllocations.map((a) => a.month))].sort(),
     sections: [...new Set(siblings.map((l) => l.section))].sort(),
-    items: items.map((item) => {
-      const { committed, actual } = totals(expenses.filter((e) => e.item_id === item.id));
-      return {
-        id: item.id,
-        name: item.name,
-        amount: item.amount,
-        notes: item.notes,
-        committed,
-        actual,
-        remaining: fromCents(addCents([item.amount]) - addCents([committed, actual])),
-      };
-    }),
+    items: items.map((item) => summarizeItem(item, expenses)),
     expenses: expenses.map((e) => ({ ...e, itemName: e.item_id ? itemName.get(e.item_id) ?? null : null })),
   };
 }

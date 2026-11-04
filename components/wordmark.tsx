@@ -1,12 +1,11 @@
-/** Text stand-in until the white logo file is supplied. */
 export function Wordmark({ collapsed = false }: { collapsed?: boolean }) {
   if (collapsed) {
-    return <span className="text-lg font-bold italic tracking-tight text-white">C</span>;
+    return <span role="img" aria-label="Catapult" className="text-lg font-bold italic tracking-tight text-white">C</span>;
   }
   return (
     <span className="block leading-none">
-      <span className="block text-[17px] font-bold italic tracking-wide text-white">CATAPULT</span>
-      <span className="mt-1 block text-[10px] font-medium tracking-[0.22em] text-ink-200">OPERATIONS</span>
+      <img src="/catapult-logo-white.png" alt="Catapult" width={128} height={20} className="block h-5 w-32" />
+      <span className="mt-1.5 block text-[10px] font-medium tracking-[0.22em] text-ink-200">OPERATIONS</span>
     </span>
   );
 }

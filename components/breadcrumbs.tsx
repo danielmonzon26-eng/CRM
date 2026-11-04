@@ -13,6 +13,8 @@ const LABELS: Record<string, string> = {
   tasks: "Tasks",
   team: "Team",
   budgets: "Budgets",
+  items: "Line items",
+  analysis: "Cost & revenue",
   lines: "Budget line",
   reports: "Reports",
   events: "Events",

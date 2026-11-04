@@ -1,58 +1,76 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { parseBudgetWorkbook, type ParseResult } from "@/lib/budgets/parse-workbook";
+import { cookies } from "next/headers";
+import { monthLabel } from "@/lib/budgets/history";
+import { BUDGET_COOKIE } from "@/lib/budgets/queries";
 import { createClient } from "@/lib/supabase/server";
-import { calgaryDateKey } from "@/lib/events/format";
-import type { ExpenseStatus } from "@/lib/supabase/types";
+import type { BudgetRevenueKind, BudgetRevenueStatus, ExpenseStatus } from "@/lib/supabase/types";
 
 export type BudgetActionResult = { error?: string; id?: string };
 
-const MAX_WORKBOOK_BYTES = 1024 * 1024;
+const MAX_BUDGET_MONTHS = 36;
+const SELECTION_SECONDS = 60 * 60 * 24 * 365;
 
 function revalidateBudgets(lineId?: string) {
   revalidatePath("/");
-  revalidatePath("/budgets");
+  revalidatePath("/budgets", "layout");
   revalidatePath("/reports");
   revalidatePath("/events");
   revalidatePath("/events/[id]", "page");
   if (lineId) revalidatePath(`/budgets/lines/${lineId}`);
 }
 
-async function readWorkbook(formData: FormData): Promise<ParseResult> {
-  const file = formData.get("file");
-  if (!(file instanceof File) || file.size === 0) return { errors: ["Choose an Excel file first."] };
-  if (!file.name.toLowerCase().endsWith(".xlsx")) return { errors: ["Please upload an .xlsx Excel file."] };
-  if (file.size > MAX_WORKBOOK_BYTES) return { errors: ["That file is over the 1 MB limit."] };
-  return parseBudgetWorkbook(await file.arrayBuffer(), file.name);
+async function rememberBudget(budgetId: string) {
+  (await cookies()).set(BUDGET_COOKIE, budgetId, {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+    path: "/",
+    maxAge: SELECTION_SECONDS,
+  });
 }
 
-/** Reads a workbook and reports what it contains, without saving anything. */
-export async function previewBudgetWorkbook(formData: FormData): Promise<ParseResult> {
+/** Remembers which budget this person is looking at, here and on the Overview. */
+export async function selectBudget(budgetId: string): Promise<BudgetActionResult> {
+  const supabase = await createClient();
+  const { error } = await supabase.from("budgets").select("id").eq("id", budgetId).single();
+  if (error) return { error: "That budget couldn't be opened." };
+  await rememberBudget(budgetId);
+  revalidateBudgets();
+  return {};
+}
+
+export async function createBudget(input: { name: string; startMonth: string; endMonth: string }): Promise<BudgetActionResult> {
+  const name = input.name.trim();
+  const isMonth = (value: string) => /^\d{4}-\d{2}-01$/.test(value);
+  if (!name) return { error: "Name this budget." };
+  if (!isMonth(input.startMonth) || !isMonth(input.endMonth)) return { error: "Choose a start and end month." };
+  if (input.startMonth > input.endMonth) return { error: "The end month can't be before the start month." };
+
+  const [startYear, startMonth] = input.startMonth.split("-").map(Number);
+  const [endYear, endMonth] = input.endMonth.split("-").map(Number);
+  const count = (endYear - startYear) * 12 + endMonth - startMonth + 1;
+  if (count > MAX_BUDGET_MONTHS) return { error: `A budget can cover up to ${MAX_BUDGET_MONTHS} months.` };
+
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) return { errors: ["Please sign in again."] };
-  return readWorkbook(formData);
-}
-
-/** Parses the file again rather than trusting anything the browser sends back. */
-export async function importBudgetWorkbook(formData: FormData): Promise<BudgetActionResult> {
-  const { budget, errors } = await readWorkbook(formData);
-  if (!budget || errors.length > 0) return { error: errors.join(" ") || "That file couldn't be read." };
-
-  const supabase = await createClient();
-  const { data, error } = await supabase.rpc("import_budget", {
-    p_budget: { ...budget, importedOn: calgaryDateKey(new Date()) },
-  });
+  const periodLabel = `${monthLabel(input.startMonth)} – ${monthLabel(input.endMonth)} (${count} ${count === 1 ? "month" : "months"})`;
+  const { data, error } = await supabase
+    .from("budgets")
+    .insert({ name, period_label: periodLabel, start_month: input.startMonth, end_month: input.endMonth, created_by: user?.id ?? null })
+    .select("id")
+    .single();
   if (error) {
-    if (error.code === "23505") return { error: `"${budget.name}" for ${budget.periodLabel} is already imported.` };
+    if (error.code === "23505") return { error: `"${name}" already exists for these months.` };
     return { error: error.message };
   }
 
+  await rememberBudget(data.id);
   revalidateBudgets();
-  return { id: data };
+  return { id: data.id };
 }
 
 export async function linkBudgetLine(lineId: string, eventId: string | null): Promise<BudgetActionResult> {
@@ -188,6 +206,14 @@ export async function updateBudgetLine(
   return refreshAfter(error, lineId);
 }
 
+export async function renameBudgetLine(lineId: string, name: string): Promise<BudgetActionResult> {
+  const trimmed = name.trim();
+  if (!trimmed) return { error: "Name this line." };
+  const supabase = await createClient();
+  const { error } = await supabase.from("budget_lines").update({ name: trimmed }).eq("id", lineId).select("id").single();
+  return refreshAfter(error, lineId);
+}
+
 export async function addBudgetLine(input: {
   budgetId: string;
   kind: "general" | "event";
@@ -224,6 +250,114 @@ export async function addBudgetMonth(budgetId: string, month: string): Promise<B
   const supabase = await createClient();
   const { error } = await supabase.rpc("budget_add_month", { p_budget_id: budgetId, p_month: month });
   return refreshAfter(error);
+}
+
+/** Adds the months of a quarter to a budget, so it can keep growing through the year. */
+export async function addBudgetQuarter(budgetId: string, months: string[]): Promise<BudgetActionResult> {
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("budget_add_months", { p_budget_id: budgetId, p_months: months });
+  if (error?.code === "23505") return { error: "Another budget with this name already covers those months. Rename this one first." };
+  return refreshAfter(error);
+}
+
+/** Only an empty budget can be deleted, so nothing that was planned or tracked can vanish. */
+export async function deleteEmptyBudget(budgetId: string): Promise<BudgetActionResult> {
+  const supabase = await createClient();
+  const [{ count: lines, error: linesError }, { count: revenue, error: revenueError }] = await Promise.all([
+    supabase.from("budget_lines").select("id", { count: "exact", head: true }).eq("budget_id", budgetId),
+    supabase.from("budget_revenue").select("id", { count: "exact", head: true }).eq("budget_id", budgetId),
+  ]);
+  if (linesError || revenueError) return { error: (linesError ?? revenueError)?.message };
+  if (lines || revenue) return { error: "Only a budget with no lines or revenue can be deleted." };
+
+  const { error } = await supabase.from("budgets").delete().eq("id", budgetId).select("id").single();
+  if (error) return { error: error.message };
+  (await cookies()).delete(BUDGET_COOKIE);
+  revalidateBudgets();
+  return {};
+}
+
+const REVENUE_KINDS: BudgetRevenueKind[] = ["grant", "sponsorship", "other"];
+const REVENUE_STATUSES: BudgetRevenueStatus[] = ["pending", "approved", "received", "declined"];
+
+export async function addBudgetRevenue(input: {
+  budgetId: string;
+  kind: BudgetRevenueKind;
+  source: string;
+  amount: string;
+  status: BudgetRevenueStatus;
+  expectedOn: string;
+}): Promise<BudgetActionResult> {
+  const source = input.source.trim();
+  const amount = parseAmount(input.amount);
+  if (!source) return { error: "Name the source, such as the grant or sponsor." };
+  if (amount === null) return { error: AMOUNT_ERROR };
+  if (!REVENUE_KINDS.includes(input.kind) || !REVENUE_STATUSES.includes(input.status)) return { error: "Choose a type and status." };
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(input.expectedOn)) return { error: "Choose a date." };
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  const { error } = await supabase.from("budget_revenue").insert({
+    budget_id: input.budgetId,
+    kind: input.kind,
+    source,
+    amount,
+    status: input.status,
+    expected_on: input.expectedOn,
+    created_by: user?.id ?? null,
+  });
+  return refreshAfter(error);
+}
+
+export async function updateBudgetRevenue(
+  revenueId: string,
+  change: { source?: string; amount?: string; status?: BudgetRevenueStatus; expectedOn?: string }
+): Promise<BudgetActionResult> {
+  const source = change.source?.trim();
+  const amount = change.amount === undefined ? undefined : parseAmount(change.amount);
+  if (source === "") return { error: "Name the source, such as the grant or sponsor." };
+  if (amount === null) return { error: AMOUNT_ERROR };
+  if (change.status && !REVENUE_STATUSES.includes(change.status)) return { error: "Choose a status." };
+  if (change.expectedOn !== undefined && !/^\d{4}-\d{2}-\d{2}$/.test(change.expectedOn)) return { error: "Choose a date." };
+
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("budget_revenue")
+    .update({
+      ...(source ? { source } : {}),
+      ...(amount !== undefined ? { amount } : {}),
+      ...(change.status ? { status: change.status } : {}),
+      ...(change.expectedOn ? { expected_on: change.expectedOn } : {}),
+    })
+    .eq("id", revenueId)
+    .select("id")
+    .single();
+  return refreshAfter(error);
+}
+
+export async function deleteBudgetRevenue(revenueId: string): Promise<BudgetActionResult> {
+  const supabase = await createClient();
+  const { error } = await supabase.from("budget_revenue").delete().eq("id", revenueId).select("id").single();
+  return refreshAfter(error);
+}
+
+/** Changes only what was edited, so two quick edits to an item can't undo each other. */
+export async function updateBudgetItem(itemId: string, lineId: string, change: { name?: string; amount?: string }): Promise<BudgetActionResult> {
+  const name = change.name?.trim();
+  const amount = change.amount === undefined ? undefined : parseAmount(change.amount);
+  if (name === "") return { error: "Name this item." };
+  if (amount === null) return { error: AMOUNT_ERROR };
+
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("budget_items")
+    .update({ ...(name ? { name } : {}), ...(amount !== undefined ? { amount } : {}) })
+    .eq("id", itemId)
+    .select("id")
+    .single();
+  return refreshAfter(error, lineId);
 }
 
 export async function saveBudgetItem(input: {

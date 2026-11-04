@@ -1,14 +1,14 @@
-import { BudgetImport } from "@/components/budget-import";
+import { Wallet } from "lucide-react";
 import { BudgetOverviewView } from "@/components/budget-overview";
-import { Page, PageHeader } from "@/components/ui/page";
-import { getBudgetChanges, getBudgetList, getBudgetOverview } from "@/lib/budgets/queries";
-import Link from "next/link";
+import { BudgetPicker, NewBudget } from "@/components/budget-switcher";
+import { BudgetTabs } from "@/components/budget-tabs";
+import { EmptyState, Page, PageHeader } from "@/components/ui/page";
+import { getBudgetChanges, getBudgetList, getBudgetOverview, getEventOptions } from "@/lib/budgets/queries";
 
 export const dynamic = "force-dynamic";
 
-export default async function BudgetsPage({ searchParams }: { searchParams: Promise<{ budget?: string }> }) {
-  const { budget: budgetId } = await searchParams;
-  const [budgets, overview] = await Promise.all([getBudgetList(), getBudgetOverview(budgetId)]);
+export default async function BudgetsPage() {
+  const [budgets, overview, events] = await Promise.all([getBudgetList(), getBudgetOverview(), getEventOptions()]);
   const changes = overview ? await getBudgetChanges({ budgetId: overview.id }) : [];
 
   return (
@@ -16,33 +16,20 @@ export default async function BudgetsPage({ searchParams }: { searchParams: Prom
       <PageHeader
         title={overview?.name ?? "Budgets"}
         subtitle={overview ? `${overview.periodLabel ?? ""}${overview.sourceFile ? ` · Imported from ${overview.sourceFile}` : ""}` : "Track planned versus actual spending."}
+        actions={
+          <>
+            {overview && <BudgetPicker budgets={budgets} selectedId={overview.id} />}
+            {overview && <NewBudget />}
+          </>
+        }
       />
-      {budgets.length > 1 && (
-        <nav aria-label="Budgets" className="mb-4 flex flex-wrap gap-2 text-sm">
-          {budgets.map((b) => (
-            <Link
-              key={b.id}
-              href={`/budgets?budget=${b.id}`}
-              aria-current={b.id === overview?.id ? "page" : undefined}
-              className={`rounded-full border px-3 py-1 ${b.id === overview?.id ? "border-brand-600 bg-brand-50 text-brand-700" : "border-slate-200 bg-white text-slate-600 hover:text-slate-900"}`}
-            >
-              {b.name} · {b.periodLabel}
-            </Link>
-          ))}
-        </nav>
-      )}
       {overview ? (
-        <div className="space-y-5">
-          <BudgetOverviewView budget={overview} changes={changes} />
-          <details className="rounded-xl border border-slate-200 bg-white shadow-card">
-            <summary className="cursor-pointer px-5 py-3.5 text-sm font-medium text-slate-700">Import a different budget from Excel</summary>
-            <div className="border-t border-slate-100 p-1">
-              <BudgetImport />
-            </div>
-          </details>
-        </div>
+        <>
+          <BudgetTabs />
+          <BudgetOverviewView key={overview.id} budget={overview} changes={changes} events={events} />
+        </>
       ) : (
-        <BudgetImport />
+        <EmptyState icon={Wallet} title="No budgets yet" description="Create a budget, choose its quarters, and add its line items." action={<NewBudget />} />
       )}
     </Page>
   );

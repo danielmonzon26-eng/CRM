@@ -10,6 +10,7 @@ type SaveResult = { error?: string };
 function EditableField({
   label,
   display,
+  valueText,
   initial,
   inputProps,
   onSave,
@@ -19,6 +20,7 @@ function EditableField({
 }: {
   label: string;
   display: React.ReactNode;
+  valueText: string;
   initial: string;
   inputProps?: React.InputHTMLAttributes<HTMLInputElement>;
   onSave: (value: string) => Promise<SaveResult>;
@@ -32,10 +34,19 @@ function EditableField({
   const [pendingDisplay, setPendingDisplay] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const inputRef = useRef<HTMLInputElement>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
   const cancelled = useRef(false);
+  const returnFocus = useRef(false);
 
   useEffect(() => {
-    if (editing) inputRef.current?.select();
+    if (editing) {
+      inputRef.current?.focus();
+      inputRef.current?.select();
+    } else if (returnFocus.current) {
+      // Enter and Esc stay on this value, while Tab or a click moves on.
+      returnFocus.current = false;
+      buttonRef.current?.focus();
+    }
   }, [editing]);
 
   // Once fresh data arrives from the server, it replaces the value shown while saving.
@@ -57,6 +68,8 @@ function EditableField({
         setPendingDisplay(null);
         setDraft(initial);
         toast(`${label}: ${result.error}`, "error");
+      } else {
+        toast(`${label} saved`);
       }
     });
   }
@@ -70,8 +83,14 @@ function EditableField({
         onChange={(e) => setDraft(e.target.value)}
         onBlur={commit}
         onKeyDown={(e) => {
-          if (e.key === "Enter") e.currentTarget.blur();
+          if (e.key === "Enter") {
+            returnFocus.current = true;
+            e.currentTarget.blur();
+          }
           if (e.key === "Escape") {
+            // Stops Esc from also closing a popup this field sits in.
+            e.stopPropagation();
+            returnFocus.current = true;
             cancelled.current = true;
             setDraft(initial);
             e.currentTarget.blur();
@@ -85,8 +104,9 @@ function EditableField({
 
   return (
     <button
+      ref={buttonRef}
       type="button"
-      aria-label={`Edit ${label}`}
+      aria-label={`Edit ${label}, ${pendingDisplay !== null && align !== "right" ? pendingDisplay : valueText}`}
       title="Click to edit"
       onClick={() => {
         setDraft(initial);
@@ -106,6 +126,7 @@ export function EditableMoney({ label, value, onSave }: { label: string; value: 
       align="right"
       className="tabular-nums text-slate-700"
       display={formatMoney(value)}
+      valueText={formatMoney(value)}
       initial={String(value)}
       inputProps={{ inputMode: "decimal" }}
       isSame={(next) => Number(next) === value}
@@ -120,6 +141,7 @@ export function EditableText({ label, value, onSave, className }: { label: strin
       label={label}
       className={className}
       display={value}
+      valueText={value}
       initial={value}
       isSame={(next) => next.trim() === value}
       onSave={onSave}

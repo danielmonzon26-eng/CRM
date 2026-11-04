@@ -150,7 +150,7 @@ export function FeedbackProvider({ children }: { children: React.ReactNode }) {
             >
               <Icon className={`mt-0.5 h-4 w-4 shrink-0 ${toast.tone === "error" ? "text-rose-700" : "text-emerald-600"}`} strokeWidth={2} />
               <p className="min-w-0 flex-1">{toast.text}</p>
-              <button type="button" aria-label="Dismiss" onClick={() => dismiss(toast.id)} className="shrink-0 rounded p-0.5 text-slate-400 hover:text-slate-700">
+              <button type="button" aria-label="Dismiss" onClick={() => dismiss(toast.id)} className="shrink-0 rounded p-1 text-slate-500 hover:text-slate-700">
                 <X className="h-4 w-4" strokeWidth={2} />
               </button>
             </div>

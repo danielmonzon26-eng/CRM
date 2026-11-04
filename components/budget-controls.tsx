@@ -88,7 +88,7 @@ export function EventLinePicker({ eventId, lines }: { eventId: string; lines: { 
   );
 }
 
-export function ExpenseForm({ lineId, items }: { lineId: string; items: { id: string; name: string }[] }) {
+export function ExpenseForm({ lineId, items, onAdded }: { lineId: string; items: { id: string; name: string }[]; onAdded?: () => void }) {
   const today = calgaryDateKey(new Date());
   const [status, setStatus] = useState<ExpenseStatus>("actual");
   const [itemId, setItemId] = useState("");
@@ -115,6 +115,7 @@ export function ExpenseForm({ lineId, items }: { lineId: string; items: { id: st
             setAmount("");
             setVendor("");
             setDescription("");
+            onAdded?.();
           }
         });
       }}
