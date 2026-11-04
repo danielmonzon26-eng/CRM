@@ -523,8 +523,8 @@ function ResultsPanel({ report }: { report: EventReportRow }) {
         ["Tickets (estimated)", formatMoney(report.revenue.ticketsEstimated)],
         ["Sponsors and other", formatMoney(report.revenue.other)],
         ["Total revenue", formatMoney(report.revenue.total)],
-        ["Open deals after registering", formatMoney(report.revenue.openPipeline)],
-        ["Deals won after registering", formatMoney(report.revenue.closedWon)],
+        ["Open proposals after registering", formatMoney(report.revenue.openPipeline)],
+        ["Proposals won after registering", formatMoney(report.revenue.closedWon)],
       ],
     },
     {

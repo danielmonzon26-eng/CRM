@@ -21,7 +21,7 @@ import { AssigneeSelect } from "@/components/assignee-select";
 import { TaskList } from "@/components/task-list";
 import { TaskForm } from "@/components/task-form";
 import { DealCard } from "@/components/deal-card";
-import { CreateDealForm } from "@/components/create-deal-form";
+import { CreateProposal } from "@/components/create-proposal";
 import { EventRegistrationsSection } from "@/components/event-registrations-section";
 import { getLeadDetail, getTeamMembers } from "@/lib/leads/queries";
 import { getTasksForSubject } from "@/lib/tasks/queries";
@@ -60,9 +60,9 @@ export default async function LeadDetailPage({ params }: { params: Promise<{ id:
 
   return (
     <main className="mx-auto max-w-[1600px] px-4 py-6 sm:px-6 lg:px-8">
-      <Link href="/crm" className="inline-flex items-center gap-1 text-sm text-slate-500 hover:text-slate-900">
+      <Link href="/leads" className="inline-flex items-center gap-1 text-sm text-slate-500 hover:text-slate-900">
         <ArrowLeft className="h-3.5 w-3.5" strokeWidth={2} />
-        Back to board
+        Back to leads
       </Link>
 
       <div className="mt-4 flex flex-wrap items-start justify-between gap-4">
@@ -160,9 +160,9 @@ export default async function LeadDetailPage({ params }: { params: Promise<{ id:
 
           <section>
             <div className="flex items-center justify-between">
-              <h2 className="text-sm font-semibold text-slate-700">Deals</h2>
+              <h2 className="text-sm font-semibold text-slate-700">Proposals</h2>
               {deals.length === 0 && (
-                <CreateDealForm
+                <CreateProposal
                   companyId={lead.company.id}
                   leadId={lead.id}
                   primaryContactId={primaryContact?.id ?? null}
@@ -171,7 +171,7 @@ export default async function LeadDetailPage({ params }: { params: Promise<{ id:
               )}
             </div>
             <div className="mt-2 space-y-2">
-              {deals.length === 0 && <p className="text-sm text-slate-400">No deal yet for this lead.</p>}
+              {deals.length === 0 && <p className="text-sm text-slate-400">No proposal yet for this lead.</p>}
               {deals.map((d) => (
                 <DealCard key={d.id} deal={d} />
               ))}

@@ -742,6 +742,7 @@ export type Database = {
           p_event_id?: string | null;
           p_client_type?: string | null;
           p_program?: string | null;
+          p_proposal?: string | null;
           p_sort?: string;
           p_descending?: boolean;
           p_limit?: number;
@@ -762,7 +763,10 @@ export type Database = {
           primary_name: string | null;
           primary_title: string | null;
           primary_email: string | null;
+          primary_contact_id: string | null;
           contact_count: number;
+          proposal_id: string | null;
+          proposal_stage: string | null;
           total_count: number;
         }[];
       };
@@ -777,6 +781,7 @@ export type Database = {
           p_event_id?: string | null;
           p_client_type?: string | null;
           p_program?: string | null;
+          p_proposal?: string | null;
         };
         Returns: { status: string; lead_count: number; open_value: number }[];
       };

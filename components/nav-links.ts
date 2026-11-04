@@ -7,7 +7,6 @@ import {
   CheckSquare2,
   Handshake,
   Home,
-  LayoutGrid,
   ListChecks,
   ShieldCheck,
   Ticket,
@@ -27,11 +26,10 @@ export const EVENT_TABS: NavLink[] = [
 export const CRM_TAB: NavLink = { href: "/crm", label: "CRM", icon: Briefcase };
 
 export const CRM_LINKS: NavLink[] = [
-  { href: "/crm", label: "Dashboard", icon: LayoutGrid },
+  { href: "/crm", label: "Proposals", icon: Handshake },
   { href: "/leads", label: "Leads", icon: ListChecks },
   { href: "/companies", label: "Companies", icon: Building2 },
   { href: "/contacts", label: "Contacts", icon: Users },
-  { href: "/deals", label: "Deals", icon: Handshake },
 ];
 
 export const WORK_TABS: NavLink[] = [
@@ -43,6 +41,7 @@ export const WORK_TABS: NavLink[] = [
 export const TEAM_LINK: NavLink = { href: "/team", label: "Team", icon: ShieldCheck };
 
 export function isActive(pathname: string, href: string): boolean {
+  if (href === "/crm" && (pathname === "/deals" || pathname.startsWith("/deals/"))) return true;
   return href === "/" ? pathname === "/" : pathname === href || pathname.startsWith(`${href}/`);
 }
 

@@ -116,7 +116,7 @@ export function EventReportTable({ rows }: { rows: EventReportRow[] }) {
             ["Total revenue", formatMoney(sum((r) => r.revenue.total))],
             ["Tickets (estimated)", formatMoney(sum((r) => r.revenue.ticketsEstimated))],
             ["Sponsors and other", formatMoney(sum((r) => r.revenue.other))],
-            ["Deals won after registering", formatMoney(sum((r) => r.revenue.closedWon))],
+            ["Proposals won after registering", formatMoney(sum((r) => r.revenue.closedWon))],
           ]}
         />
         <Summary
@@ -147,7 +147,7 @@ export function EventReportTable({ rows }: { rows: EventReportRow[] }) {
               <th scope="col" className={TH}>Attended</th>
               <th scope="col" className={TH}>New contacts</th>
               <th scope="col" className={`border-l border-slate-100 ${TH}`}>Revenue</th>
-              <th scope="col" className={TH}>Deals won</th>
+              <th scope="col" className={TH}>Proposals won</th>
               <th scope="col" className={`border-l border-slate-100 ${TH}`}>Budget</th>
               <th scope="col" className={TH}>Actual</th>
               <th scope="col" className={TH}>Per attendee</th>
@@ -182,7 +182,7 @@ export function EventReportTable({ rows }: { rows: EventReportRow[] }) {
       </div>
 
       <p className="text-xs text-slate-500">
-        Ticket revenue is registered seats times the ticket price, an estimate until payments are connected. Deals won counts deals on a registrant&apos;s lead created after they registered, which shows influence, not proof the event caused the sale.
+        Ticket revenue is registered seats times the ticket price, an estimate until payments are connected. Proposals won counts proposals on a registrant&apos;s lead created after they registered, which shows influence, not proof the event caused the sale.
       </p>
     </div>
   );

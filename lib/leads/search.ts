@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import { ALL_STATUSES, BOARD_PAGE_SIZE, BOARD_STATUSES, TABLE_PAGE_SIZE, type LeadFilters, type LeadSort, type LeadViewState } from "@/lib/leads/filters";
+import { ALL_STATUSES, TABLE_PAGE_SIZE, type LeadFilters, type LeadSort, type LeadViewState } from "@/lib/leads/filters";
 import type { LeadStatus } from "@/lib/supabase/types";
 
 export type LeadRow = {
@@ -17,11 +17,13 @@ export type LeadRow = {
   primaryName: string | null;
   primaryTitle: string | null;
   primaryEmail: string | null;
+  primaryContactId: string | null;
   contactCount: number;
+  proposalId: string | null;
+  proposalStage: string | null;
 };
 
 export type StageSummary = { status: LeadStatus; count: number; openValue: number };
-export type BoardColumn = StageSummary & { leads: LeadRow[] };
 export type LeadFacets = { industries: string[]; communities: string[] };
 
 function filterArgs(filters: LeadFilters) {
@@ -35,6 +37,7 @@ function filterArgs(filters: LeadFilters) {
     p_event_id: filters.event || null,
     p_client_type: filters.clientType || null,
     p_program: filters.program || null,
+    p_proposal: filters.proposal || null,
   };
 }
 
@@ -70,7 +73,10 @@ export async function searchLeads(
       primaryName: r.primary_name,
       primaryTitle: r.primary_title,
       primaryEmail: r.primary_email,
+      primaryContactId: r.primary_contact_id,
       contactCount: r.contact_count,
+      proposalId: r.proposal_id,
+      proposalStage: r.proposal_stage,
     })),
   };
 }
@@ -92,21 +98,6 @@ export async function getLeadFacets(): Promise<LeadFacets> {
   const { data, error } = await supabase.rpc("crm_lead_facets");
   if (error) throw error;
   return data;
-}
-
-export async function getLeadBoard(state: LeadViewState): Promise<BoardColumn[]> {
-  const summaries = await getStageSummaries(state);
-  const statuses = state.status
-    ? [state.status as LeadStatus]
-    : state.unqualified
-      ? [...BOARD_STATUSES, "unqualified" as const]
-      : BOARD_STATUSES;
-  return Promise.all(
-    statuses.map(async (status) => {
-      const { rows } = await searchLeads(state, { statuses: [status], sort: state.sort, desc: state.desc, limit: BOARD_PAGE_SIZE, offset: 0 });
-      return { ...summaries.find((s) => s.status === status)!, leads: rows };
-    })
-  );
 }
 
 export async function getLeadTablePage(state: LeadViewState) {

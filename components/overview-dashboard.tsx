@@ -28,8 +28,8 @@ const ACTIVITY_LABELS: Partial<Record<string, string>> = {
   email_sent: "Email sent",
   call_logged: "Call logged",
   task_completed: "Task completed",
-  deal_created: "Deal created",
-  deal_stage_change: "Deal stage changed",
+  deal_created: "Proposal created",
+  deal_stage_change: "Proposal stage changed",
   event_registration: "Event registration",
 };
 
@@ -204,9 +204,9 @@ export function OverviewDashboard({ data, firstName }: { data: DashboardData; fi
             icon={Handshake}
             tone="bg-accent-50 text-accent-700"
             value={kpis.openDeals.toLocaleString()}
-            label="Active opportunities"
+            label="Open proposals"
             detail={`${money(kpis.openDealValue)} open`}
-            href="/deals"
+            href="/crm"
           />
           <Kpi
             icon={Wallet}

@@ -44,7 +44,7 @@ export default async function CompaniesPage({
               <th className="px-4 py-2.5 font-medium">Industry</th>
               <th className="px-4 py-2.5 font-medium">Est. revenue</th>
               <th className="px-4 py-2.5 font-medium">Contacts</th>
-              <th className="px-4 py-2.5 font-medium">Deal status</th>
+              <th className="px-4 py-2.5 font-medium">Proposal status</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">

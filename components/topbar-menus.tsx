@@ -41,7 +41,7 @@ export function QuickCreateMenu() {
         <div role="menu" className={MENU}>
           <Link role="menuitem" href="/events/new" onClick={close} className={MENU_ITEM}>New event</Link>
           <Link role="menuitem" href="/tasks" onClick={close} className={MENU_ITEM}>New task</Link>
-          <Link role="menuitem" href="/deals" onClick={close} className={MENU_ITEM}>Deals</Link>
+          <Link role="menuitem" href="/leads" onClick={close} className={MENU_ITEM}>New proposal</Link>
         </div>
       )}
     </div>

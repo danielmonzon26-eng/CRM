@@ -10,15 +10,6 @@ import type { LeadStatus } from "@/lib/supabase/types";
 const MAX_EXPORT_ROWS = 500;
 const MAX_BULK_LEADS = 200;
 
-/** The next batch for one board column. */
-export async function loadLeadsPage(
-  filters: LeadFilters,
-  options: { status: LeadStatus; sort: LeadSort; desc: boolean; offset: number; limit: number }
-): Promise<LeadRow[]> {
-  const { rows } = await searchLeads(filters, { statuses: [options.status], sort: options.sort, desc: options.desc, limit: options.limit, offset: options.offset });
-  return rows;
-}
-
 /** Every lead matching the filters, one batch at a time, for a CSV export. */
 export async function exportLeadsBatch(
   filters: LeadFilters,

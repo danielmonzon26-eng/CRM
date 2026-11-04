@@ -3,10 +3,11 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import type { DealStage } from "@/lib/supabase/types";
-import { DEAL_STAGE_META } from "@/lib/deals/stages";
+import { DEAL_STAGE_META, OPEN_DEAL_STAGES } from "@/lib/deals/stages";
 
 function revalidateDealPaths(dealId: string, leadId: string | null, companyId: string) {
-  revalidatePath("/deals");
+  revalidatePath("/crm");
+  revalidatePath("/leads");
   revalidatePath(`/deals/${dealId}`);
   revalidatePath(`/companies/${companyId}`);
   if (leadId) revalidatePath(`/leads/${leadId}`);
@@ -19,7 +20,13 @@ export async function createDeal(input: {
   primaryContactId: string | null;
   amount: number;
   expectedCloseDate: string;
+  stage?: DealStage;
 }) {
+  const stage = input.stage ?? OPEN_DEAL_STAGES[0];
+  if (!OPEN_DEAL_STAGES.includes(stage)) throw new Error("A new proposal has to start in an open stage.");
+  if (!Number.isFinite(input.amount) || input.amount < 0) throw new Error("Enter a valid amount.");
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(input.expectedCloseDate)) throw new Error("Enter a valid close date.");
+
   const supabase = await createClient();
   const {
     data: { user },
@@ -29,6 +36,7 @@ export async function createDeal(input: {
     .from("deals")
     .insert({
       name: input.name,
+      stage,
       company_id: input.companyId,
       lead_id: input.leadId,
       primary_contact_id: input.primaryContactId,
@@ -44,7 +52,7 @@ export async function createDeal(input: {
   await supabase.from("deal_stage_history").insert({
     deal_id: deal.id,
     from_stage: null,
-    to_stage: "discovery_scheduled",
+    to_stage: stage,
     changed_by: user?.id ?? null,
   });
 
@@ -53,7 +61,7 @@ export async function createDeal(input: {
       lead_id: input.leadId,
       actor_id: user?.id ?? null,
       type: "deal_created",
-      body: `Deal "${input.name}" created ($${input.amount.toLocaleString()})`,
+      body: `Proposal "${input.name}" created ($${input.amount.toLocaleString()})`,
     });
   }
 
@@ -75,7 +83,7 @@ export async function updateDealStage(dealId: string, newStage: DealStage, lostR
   if (fetchError) throw fetchError;
 
   if (newStage === "closed_lost" && !lostReason?.trim()) {
-    throw new Error("A lost reason is required when closing a deal as lost.");
+    throw new Error("A lost reason is required when closing a proposal as lost.");
   }
 
   const update: { stage: DealStage; lost_reason: string | null; closed_at?: string } = {
@@ -101,7 +109,7 @@ export async function updateDealStage(dealId: string, newStage: DealStage, lostR
       lead_id: deal.lead_id,
       actor_id: user?.id ?? null,
       type: "deal_stage_change",
-      body: `Deal "${deal.name}" moved to ${DEAL_STAGE_META[newStage].label}`,
+      body: `Proposal "${deal.name}" moved to ${DEAL_STAGE_META[newStage].label}`,
     });
   }
 

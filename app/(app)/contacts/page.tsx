@@ -40,7 +40,7 @@ export default async function ContactsPage({ searchParams }: { searchParams: Pro
               <th className="px-4 py-2.5 font-medium">Company</th>
               <th className="px-4 py-2.5 font-medium">Email</th>
               <th className="px-4 py-2.5 font-medium">Phone</th>
-              <th className="px-4 py-2.5 font-medium">Deal status</th>
+              <th className="px-4 py-2.5 font-medium">Proposal status</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">

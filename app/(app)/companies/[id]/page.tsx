@@ -8,7 +8,7 @@ import { getDealsForCompany } from "@/lib/deals/queries";
 import { TaskList } from "@/components/task-list";
 import { TaskForm } from "@/components/task-form";
 import { DealCard } from "@/components/deal-card";
-import { CreateDealForm } from "@/components/create-deal-form";
+import { CreateProposal } from "@/components/create-proposal";
 import { EventRegistrationsSection } from "@/components/event-registrations-section";
 import { getEventRegistrationsForLead } from "@/lib/events/queries";
 import { getInitials } from "@/lib/text";
@@ -114,8 +114,8 @@ export default async function CompanyDetailPage({ params }: { params: Promise<{ 
 
       <section className="mt-8">
         <div className="flex items-center justify-between">
-          <h2 className="text-sm font-semibold text-slate-700">Deals ({deals.length})</h2>
-          <CreateDealForm
+          <h2 className="text-sm font-semibold text-slate-700">Proposals ({deals.length})</h2>
+          <CreateProposal
             companyId={company.id}
             leadId={company.leadId}
             primaryContactId={primaryContact?.id ?? null}
@@ -123,7 +123,7 @@ export default async function CompanyDetailPage({ params }: { params: Promise<{ 
           />
         </div>
         <div className="mt-2 space-y-2">
-          {deals.length === 0 && <p className="text-sm text-slate-400">No deals yet.</p>}
+          {deals.length === 0 && <p className="text-sm text-slate-400">No proposals yet.</p>}
           {deals.map((d) => (
             <DealCard key={d.id} deal={d} />
           ))}

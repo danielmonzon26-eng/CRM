@@ -1,41 +1,31 @@
-import { LeadsWorkspace } from "@/components/leads-workspace";
+import { ProposalsBoard, type ProposalBoardFilters } from "@/components/proposals-board";
 import { StatsBar } from "@/components/stats-bar";
 import { Page, PageHeader } from "@/components/ui/page";
-import { getPipelineForecast } from "@/lib/deals/queries";
-import { getEvents } from "@/lib/events/queries";
-import { parseLeadView } from "@/lib/leads/filters";
-import { getPipelineStats, getTeamMembers } from "@/lib/leads/queries";
-import { getLeadBoard, getLeadFacets, getLeadTablePage, getStageSummaries } from "@/lib/leads/search";
+import { getPipelineForecast, getProposalBoard } from "@/lib/deals/queries";
+import { EVENT_TIME_ZONE } from "@/lib/events/format";
+import { getTeamMembers } from "@/lib/leads/queries";
 
 export const dynamic = "force-dynamic";
 
-export default async function CrmDashboardPage({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
-  const state = parseLeadView(await searchParams, "board");
-  const [stats, forecast, facets, members, events, board, table, stages] = await Promise.all([
-    getPipelineStats(),
-    getPipelineForecast(),
-    getLeadFacets(),
-    getTeamMembers(),
-    getEvents(),
-    state.view === "board" ? getLeadBoard(state) : Promise.resolve(null),
-    state.view === "table" ? getLeadTablePage(state) : Promise.resolve(null),
-    getStageSummaries(state),
-  ]);
+export default async function ProposalsPage({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
+  const params = await searchParams;
+  const [forecast, proposals, members] = await Promise.all([getPipelineForecast(), getProposalBoard(), getTeamMembers()]);
+  const filters: ProposalBoardFilters = {
+    q: params.q ?? "",
+    owner: params.owner ?? "",
+    clientType: params.clientType ?? "",
+    program: params.program ?? "",
+  };
 
   return (
     <Page>
-      <PageHeader title="CRM Dashboard" subtitle="Your pipeline, from first contact to closed." />
-      <StatsBar stats={stats} forecast={forecast} />
-      <LeadsWorkspace
-        state={state}
-        defaultView="board"
-        basePath="/crm"
-        board={board}
-        table={table}
-        stages={stages}
-        facets={facets}
+      <PageHeader title="Proposals" subtitle="Work every proposal from first meeting to close." />
+      <StatsBar forecast={forecast} />
+      <ProposalsBoard
+        proposals={proposals}
         members={members.map((m) => ({ id: m.id, name: m.fullName ?? m.email ?? "Unknown" }))}
-        events={events.map((e) => ({ id: e.id, title: e.title }))}
+        initialFilters={filters}
+        today={new Date().toLocaleDateString("en-CA", { timeZone: EVENT_TIME_ZONE })}
       />
     </Page>
   );

@@ -9,7 +9,7 @@ const LABELS: Record<string, string> = {
   leads: "Leads",
   companies: "Companies",
   contacts: "Contacts",
-  deals: "Deals",
+  deals: "Proposals",
   tasks: "Tasks",
   team: "Team",
   budgets: "Budgets",
