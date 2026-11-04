@@ -73,8 +73,7 @@ Get these two values from Supabase dashboard → **Project Settings → API**
 them to the new developer over a secure channel (not committed to the
 repo, not pasted in a public place). They do **not** need the service-role
 key for local development — the app's authenticated pages work fine
-without it; only the temporarily-public `/` board route needs it, and that
-exception is documented inline in `middleware.ts` and `lib/leads/queries.ts`.
+without it.
 
 Then:
 
