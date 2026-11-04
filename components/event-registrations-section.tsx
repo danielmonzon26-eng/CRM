@@ -23,7 +23,7 @@ export function EventRegistrationsSection({ registrations }: { registrations: Le
               <p className="text-xs text-slate-500">{formatEventWhen(r.startsAt, r.endsAt)}</p>
               <p className="mt-1 text-xs text-slate-600">
                 {r.attendeeName} · {FORMAT_LABELS[r.attendanceMode]} ·{" "}
-                {r.status === "cancelled" ? "Cancelled" : r.checkedInAt ? "Attended" : "Registered"}
+                {r.status === "cancelled" ? "Cancelled" : r.status === "waitlisted" ? "Waitlisted" : r.checkedInAt ? "Attended" : "Registered"}
               </p>
             </div>
           </Link>

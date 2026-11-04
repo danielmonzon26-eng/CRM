@@ -38,6 +38,7 @@ export default async function EventDetailPage({
 
   const { event, registrations, documents, videos } = detail;
   const active = registrations.filter((r) => r.status === "registered");
+  const waitlisted = registrations.filter((r) => r.status === "waitlisted").length;
   const checkedIn = active.filter((r) => r.checked_in_at).length;
   const online = active.filter((r) => r.attendance_mode === "online").length;
   const registrationUrl = `${await getSiteUrl()}/register/${event.slug}`;
@@ -59,7 +60,7 @@ export default async function EventDetailPage({
       <div className="mt-4 flex flex-wrap items-start justify-between gap-4">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
-            <p className="text-sm font-medium text-slate-400">{event.event_type ?? "Event"}</p>
+            <p className="text-sm font-medium text-slate-500">{[event.program, event.event_type].filter(Boolean).join(" · ") || "Event"}</p>
             <span className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${STATUS_STYLES[event.status]}`}>
               {STATUS_LABELS[event.status]}
             </span>
@@ -155,7 +156,9 @@ export default async function EventDetailPage({
       </section>
 
       <section className="mt-8">
-        <h2 className="text-sm font-semibold text-slate-700">Registrations ({active.length})</h2>
+        <h2 className="text-sm font-semibold text-slate-700">
+          Registrations ({active.length}){waitlisted > 0 && ` · ${waitlisted} on waitlist`}
+        </h2>
         {registrations.length === 0 ? (
           <p className="mt-2 rounded-xl border border-dashed border-slate-300 bg-white px-6 py-10 text-center text-sm text-slate-500">
             No registrations yet.
@@ -175,7 +178,7 @@ export default async function EventDetailPage({
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {registrations.map((r) => (
-                  <tr key={r.id} className={r.status === "cancelled" ? "text-slate-400" : "text-slate-700"}>
+                  <tr key={r.id} className={r.status === "cancelled" ? "text-slate-500" : "text-slate-700"}>
                     <td className="px-3 py-2 font-medium">
                       {r.lead_id ? (
                         <Link href={`/leads/${r.lead_id}`} className="inline-flex items-center gap-1 hover:text-brand-600">
@@ -185,7 +188,7 @@ export default async function EventDetailPage({
                       ) : (
                         r.full_name
                       )}
-                      {r.status === "cancelled" && <span className="ml-1.5 text-xs font-normal">(cancelled)</span>}
+                      {r.status !== "registered" && <span className="ml-1.5 text-xs font-normal">({r.status === "cancelled" ? "cancelled" : "waitlist"})</span>}
                     </td>
                     <td className="px-3 py-2">{r.email}</td>
                     <td className="px-3 py-2">{r.company_name ?? "—"}</td>
@@ -195,7 +198,7 @@ export default async function EventDetailPage({
                       <RegistrationActions
                         registrationId={r.id}
                         eventId={event.id}
-                        cancelled={r.status === "cancelled"}
+                        status={r.status}
                         checkedIn={Boolean(r.checked_in_at)}
                       />
                     </td>

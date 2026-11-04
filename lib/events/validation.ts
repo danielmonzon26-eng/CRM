@@ -1,0 +1,49 @@
+import type { AgendaItem, EventFormat, EventTicketType, Speaker } from "@/lib/supabase/types";
+
+export type EventInput = {
+  title: string;
+  program: string;
+  eventType: string;
+  description: string;
+  imageUrl: string;
+  ownerId: string;
+  startsAt: string;
+  endsAt: string;
+  format: EventFormat;
+  venueName: string;
+  venueAddress: string;
+  onlineUrl: string;
+  agenda: AgendaItem[];
+  speakers: Speaker[];
+  ticketType: EventTicketType;
+  ticketPrice: string;
+  capacity: string;
+  collectCompany: boolean;
+  collectPhone: boolean;
+  waitlistEnabled: boolean;
+  registrationOpensAt: string;
+  registrationClosesAt: string;
+  confirmationMessage: string;
+  budgetAmount: string;
+  fundingSource: string;
+  budgetNotes: string;
+};
+
+export function isWebUrl(value: string): boolean {
+  try {
+    return ["http:", "https:"].includes(new URL(value).protocol);
+  } catch {
+    return false;
+  }
+}
+
+/** Everything still needed before an event can be published. */
+export function getMissingForPublish(input: EventInput): string[] {
+  const missing: string[] = [];
+  if (!input.title.trim()) missing.push("Event name");
+  if (!input.startsAt) missing.push("Start date and time");
+  if (input.format !== "online" && !input.venueName.trim()) missing.push("Venue");
+  if (input.format !== "in_person" && !isWebUrl(input.onlineUrl.trim())) missing.push("Livestream or join link");
+  if (input.ticketType === "paid" && !input.ticketPrice.trim()) missing.push("Ticket price");
+  return missing;
+}

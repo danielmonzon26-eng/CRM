@@ -111,7 +111,9 @@ create policy "authenticated manage event documents" on storage.objects
   with check (bucket_id = 'event-documents');
 
 -- Public fields of one event. Excludes online_url, which only goes to online registrants.
-create or replace function public.get_public_event(p_slug text)
+-- Dropped first because 0009 changes the return type and every migration is re-applied.
+drop function if exists public.get_public_event(text);
+create function public.get_public_event(p_slug text)
 returns table (
   title text,
   event_type text,

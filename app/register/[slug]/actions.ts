@@ -13,9 +13,10 @@ export type RegisterInput = {
 };
 
 export type RegisterResult = {
-  status: "registered" | "already_registered" | "sold_out" | "closed" | "not_found" | "invalid" | "error";
+  status: "registered" | "waitlisted" | "already_registered" | "sold_out" | "closed" | "not_open" | "not_found" | "invalid" | "error";
   ticketCode?: string;
   onlineUrl?: string | null;
+  confirmationMessage?: string | null;
 };
 
 export async function registerForEvent(input: RegisterInput): Promise<RegisterResult> {
@@ -37,5 +38,10 @@ export async function registerForEvent(input: RegisterInput): Promise<RegisterRe
     return { status: "error" };
   }
 
-  return { status: data.status, ticketCode: data.ticket_code, onlineUrl: data.online_url };
+  return {
+    status: data.status,
+    ticketCode: data.ticket_code,
+    onlineUrl: data.online_url,
+    confirmationMessage: data.confirmation_message,
+  };
 }

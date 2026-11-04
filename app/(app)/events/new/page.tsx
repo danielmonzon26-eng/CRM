@@ -1,16 +1,17 @@
-import Link from "next/link";
-import { ArrowLeft } from "lucide-react";
-import { EventForm } from "@/components/event-form";
+import { EventWizard } from "@/components/event-wizard";
+import { Page, PageHeader } from "@/components/ui/page";
+import { getEventTemplates } from "@/lib/events/queries";
+import { getTeamMembers } from "@/lib/leads/queries";
 
-export default function NewEventPage() {
+export const dynamic = "force-dynamic";
+
+export default async function NewEventPage() {
+  const [members, templates] = await Promise.all([getTeamMembers(), getEventTemplates()]);
+
   return (
-    <main className="mx-auto max-w-4xl px-4 py-6 sm:px-6 lg:px-8">
-      <Link href="/events" className="inline-flex items-center gap-1 text-sm text-slate-500 hover:text-slate-900">
-        <ArrowLeft className="h-3.5 w-3.5" strokeWidth={2} />
-        Back to events
-      </Link>
-      <h1 className="mb-5 mt-4 text-[28px] font-semibold leading-tight tracking-tight text-slate-900">New event</h1>
-      <EventForm />
-    </main>
+    <Page>
+      <PageHeader title="Create an event" subtitle="Set up your event, from details to registration and budget." />
+      <EventWizard members={members.map((m) => ({ id: m.id, name: m.fullName ?? m.email ?? "Unknown" }))} templates={templates} />
+    </Page>
   );
 }

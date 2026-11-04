@@ -11,7 +11,7 @@ import {
   setRegistrationCheckedIn,
 } from "@/app/actions/events";
 import { uploadEventDocument } from "@/lib/events/upload";
-import type { EventStatus } from "@/lib/supabase/types";
+import type { EventStatus, RegistrationStatus } from "@/lib/supabase/types";
 
 export function CopyLinkButton({ url }: { url: string }) {
   const [copied, setCopied] = useState(false);
@@ -34,7 +34,11 @@ export function CopyLinkButton({ url }: { url: string }) {
 
 export function EventStatusButtons({ eventId, status }: { eventId: string; status: EventStatus }) {
   const [isPending, startTransition] = useTransition();
-  const change = (next: EventStatus) => startTransition(() => setEventStatus(eventId, next));
+  const change = (next: EventStatus) =>
+    startTransition(async () => {
+      const result = await setEventStatus(eventId, next);
+      if (result.error) alert(result.error);
+    });
 
   return (
     <>
@@ -77,19 +81,20 @@ export function EventStatusButtons({ eventId, status }: { eventId: string; statu
 export function RegistrationActions({
   registrationId,
   eventId,
-  cancelled,
+  status,
   checkedIn,
 }: {
   registrationId: string;
   eventId: string;
-  cancelled: boolean;
+  status: RegistrationStatus;
   checkedIn: boolean;
 }) {
+  const cancelled = status === "cancelled";
   const [isPending, startTransition] = useTransition();
 
   return (
     <div className="flex justify-end gap-2">
-      {!cancelled && (
+      {status === "registered" && (
         <button
           type="button"
           disabled={isPending}
@@ -99,6 +104,16 @@ export function RegistrationActions({
           }`}
         >
           {checkedIn ? "Checked in" : "Check in"}
+        </button>
+      )}
+      {status === "waitlisted" && (
+        <button
+          type="button"
+          disabled={isPending}
+          onClick={() => startTransition(() => setRegistrationCancelled(registrationId, eventId, false))}
+          className="rounded-md border border-slate-200 px-2 py-1 text-xs font-medium text-slate-600 hover:bg-slate-50 disabled:opacity-50"
+        >
+          Move to registered
         </button>
       )}
       <button
@@ -113,7 +128,7 @@ export function RegistrationActions({
   );
 }
 
-export function DocumentUpload({ eventId }: { eventId: string }) {
+export function DocumentUpload({ eventId, onUploaded }: { eventId: string; onUploaded?: (name: string) => void }) {
   const router = useRouter();
   const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -122,8 +137,12 @@ export function DocumentUpload({ eventId }: { eventId: string }) {
     setError(null);
     setIsUploading(true);
     const uploadError = await uploadEventDocument(eventId, file);
-    if (uploadError) setError(uploadError);
-    else router.refresh();
+    if (uploadError) {
+      setError(uploadError);
+    } else {
+      onUploaded?.(file.name);
+      router.refresh();
+    }
     setIsUploading(false);
   }
 
@@ -195,7 +214,7 @@ export function RemoveResourceButton({ id, eventId, label }: { id: string; event
   );
 }
 
-export function VideoForm({ eventId }: { eventId: string }) {
+export function VideoForm({ eventId, onAdded }: { eventId: string; onAdded?: (url: string) => void }) {
   const [title, setTitle] = useState("");
   const [url, setUrl] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -212,6 +231,7 @@ export function VideoForm({ eventId }: { eventId: string }) {
           if (result.error) {
             setError(result.error);
           } else {
+            onAdded?.(url.trim());
             setTitle("");
             setUrl("");
           }

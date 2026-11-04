@@ -121,7 +121,7 @@ function EventRow({ event }: { event: DashboardEvent }) {
       <span className="min-w-0 flex-1">
         <span className="block truncate font-medium text-slate-900">{event.title}</span>
         <span className="block truncate text-xs text-slate-500">
-          {event.eventType ? `${event.eventType} · ` : ""}
+          {event.program ? `${event.program} · ` : ""}
           {event.format === "online" ? "Online" : event.venueName}
         </span>
       </span>
@@ -263,7 +263,7 @@ export function OverviewDashboard({ data, firstName }: { data: DashboardData; fi
               )}
             </Panel>
 
-            <Panel title="Program performance" subtitle="Grouped by event type">
+            <Panel title="Program performance">
               {data.programs.length === 0 ? (
                 <PanelEmpty icon={BarChart3}>Figures appear once you have events.</PanelEmpty>
               ) : (

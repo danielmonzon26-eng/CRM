@@ -29,6 +29,7 @@ export async function getEventsBetween(startIso: string, endIso: string): Promis
   const { data, error } = await supabase
     .from("events")
     .select("*")
+    .is("archived_at", null)
     .lte("starts_at", endIso)
     .or(`starts_at.gte.${startIso},ends_at.gte.${startIso}`)
     .order("starts_at");
@@ -39,6 +40,15 @@ export async function getEventsBetween(startIso: string, endIso: string): Promis
 export async function getEvent(id: string): Promise<EventRow | null> {
   const supabase = await createClient();
   const { data, error } = await supabase.from("events").select("*").eq("id", id).maybeSingle();
+  if (error) throw error;
+  return data;
+}
+
+export type EventTemplate = Database["public"]["Tables"]["event_templates"]["Row"];
+
+export async function getEventTemplates(): Promise<EventTemplate[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase.from("event_templates").select("*").order("name");
   if (error) throw error;
   return data;
 }

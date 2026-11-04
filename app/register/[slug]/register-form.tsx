@@ -13,12 +13,25 @@ const ERROR_MESSAGES: Partial<Record<RegisterResult["status"], string>> = {
   already_registered: "This email is already registered for this event. Contact us if you need your details again.",
   sold_out: "Sorry, this event just sold out.",
   closed: "Registration for this event has closed.",
+  not_open: "Registration for this event hasn't opened yet.",
   not_found: "This event is no longer available.",
   invalid: "Please check your name and email address.",
   error: "Something went wrong. Please try again.",
 };
 
-export function RegisterForm({ slug, format }: { slug: string; format: EventFormat }) {
+export function RegisterForm({
+  slug,
+  format,
+  collectCompany,
+  collectPhone,
+  waitlist,
+}: {
+  slug: string;
+  format: EventFormat;
+  collectCompany: boolean;
+  collectPhone: boolean;
+  waitlist: boolean;
+}) {
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
@@ -28,6 +41,19 @@ export function RegisterForm({ slug, format }: { slug: string; format: EventForm
   const [result, setResult] = useState<RegisterResult | null>(null);
   const [isPending, startTransition] = useTransition();
 
+  if (result?.status === "waitlisted") {
+    return (
+      <div className="rounded-xl bg-slate-100 p-4 text-sm text-slate-800">
+        <p className="flex items-center gap-2 font-semibold">
+          <CheckCircle2 className="h-4 w-4" strokeWidth={2} />
+          You&apos;re on the waitlist
+        </p>
+        <p className="mt-1">Our team will contact you if a spot opens.</p>
+        {result.confirmationMessage && <p className="mt-2 whitespace-pre-line">{result.confirmationMessage}</p>}
+      </div>
+    );
+  }
+
   if (result?.status === "registered") {
     return (
       <div className="rounded-xl bg-emerald-50 p-4 text-sm text-emerald-900">
@@ -35,7 +61,7 @@ export function RegisterForm({ slug, format }: { slug: string; format: EventForm
           <CheckCircle2 className="h-4 w-4" strokeWidth={2} />
           You&apos;re registered
         </p>
-        <p className="mt-1">We have your spot saved. See you there.</p>
+        <p className="mt-1 whitespace-pre-line">{result.confirmationMessage ?? "We have your spot saved. See you there."}</p>
         {result.onlineUrl && (
           <p className="mt-2">
             Join online:{" "}
@@ -84,14 +110,18 @@ export function RegisterForm({ slug, format }: { slug: string; format: EventForm
         <label className={LABEL} htmlFor="email">Email</label>
         <input id="email" type="email" required autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} className={INPUT} />
       </div>
-      <div>
-        <label className={LABEL} htmlFor="company">Company (optional)</label>
-        <input id="company" autoComplete="organization" value={company} onChange={(e) => setCompany(e.target.value)} className={INPUT} />
-      </div>
-      <div>
-        <label className={LABEL} htmlFor="phone">Phone (optional)</label>
-        <input id="phone" type="tel" autoComplete="tel" value={phone} onChange={(e) => setPhone(e.target.value)} className={INPUT} />
-      </div>
+      {collectCompany && (
+        <div>
+          <label className={LABEL} htmlFor="company">Company (optional)</label>
+          <input id="company" autoComplete="organization" value={company} onChange={(e) => setCompany(e.target.value)} className={INPUT} />
+        </div>
+      )}
+      {collectPhone && (
+        <div>
+          <label className={LABEL} htmlFor="phone">Phone (optional)</label>
+          <input id="phone" type="tel" autoComplete="tel" value={phone} onChange={(e) => setPhone(e.target.value)} className={INPUT} />
+        </div>
+      )}
       {format === "hybrid" && (
         <div>
           <label className={LABEL} htmlFor="attendanceMode">How will you attend?</label>
@@ -113,7 +143,7 @@ export function RegisterForm({ slug, format }: { slug: string; format: EventForm
         disabled={isPending}
         className="rounded-md bg-brand-600 px-3 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-50"
       >
-        {isPending ? "Registering..." : "Register"}
+        {isPending ? "Sending..." : waitlist ? "Join the waitlist" : "Register"}
       </button>
     </form>
   );

@@ -31,7 +31,9 @@ export type EventFormat = "in_person" | "online" | "hybrid";
 export type EventStatus = "draft" | "published" | "cancelled";
 export type EventTicketType = "free" | "paid";
 export type AttendanceMode = "in_person" | "online";
-export type RegistrationStatus = "registered" | "cancelled";
+export type RegistrationStatus = "registered" | "waitlisted" | "cancelled";
+export type AgendaItem = { time: string; title: string };
+export type Speaker = { name: string; title: string };
 export type EventResourceKind = "document" | "video";
 
 export type SourceKind = "open_data_api" | "web_scrape" | "enrichment";
@@ -406,6 +408,20 @@ export type Database = {
           starts_at: string;
           ends_at: string | null;
           capacity: number | null;
+          program: string | null;
+          owner_id: string | null;
+          archived_at: string | null;
+          agenda: AgendaItem[];
+          speakers: Speaker[];
+          collect_company: boolean;
+          collect_phone: boolean;
+          waitlist_enabled: boolean;
+          registration_opens_at: string | null;
+          registration_closes_at: string | null;
+          confirmation_message: string | null;
+          budget_amount: number | null;
+          funding_source: string | null;
+          budget_notes: string | null;
           ticket_type: EventTicketType;
           ticket_price: number | null;
           currency: string;
@@ -428,6 +444,20 @@ export type Database = {
           starts_at: string;
           ends_at?: string | null;
           capacity?: number | null;
+          program?: string | null;
+          owner_id?: string | null;
+          archived_at?: string | null;
+          agenda?: AgendaItem[];
+          speakers?: Speaker[];
+          collect_company?: boolean;
+          collect_phone?: boolean;
+          waitlist_enabled?: boolean;
+          registration_opens_at?: string | null;
+          registration_closes_at?: string | null;
+          confirmation_message?: string | null;
+          budget_amount?: number | null;
+          funding_source?: string | null;
+          budget_notes?: string | null;
           ticket_type?: EventTicketType;
           ticket_price?: number | null;
           currency?: string;
@@ -437,6 +467,26 @@ export type Database = {
           updated_at?: string;
         };
         Update: Partial<Database["public"]["Tables"]["events"]["Insert"]>;
+        Relationships: [];
+      };
+      event_templates: {
+        Row: {
+          id: string;
+          name: string;
+          data: Record<string, unknown>;
+          created_by: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          name: string;
+          data?: Record<string, unknown>;
+          created_by?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["event_templates"]["Insert"]>;
         Relationships: [];
       };
       event_registrations: {
@@ -506,6 +556,7 @@ export type Database = {
         Args: { p_slug: string };
         Returns: {
           title: string;
+          program: string | null;
           event_type: string | null;
           description: string | null;
           image_url: string | null;
@@ -514,6 +565,13 @@ export type Database = {
           venue_address: string | null;
           starts_at: string;
           ends_at: string | null;
+          agenda: AgendaItem[];
+          speakers: Speaker[];
+          collect_company: boolean;
+          collect_phone: boolean;
+          waitlist_enabled: boolean;
+          registration_opens_at: string | null;
+          registration_closes_at: string | null;
           ticket_type: EventTicketType;
           ticket_price: number | null;
           currency: string;
@@ -531,9 +589,10 @@ export type Database = {
           p_attendance_mode?: string | null;
         };
         Returns: {
-          status: "registered" | "already_registered" | "sold_out" | "closed" | "not_found" | "invalid";
+          status: "registered" | "waitlisted" | "already_registered" | "sold_out" | "closed" | "not_open" | "not_found" | "invalid";
           ticket_code?: string;
           online_url?: string | null;
+          confirmation_message?: string | null;
         };
       };
     };

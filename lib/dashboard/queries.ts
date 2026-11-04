@@ -10,7 +10,7 @@ const ACTIVE_LEAD_STATUSES = ["new", "researching", "contacted", "qualified"] as
 export type DashboardEvent = {
   id: string;
   title: string;
-  eventType: string | null;
+  program: string | null;
   startsAt: string;
   endsAt: string | null;
   format: EventFormat;
@@ -106,8 +106,9 @@ export async function getDashboardData(): Promise<DashboardData> {
     fetchAllPages((from, to) =>
       supabase
         .from("events")
-        .select("id, title, event_type, starts_at, ends_at, format, venue_name, status, capacity")
+        .select("id, title, program, starts_at, ends_at, format, venue_name, status, capacity")
         .neq("status", "cancelled")
+        .is("archived_at", null)
         .order("starts_at")
         .range(from, to)
     ),
@@ -188,9 +189,9 @@ export async function getDashboardData(): Promise<DashboardData> {
     programs.set(key, row);
     return row;
   };
-  for (const e of events) program(e.event_type).events++;
+  for (const e of events) program(e.program).events++;
   for (const r of allRegistrations) {
-    const row = program(eventById.get(r.event_id)?.event_type);
+    const row = program(eventById.get(r.event_id)?.program);
     row.registrations++;
     if (pastEventIds.has(r.event_id)) {
       row.pastRegistered++;
@@ -213,7 +214,7 @@ export async function getDashboardData(): Promise<DashboardData> {
     upcomingEvents: upcoming.slice(0, 5).map((e) => ({
       id: e.id,
       title: e.title,
-      eventType: e.event_type,
+      program: e.program,
       startsAt: e.starts_at,
       endsAt: e.ends_at,
       format: e.format,
