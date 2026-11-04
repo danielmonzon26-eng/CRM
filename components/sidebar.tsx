@@ -14,7 +14,7 @@ export function Sidebar({ isAdmin, openTaskCount }: { isAdmin: boolean; openTask
   return (
     <aside className="hidden w-60 shrink-0 flex-col bg-ink-950 lg:flex">
       <div className="flex h-14 items-center gap-1.5 border-b border-white/10 px-5">
-        <span className="text-base font-bold tracking-wide text-white">CATAPULT</span>
+        <span className="text-base font-bold tracking-wide text-white">HI DAN</span>
       </div>
 
       <div className="border-b border-white/10 px-5 py-2.5 text-[11px] leading-snug text-white">
