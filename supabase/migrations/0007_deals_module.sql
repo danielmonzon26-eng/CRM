@@ -51,6 +51,7 @@ create index if not exists deals_owner_idx on public.deals (owner);
 create index if not exists deal_stage_history_deal_id_idx on public.deal_stage_history (deal_id);
 
 -- Step 4: updated_at trigger (reuses the existing set_updated_at() function)
+drop trigger if exists deals_set_updated_at on public.deals;
 create trigger deals_set_updated_at
   before update on public.deals
   for each row execute function public.set_updated_at();
@@ -59,16 +60,20 @@ create trigger deals_set_updated_at
 alter table public.deals enable row level security;
 alter table public.deal_stage_history enable row level security;
 
+drop policy if exists "authenticated all deals" on public.deals;
 create policy "authenticated all deals" on public.deals
   for all to authenticated using (true) with check (true);
 
+drop policy if exists "authenticated all deal_stage_history" on public.deal_stage_history;
 create policy "authenticated all deal_stage_history" on public.deal_stage_history
   for all to authenticated using (true) with check (true);
 
--- Step 6: extend the activities type check to cover deal events
+-- Step 6: extend the activities type check to cover deal events. Migrations are all
+-- re-applied on every run, so this also lists types from later migrations; otherwise
+-- re-adding it would fail once rows of those types exist.
 alter table public.activities drop constraint if exists activities_type_check;
 alter table public.activities add constraint activities_type_check
   check (type in (
     'status_change', 'enrichment_run', 'email_sent', 'call_logged', 'sync_matched',
-    'task_completed', 'note', 'deal_created', 'deal_stage_change'
+    'task_completed', 'note', 'deal_created', 'deal_stage_change', 'event_registration'
   ));
