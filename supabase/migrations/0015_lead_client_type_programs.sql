@@ -1,6 +1,7 @@
 -- Groups leads by client type (one per lead) and the Catapult programs they're interested in
 -- (any number per lead). Both start empty on existing leads, and nothing else about a lead
--- changes. CRM search gains matching filters and returns both fields.
+-- changes. CRM search gains matching filters, returns both fields, and reports each lead's
+-- latest proposal, so the Leads table can show and filter on it.
 
 alter table public.leads
   add column if not exists client_type text,
@@ -24,9 +25,9 @@ create index if not exists leads_programs_idx on public.leads using gin (program
 drop function if exists public.crm_lead_stage_counts(text, text, text, text, integer, text, uuid);
 drop function if exists public.crm_search_leads(text, text[], text, text, text, integer, text, uuid, text, boolean, integer, integer);
 drop function if exists public.crm_filtered_leads(text, text, text, text, integer, text, uuid);
-drop function if exists public.crm_lead_stage_counts(text, text, text, text, integer, text, uuid, text, text);
-drop function if exists public.crm_search_leads(text, text[], text, text, text, integer, text, uuid, text, text, text, boolean, integer, integer);
-drop function if exists public.crm_filtered_leads(text, text, text, text, integer, text, uuid, text, text);
+drop function if exists public.crm_lead_stage_counts(text, text, text, text, integer, text, uuid, text, text, text);
+drop function if exists public.crm_search_leads(text, text[], text, text, text, integer, text, uuid, text, text, text, text, boolean, integer, integer);
+drop function if exists public.crm_filtered_leads(text, text, text, text, integer, text, uuid, text, text, text);
 
 create function public.crm_filtered_leads(
   p_search text,
@@ -37,7 +38,8 @@ create function public.crm_filtered_leads(
   p_contact text,
   p_event_id uuid,
   p_client_type text,
-  p_program text
+  p_program text,
+  p_proposal text
 )
 returns setof public.leads
 language sql
@@ -77,7 +79,10 @@ as $$
          or l.client_type = p_client_type)
     and (p_program is null
          or (p_program = 'none' and l.programs = '{}')
-         or l.programs @> array[p_program]);
+         or l.programs @> array[p_program])
+    and (p_proposal is null
+         or (p_proposal = 'has' and exists (select 1 from public.deals d where d.lead_id = l.id))
+         or (p_proposal = 'none' and not exists (select 1 from public.deals d where d.lead_id = l.id)));
 $$;
 
 create function public.crm_search_leads(
@@ -91,6 +96,7 @@ create function public.crm_search_leads(
   p_event_id uuid default null,
   p_client_type text default null,
   p_program text default null,
+  p_proposal text default null,
   p_sort text default 'score',
   p_descending boolean default true,
   p_limit integer default 25,
@@ -111,7 +117,10 @@ returns table (
   primary_name text,
   primary_title text,
   primary_email text,
+  primary_contact_id uuid,
   contact_count integer,
+  proposal_id uuid,
+  proposal_stage text,
   total_count bigint
 )
 language sql
@@ -121,7 +130,7 @@ set search_path = ''
 as $$
   with matched as (
     select f.id, f.status, f.score, f.assigned_to, f.created_at, f.company_id, f.client_type, f.programs, co.name, co.community, co.industry
-    from public.crm_filtered_leads(p_search, p_owner, p_industry, p_community, p_min_score, p_contact, p_event_id, p_client_type, p_program) f
+    from public.crm_filtered_leads(p_search, p_owner, p_industry, p_community, p_min_score, p_contact, p_event_id, p_client_type, p_program, p_proposal) f
     join public.companies co on co.id = f.company_id
     where p_statuses is null or f.status = any (p_statuses)
   ),
@@ -147,16 +156,23 @@ as $$
   select
     p.id, p.status, p.score, p.assigned_to, p.created_at, p.company_id, p.name, p.community, p.industry,
     p.client_type, p.programs,
-    pc.full_name, pc.title, pc.email,
+    pc.full_name, pc.title, pc.email, pc.id,
     (select count(*)::integer from public.contacts c where c.lead_id = p.id),
+    latest.id, latest.stage,
     p.total_count
   from page p
   left join lateral (
-    select c.full_name, c.title, c.email from public.contacts c
+    select c.id, c.full_name, c.title, c.email from public.contacts c
     where c.lead_id = p.id
     order by c.is_primary desc, c.created_at
     limit 1
   ) pc on true
+  left join lateral (
+    select d.id, d.stage from public.deals d
+    where d.lead_id = p.id
+    order by d.created_at desc
+    limit 1
+  ) latest on true
   order by
     case when p_sort = 'name' and p_descending then lower(p.name) end desc,
     case when p_sort = 'name' and not p_descending then lower(p.name) end asc,
@@ -180,7 +196,8 @@ create function public.crm_lead_stage_counts(
   p_contact text default null,
   p_event_id uuid default null,
   p_client_type text default null,
-  p_program text default null
+  p_program text default null,
+  p_proposal text default null
 )
 returns table (status text, lead_count bigint, open_value numeric)
 language sql
@@ -195,7 +212,7 @@ as $$
       select sum(d.amount) from public.deals d
       where d.lead_id = f.id and d.stage not in ('closed_won', 'closed_lost')
     )), 0)
-  from public.crm_filtered_leads(p_search, p_owner, p_industry, p_community, p_min_score, p_contact, p_event_id, p_client_type, p_program) f
+  from public.crm_filtered_leads(p_search, p_owner, p_industry, p_community, p_min_score, p_contact, p_event_id, p_client_type, p_program, p_proposal) f
   group by f.status;
 $$;
 
@@ -220,11 +237,11 @@ begin
 end;
 $$;
 
-revoke all on function public.crm_filtered_leads(text, text, text, text, integer, text, uuid, text, text) from public, anon;
-revoke all on function public.crm_search_leads(text, text[], text, text, text, integer, text, uuid, text, text, text, boolean, integer, integer) from public, anon;
-revoke all on function public.crm_lead_stage_counts(text, text, text, text, integer, text, uuid, text, text) from public, anon;
+revoke all on function public.crm_filtered_leads(text, text, text, text, integer, text, uuid, text, text, text) from public, anon;
+revoke all on function public.crm_search_leads(text, text[], text, text, text, integer, text, uuid, text, text, text, text, boolean, integer, integer) from public, anon;
+revoke all on function public.crm_lead_stage_counts(text, text, text, text, integer, text, uuid, text, text, text) from public, anon;
 revoke all on function public.crm_change_lead_program(uuid[], text, boolean) from public, anon;
-grant execute on function public.crm_filtered_leads(text, text, text, text, integer, text, uuid, text, text) to authenticated;
-grant execute on function public.crm_search_leads(text, text[], text, text, text, integer, text, uuid, text, text, text, boolean, integer, integer) to authenticated;
-grant execute on function public.crm_lead_stage_counts(text, text, text, text, integer, text, uuid, text, text) to authenticated;
+grant execute on function public.crm_filtered_leads(text, text, text, text, integer, text, uuid, text, text, text) to authenticated;
+grant execute on function public.crm_search_leads(text, text[], text, text, text, integer, text, uuid, text, text, text, text, boolean, integer, integer) to authenticated;
+grant execute on function public.crm_lead_stage_counts(text, text, text, text, integer, text, uuid, text, text, text) to authenticated;
 grant execute on function public.crm_change_lead_program(uuid[], text, boolean) to authenticated;
