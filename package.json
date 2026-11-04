@@ -10,10 +10,18 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@fullcalendar/core": "^6.1.22",
+    "@fullcalendar/daygrid": "^6.1.22",
+    "@fullcalendar/interaction": "^6.1.22",
+    "@fullcalendar/list": "^6.1.22",
+    "@fullcalendar/luxon3": "^6.1.22",
+    "@fullcalendar/react": "^6.1.22",
+    "@fullcalendar/timegrid": "^6.1.22",
     "@sparticuz/chromium": "^153.0.0",
     "@supabase/ssr": "^0.12.7",
     "@supabase/supabase-js": "^2.45.4",
     "lucide-react": "^1.60.0",
+    "luxon": "^3.7.2",
     "next": "15.5.25",
     "playwright-core": "^1.63.0",
     "react": "^18.3.1",

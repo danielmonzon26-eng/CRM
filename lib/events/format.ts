@@ -1,8 +1,16 @@
 import type { EventFormat, EventStatus, EventTicketType } from "@/lib/supabase/types";
 
-// Events are run from Calgary, so times are entered and shown in Calgary time for
-// everyone, whatever timezone the viewer or the server is in.
-export const EVENT_TIME_ZONE = "America/Edmonton";
+// Events are run from Calgary, so times are entered and shown in Calgary time for everyone,
+// whatever timezone the viewer or the server is in.
+//
+// Alberta moved to permanent UTC-6 ("Alberta Time") in November 2026. This is a fixed zone,
+// not "America/Edmonton", because runtimes disagree about that name until their time zone
+// data catches up: Node 22 still applies UTC-7 this winter, which saved events an hour off
+// and made server and browser disagree. ("Etc/GMT+6" is UTC-6; the sign is inverted by
+// convention.) Winter dates before March 2026 therefore read an hour later than the clock
+// did at the time.
+export const EVENT_TIME_ZONE = "Etc/GMT+6";
+export const EVENT_TIME_ZONE_LABEL = "ABT";
 
 export const FORMAT_LABELS: Record<EventFormat, string> = {
   in_person: "In person",
@@ -84,10 +92,10 @@ export function fromDateTimeInput(value: string): string {
 
 export function formatEventWhen(startsAt: string, endsAt: string | null): string {
   const start = dateTimeFormat.format(new Date(startsAt));
-  if (!endsAt) return `${start} MT`;
+  if (!endsAt) return `${start} ${EVENT_TIME_ZONE_LABEL}`;
   const sameDay = calgaryDateKey(startsAt) === calgaryDateKey(endsAt);
   const end = sameDay ? timeFormat.format(new Date(endsAt)) : dateTimeFormat.format(new Date(endsAt));
-  return `${start} – ${end} MT`;
+  return `${start} – ${end} ${EVENT_TIME_ZONE_LABEL}`;
 }
 
 export function formatEventTime(iso: string): string {

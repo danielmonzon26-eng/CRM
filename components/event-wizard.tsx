@@ -58,16 +58,18 @@ export function EventWizard({
   materials = [],
   videos = [],
   initialStep = 0,
+  initialStart = "",
 }: {
   event?: EventRow;
   initialStep?: number;
+  initialStart?: string;
   members: { id: string; name: string }[];
   templates: EventTemplate[];
   materials?: string[];
   videos?: string[];
 }) {
   const router = useRouter();
-  const [values, setValues] = useState<EventInput>(() => toInput(event));
+  const [values, setValues] = useState<EventInput>(() => ({ ...toInput(event), startsAt: event ? toDateTimeInput(event.starts_at) : initialStart }));
   const [step, setStep] = useState(initialStep);
   const [eventId, setEventId] = useState<string | null>(event?.id ?? null);
   const [slug, setSlug] = useState(event?.slug ?? null);
