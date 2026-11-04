@@ -171,12 +171,16 @@ export type Database = {
           assigned_to: string | null;
           deal_value: number | null;
           expected_close_date: string | null;
+          client_type: string | null;
+          programs: string[];
           created_at: string;
           updated_at: string;
         };
         Insert: {
           id?: string;
           company_id: string;
+          client_type?: string | null;
+          programs?: string[];
           status?: LeadStatus;
           score?: number;
           score_reasons?: unknown[];
@@ -736,6 +740,8 @@ export type Database = {
           p_min_score?: number | null;
           p_contact?: string | null;
           p_event_id?: string | null;
+          p_client_type?: string | null;
+          p_program?: string | null;
           p_sort?: string;
           p_descending?: boolean;
           p_limit?: number;
@@ -751,6 +757,8 @@ export type Database = {
           company_name: string;
           community: string | null;
           industry: string | null;
+          client_type: string | null;
+          programs: string[];
           primary_name: string | null;
           primary_title: string | null;
           primary_email: string | null;
@@ -767,8 +775,14 @@ export type Database = {
           p_min_score?: number | null;
           p_contact?: string | null;
           p_event_id?: string | null;
+          p_client_type?: string | null;
+          p_program?: string | null;
         };
         Returns: { status: string; lead_count: number; open_value: number }[];
+      };
+      crm_change_lead_program: {
+        Args: { p_lead_ids: string[]; p_program: string; p_add: boolean };
+        Returns: number;
       };
       crm_lead_facets: {
         Args: Record<string, never>;

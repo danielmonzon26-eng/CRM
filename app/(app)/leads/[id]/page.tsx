@@ -15,6 +15,7 @@ import {
   TrendingUp,
   CheckCircle2,
 } from "lucide-react";
+import { LeadClassification } from "@/components/lead-classification";
 import { StatusSelect } from "@/components/status-select";
 import { AssigneeSelect } from "@/components/assignee-select";
 import { TaskList } from "@/components/task-list";
@@ -222,6 +223,7 @@ export default async function LeadDetailPage({ params }: { params: Promise<{ id:
           <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-card">
             <h2 className="text-xs font-semibold uppercase tracking-wide text-slate-400">Lead properties</h2>
             <div className="mt-3 space-y-3">
+              <LeadClassification leadId={lead.id} clientType={lead.clientType} programs={lead.programs} />
               <div>
                 <label className="text-xs font-medium text-slate-500">Status</label>
                 <div className="mt-1">

@@ -12,6 +12,8 @@ export type LeadRow = {
   companyName: string;
   community: string | null;
   industry: string | null;
+  clientType: string | null;
+  programs: string[];
   primaryName: string | null;
   primaryTitle: string | null;
   primaryEmail: string | null;
@@ -31,6 +33,8 @@ function filterArgs(filters: LeadFilters) {
     p_min_score: filters.score ? Number(filters.score) : null,
     p_contact: filters.contact || null,
     p_event_id: filters.event || null,
+    p_client_type: filters.clientType || null,
+    p_program: filters.program || null,
   };
 }
 
@@ -61,6 +65,8 @@ export async function searchLeads(
       companyName: r.company_name,
       community: r.community,
       industry: r.industry,
+      clientType: r.client_type,
+      programs: r.programs,
       primaryName: r.primary_name,
       primaryTitle: r.primary_title,
       primaryEmail: r.primary_email,

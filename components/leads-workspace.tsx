@@ -19,12 +19,13 @@ import {
   User,
   X,
 } from "lucide-react";
-import { bulkUpdateLeads, exportLeadsBatch, loadLeadsPage, updateLeadStatus } from "@/app/actions/leads";
+import { bulkChangeLeadProgram, bulkUpdateLeads, exportLeadsBatch, loadLeadsPage, updateLeadStatus } from "@/app/actions/leads";
 import { buttonClass } from "@/components/ui/button";
 import { useFeedback } from "@/components/ui/feedback";
 import { EmptyState } from "@/components/ui/page";
 import { formatMoney } from "@/lib/budgets/money";
 import { downloadCsv } from "@/lib/csv";
+import { CLIENT_TYPES, LEAD_PROGRAMS, clientTypeLabel, programLabel } from "@/lib/leads/classification";
 import {
   ALL_STATUSES,
   BOARD_PAGE_SIZE,
@@ -53,6 +54,7 @@ const STAGE_STYLES: Record<LeadStatus, { header: string; dot: string }> = {
 };
 
 const SCORE_LABELS: Record<string, string> = { "40": "Fit 40+", "70": "Fit 70+" };
+const NOT_SET_LABEL = "Not set";
 const CONTACT_LABELS: Record<string, string> = { has_contact: "Has a contact", has_email: "Has an email", none: "No contact" };
 
 type Member = { id: string; name: string };
@@ -62,6 +64,22 @@ function FitBadge({ score }: { score: number }) {
   if (score <= 0) return null;
   const tone = score >= 70 ? "bg-emerald-50 text-emerald-800" : score >= 40 ? "bg-amber-50 text-amber-800" : "bg-slate-100 text-slate-600";
   return <span title="Fit score out of 100" className={`shrink-0 rounded px-1.5 py-0.5 text-[11px] font-semibold tabular-nums ${tone}`}>Fit {score}</span>;
+}
+
+const MAX_CARD_PROGRAMS = 2;
+
+function ProgramChips({ programs, limit }: { programs: string[]; limit?: number }) {
+  if (programs.length === 0) return null;
+  const shown = limit ? programs.slice(0, limit) : programs;
+  const hidden = programs.length - shown.length;
+  return (
+    <span title={programs.map(programLabel).join(", ")} className="flex flex-wrap gap-1">
+      {shown.map((program) => (
+        <span key={program} className="rounded bg-brand-50 px-1.5 py-0.5 text-[11px] font-medium text-brand-800">{programLabel(program)}</span>
+      ))}
+      {hidden > 0 && <span className="rounded bg-slate-100 px-1.5 py-0.5 text-[11px] font-medium text-slate-600">+{hidden}</span>}
+    </span>
+  );
 }
 
 function OwnerAvatar({ name }: { name: string | null }) {
@@ -77,12 +95,14 @@ function LeadCard({
   lead,
   ownerName,
   onDragStart,
+  onDragEnd,
   onMove,
   statuses,
 }: {
   lead: LeadRow;
   ownerName: string | null;
   onDragStart: (lead: LeadRow) => void;
+  onDragEnd: () => void;
   onMove: (lead: LeadRow, status: LeadStatus) => void;
   statuses: LeadStatus[];
 }) {
@@ -95,22 +115,36 @@ function LeadCard({
       onDragStart={(e) => {
         e.dataTransfer.effectAllowed = "move";
         e.dataTransfer.setData("text/plain", lead.id);
+        // The whole card follows the pointer, even when the drag starts on its link.
+        e.dataTransfer.setDragImage(e.currentTarget, 24, 24);
         onDragStart(lead);
       }}
+      onDragEnd={onDragEnd}
       className="group relative cursor-grab rounded-lg border border-slate-200 bg-white p-3 shadow-sm transition-[border-color,box-shadow] hover:border-slate-300 hover:shadow-card active:cursor-grabbing"
     >
       <div className="flex items-start gap-2">
-        <Link href={`/leads/${lead.id}`} draggable={false} className="min-w-0 flex-1 font-medium leading-snug text-slate-900 after:absolute after:inset-0 after:rounded-lg hover:text-brand-700">
+        <Link href={`/leads/${lead.id}`} className="min-w-0 flex-1 font-medium leading-snug text-slate-900 after:absolute after:inset-0 after:rounded-lg hover:text-brand-700">
           <span className="line-clamp-2 text-sm">{lead.companyName}</span>
         </Link>
         <GripVertical aria-hidden="true" className="h-4 w-4 shrink-0 text-slate-300 opacity-0 transition-opacity group-hover:opacity-100" strokeWidth={2} />
       </div>
-      {detail && <p className="mt-0.5 truncate text-xs text-slate-500">{detail}</p>}
+      {(lead.clientType || detail) && (
+        <p className="mt-0.5 truncate text-xs text-slate-500">
+          {lead.clientType && <span className="font-medium text-slate-700">{clientTypeLabel(lead.clientType)}</span>}
+          {lead.clientType && detail ? " · " : ""}
+          {detail}
+        </p>
+      )}
       <p className={`mt-2 flex items-center gap-1.5 truncate text-xs ${contact ? "text-slate-700" : "text-slate-500"}`}>
         <User className="h-3 w-3 shrink-0 text-slate-400" strokeWidth={2} />
         <span className="truncate">{contact ?? "No contact yet"}</span>
         {lead.contactCount > 1 && <span className="shrink-0 text-slate-500">+{lead.contactCount - 1}</span>}
       </p>
+      {lead.programs.length > 0 && (
+        <div className="mt-2">
+          <ProgramChips programs={lead.programs} limit={MAX_CARD_PROGRAMS} />
+        </div>
+      )}
       <div className="mt-2.5 flex items-center justify-between gap-2">
         <FitBadge score={lead.score} />
         <div className="relative z-10 ml-auto flex items-center gap-1.5">
@@ -235,6 +269,10 @@ function Board({
                     lead={lead}
                     ownerName={memberName(lead.assignedTo)}
                     onDragStart={setDragging}
+                    onDragEnd={() => {
+                      setDragging(null);
+                      setOverStatus(null);
+                    }}
                     onMove={(l, to) => void move(l, to)}
                     statuses={ALL_STATUSES}
                   />
@@ -310,7 +348,7 @@ function LeadsTable({
   const end = Math.min(state.page * TABLE_PAGE_SIZE, total);
   const lastPage = Math.max(1, Math.ceil(total / TABLE_PAGE_SIZE));
 
-  function apply(change: { status?: LeadStatus; assigneeId?: string | null }, description: string) {
+  function apply(change: { status?: LeadStatus; assigneeId?: string | null; clientType?: string | null }, description: string) {
     startTransition(async () => {
       const result = await bulkUpdateLeads([...selected], change);
       if (result.error) {
@@ -318,6 +356,21 @@ function LeadsTable({
         return;
       }
       toast(`${result.updated} ${result.updated === 1 ? "lead" : "leads"} ${description}`);
+      setSelected(new Set());
+      router.refresh();
+    });
+  }
+
+  function changeProgram(value: string) {
+    const add = value.startsWith("+");
+    const program = value.slice(1);
+    startTransition(async () => {
+      const result = await bulkChangeLeadProgram([...selected], program, add);
+      if (result.error) {
+        toast(result.error, "error");
+        return;
+      }
+      toast(`${programLabel(program)} ${add ? "added to" : "removed from"} ${result.updated} ${result.updated === 1 ? "lead" : "leads"}`);
       setSelected(new Set());
       router.refresh();
     });
@@ -353,12 +406,42 @@ function LeadsTable({
             <option value="none">Unassigned</option>
             {members.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
           </select>
+          <select
+            aria-label="Set client type on selected leads"
+            disabled={isPending}
+            value=""
+            onChange={(e) => {
+              if (!e.target.value) return;
+              const type = e.target.value === "none" ? null : e.target.value;
+              apply({ clientType: type }, type ? `set to ${clientTypeLabel(type)}` : "cleared of client type");
+            }}
+            className="rounded-md bg-white/10 px-2 py-1 text-sm text-white [&>option]:text-slate-900"
+          >
+            <option value="">Set client type...</option>
+            {CLIENT_TYPES.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+            <option value="none">Not set</option>
+          </select>
+          <select
+            aria-label="Add or remove a program on selected leads"
+            disabled={isPending}
+            value=""
+            onChange={(e) => e.target.value && changeProgram(e.target.value)}
+            className="rounded-md bg-white/10 px-2 py-1 text-sm text-white [&>option]:text-slate-900"
+          >
+            <option value="">Change programs...</option>
+            <optgroup label="Add program">
+              {LEAD_PROGRAMS.map(([value, label]) => <option key={value} value={`+${value}`}>Add {label}</option>)}
+            </optgroup>
+            <optgroup label="Remove program">
+              {LEAD_PROGRAMS.map(([value, label]) => <option key={value} value={`-${value}`}>Remove {label}</option>)}
+            </optgroup>
+          </select>
           <button type="button" onClick={() => setSelected(new Set())} className="ml-auto text-ink-200 hover:text-white">Clear</button>
         </div>
       )}
 
       <div className="relative overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-card">
-        <table className="w-full min-w-[980px] text-left text-sm">
+        <table className="w-full min-w-[1240px] text-left text-sm">
           <thead className="border-b border-slate-100 text-xs uppercase tracking-wide text-slate-500">
             <tr>
               <th scope="col" className="w-10 px-4 py-2.5">
@@ -371,6 +454,8 @@ function LeadsTable({
                 />
               </th>
               <SortHeader label="Company" sort="name" state={state} href={href} />
+              <SortHeader label="Client type" sort="client_type" state={state} href={href} />
+              <th scope="col" className="px-3 py-2.5 font-medium">Programs</th>
               <th scope="col" className="px-3 py-2.5 font-medium">Contact</th>
               <th scope="col" className="px-3 py-2.5 font-medium">Industry</th>
               <th scope="col" className="px-3 py-2.5 font-medium">Community</th>
@@ -402,6 +487,8 @@ function LeadsTable({
                 <td className="max-w-72 px-3 py-2.5">
                   <Link href={`/leads/${lead.id}`} className="block truncate font-medium text-slate-900 hover:text-brand-700">{lead.companyName}</Link>
                 </td>
+                <td className="whitespace-nowrap px-3 py-2.5 text-slate-700">{clientTypeLabel(lead.clientType) ?? <span className="text-slate-500">—</span>}</td>
+                <td className="max-w-64 px-3 py-2.5">{lead.programs.length ? <ProgramChips programs={lead.programs} /> : <span className="text-slate-500">—</span>}</td>
                 <td className="max-w-60 px-3 py-2.5 text-slate-700">
                   {lead.primaryName ? (
                     <>
@@ -498,6 +585,8 @@ export function LeadsWorkspace({
   const chips: { label: string; clear: Partial<LeadViewState> }[] = [
     ...(state.q ? [{ label: `Search: ${state.q}`, clear: { q: "" } }] : []),
     ...(state.status ? [{ label: `Stage: ${STATUS_LABELS[state.status as LeadStatus]}`, clear: { status: "" } }] : []),
+    ...(state.clientType ? [{ label: `Client type: ${state.clientType === "none" ? NOT_SET_LABEL : clientTypeLabel(state.clientType)}`, clear: { clientType: "" } }] : []),
+    ...(state.program ? [{ label: `Program: ${state.program === "none" ? "None selected" : programLabel(state.program)}`, clear: { program: "" } }] : []),
     ...(state.owner ? [{ label: `Owner: ${state.owner === "unassigned" ? "Unassigned" : memberName(state.owner)}`, clear: { owner: "" } }] : []),
     ...(state.industry ? [{ label: `Industry: ${state.industry}`, clear: { industry: "" } }] : []),
     ...(state.community ? [{ label: `Community: ${state.community}`, clear: { community: "" } }] : []),
@@ -506,7 +595,7 @@ export function LeadsWorkspace({
     ...(state.event ? [{ label: `Event: ${events.find((e) => e.id === state.event)?.title ?? "Selected"}`, clear: { event: "" } }] : []),
   ];
 
-  const clearAll = () => go({ q: "", status: "", owner: "", industry: "", community: "", score: "", contact: "", event: "" });
+  const clearAll = () => go({ q: "", status: "", owner: "", industry: "", community: "", score: "", contact: "", event: "", clientType: "", program: "" });
 
   async function exportAll() {
     setIsExporting(true);
@@ -522,8 +611,8 @@ export function LeadsWorkspace({
       } while (rows.length < Math.min(total, EXPORT_CAP));
 
       downloadCsv("leads.csv", [
-        ["Company", "Contact", "Title", "Email", "Contacts", "Industry", "Community", "Fit score", "Owner", "Stage", "Added"],
-        ...rows.map((r) => [r.companyName, r.primaryName, r.primaryTitle, r.primaryEmail, r.contactCount, r.industry, r.community, r.score, memberName(r.assignedTo), STATUS_LABELS[r.status], r.createdAt.slice(0, 10)]),
+        ["Company", "Client type", "Programs", "Contact", "Title", "Email", "Contacts", "Industry", "Community", "Fit score", "Owner", "Stage", "Added"],
+        ...rows.map((r) => [r.companyName, clientTypeLabel(r.clientType), r.programs.map(programLabel).join("; "), r.primaryName, r.primaryTitle, r.primaryEmail, r.contactCount, r.industry, r.community, r.score, memberName(r.assignedTo), STATUS_LABELS[r.status], r.createdAt.slice(0, 10)]),
       ]);
       toast(total > EXPORT_CAP ? `Exported the first ${EXPORT_CAP.toLocaleString()} leads` : `Exported ${rows.length.toLocaleString()} leads`);
     } catch {
@@ -575,6 +664,16 @@ export function LeadsWorkspace({
           {ALL_STATUSES.map((s) => (
             <option key={s} value={s}>{STATUS_LABELS[s]} ({(stages.find((x) => x.status === s)?.count ?? 0).toLocaleString()})</option>
           ))}
+        </select>
+        <select aria-label="Client type" value={state.clientType} onChange={(e) => go({ clientType: e.target.value })} className={SELECT}>
+          <option value="">Client type: All</option>
+          {CLIENT_TYPES.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+          <option value="none">{NOT_SET_LABEL}</option>
+        </select>
+        <select aria-label="Program" value={state.program} onChange={(e) => go({ program: e.target.value })} className={`${SELECT} max-w-56`}>
+          <option value="">Program: All</option>
+          {LEAD_PROGRAMS.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+          <option value="none">None selected</option>
         </select>
         <select aria-label="Owner" value={state.owner} onChange={(e) => go({ owner: e.target.value })} className={SELECT}>
           <option value="">Owner: Anyone</option>

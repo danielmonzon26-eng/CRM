@@ -1,3 +1,4 @@
+import { isClientType, isLeadProgram } from "@/lib/leads/classification";
 import type { LeadStatus } from "@/lib/supabase/types";
 
 export const BOARD_STATUSES: LeadStatus[] = ["new", "researching", "contacted", "qualified", "won", "lost"];
@@ -15,7 +16,7 @@ export const STATUS_LABELS: Record<LeadStatus, string> = {
   unqualified: "Unqualified",
 };
 
-export type LeadSort = "score" | "name" | "created" | "status";
+export type LeadSort = "score" | "name" | "created" | "status" | "client_type";
 
 /** Everything that narrows the list. Kept in the URL, so a view can be shared or bookmarked. */
 export type LeadFilters = {
@@ -27,11 +28,13 @@ export type LeadFilters = {
   contact: string;
   event: string;
   status: string;
+  clientType: string;
+  program: string;
 };
 
 export type LeadViewState = LeadFilters & { sort: LeadSort; desc: boolean; page: number; view: "board" | "table"; unqualified: boolean };
 
-const SORTS: LeadSort[] = ["score", "name", "created", "status"];
+const SORTS: LeadSort[] = ["score", "name", "created", "status", "client_type"];
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export function parseLeadView(params: Record<string, string | undefined>, defaultView: "board" | "table"): LeadViewState {
@@ -45,6 +48,8 @@ export function parseLeadView(params: Record<string, string | undefined>, defaul
     contact: ["has_contact", "has_email", "none"].includes(params.contact ?? "") ? params.contact! : "",
     event: UUID.test(params.event ?? "") ? params.event! : "",
     status: ALL_STATUSES.includes(params.status as LeadStatus) ? params.status! : "",
+    clientType: params.clientType === "none" || isClientType(params.clientType) ? params.clientType! : "",
+    program: params.program === "none" || isLeadProgram(params.program) ? params.program! : "",
     sort,
     desc: params.dir ? params.dir === "desc" : sort === "score" || sort === "created",
     page: Math.max(1, Number(params.page) || 1),
@@ -55,7 +60,7 @@ export function parseLeadView(params: Record<string, string | undefined>, defaul
 
 export function leadViewToParams(state: LeadViewState, defaultView: "board" | "table"): URLSearchParams {
   const sp = new URLSearchParams();
-  (["q", "owner", "industry", "community", "score", "contact", "event", "status"] as const).forEach((key) => {
+  (["q", "owner", "industry", "community", "score", "contact", "event", "status", "clientType", "program"] as const).forEach((key) => {
     if (state[key]) sp.set(key, state[key]);
   });
   if (state.sort !== "score") sp.set("sort", state.sort);

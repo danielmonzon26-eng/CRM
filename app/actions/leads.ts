@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { clientTypeLabel, isClientType, isLeadProgram, programLabel } from "@/lib/leads/classification";
 import { ALL_STATUSES, type LeadFilters, type LeadSort } from "@/lib/leads/filters";
 import { searchLeads, type LeadRow } from "@/lib/leads/search";
 import type { LeadStatus } from "@/lib/supabase/types";
@@ -26,12 +27,65 @@ export async function exportLeadsBatch(
   return searchLeads(filters, { ...options, limit: MAX_EXPORT_ROWS });
 }
 
+function revalidateLeadLists() {
+  revalidatePath("/crm");
+  revalidatePath("/leads");
+}
+
+export async function updateLeadClassification(
+  leadId: string,
+  change: { clientType?: string | null; programs?: string[] }
+): Promise<{ error?: string }> {
+  if (change.clientType && !isClientType(change.clientType)) return { error: "That isn't a valid client type." };
+  if (change.programs && !change.programs.every(isLeadProgram)) return { error: "That isn't a valid program." };
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  const { error } = await supabase
+    .from("leads")
+    .update({
+      ...(change.clientType !== undefined ? { client_type: change.clientType } : {}),
+      ...(change.programs ? { programs: change.programs } : {}),
+    })
+    .eq("id", leadId)
+    .select("id")
+    .single();
+  if (error) return { error: error.message };
+
+  const body =
+    change.clientType !== undefined
+      ? `Client type set to ${clientTypeLabel(change.clientType) ?? "not set"}`
+      : `Programs set to ${change.programs?.length ? change.programs.map(programLabel).join(", ") : "none"}`;
+  await supabase.from("activities").insert({ lead_id: leadId, actor_id: user?.id ?? null, type: "note", body });
+
+  revalidateLeadLists();
+  revalidatePath(`/leads/${leadId}`);
+  return {};
+}
+
+/** Adds or removes one program on many leads, keeping each lead's other programs. */
+export async function bulkChangeLeadProgram(leadIds: string[], program: string, add: boolean): Promise<{ error?: string; updated?: number }> {
+  if (leadIds.length === 0 || leadIds.length > MAX_BULK_LEADS) return { error: `Select between 1 and ${MAX_BULK_LEADS} leads.` };
+  if (!isLeadProgram(program)) return { error: "That isn't a valid program." };
+
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("crm_change_lead_program", { p_lead_ids: leadIds, p_program: program, p_add: add });
+  if (error) return { error: error.message };
+
+  revalidateLeadLists();
+  return { updated: data };
+}
+
 export async function bulkUpdateLeads(
   leadIds: string[],
-  change: { status?: LeadStatus; assigneeId?: string | null }
+  change: { status?: LeadStatus; assigneeId?: string | null; clientType?: string | null }
 ): Promise<{ error?: string; updated?: number }> {
   if (leadIds.length === 0 || leadIds.length > MAX_BULK_LEADS) return { error: `Select between 1 and ${MAX_BULK_LEADS} leads.` };
   if (change.status && !ALL_STATUSES.includes(change.status)) return { error: "That isn't a valid stage." };
+  if (change.clientType && !isClientType(change.clientType)) return { error: "That isn't a valid client type." };
 
   const supabase = await createClient();
   const {
@@ -41,6 +95,7 @@ export async function bulkUpdateLeads(
   const update = {
     ...(change.status ? { status: change.status } : {}),
     ...(change.assigneeId !== undefined ? { assigned_to: change.assigneeId } : {}),
+    ...(change.clientType !== undefined ? { client_type: change.clientType } : {}),
   };
   const { data, error } = await supabase.from("leads").update(update).in("id", leadIds).select("id");
   if (error) return { error: error.message };

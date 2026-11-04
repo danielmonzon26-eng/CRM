@@ -59,6 +59,8 @@ export type LeadDetail = {
   score: number;
   scoreReasons: ScoreReason[];
   assignedTo: string | null;
+  clientType: string | null;
+  programs: string[];
   company: {
     id: string;
     name: string;
@@ -102,6 +104,8 @@ export async function getLeadDetail(leadId: string): Promise<LeadDetail | null> 
 
   return {
     id: lead.id,
+    clientType: lead.client_type,
+    programs: lead.programs,
     status: lead.status,
     score: lead.score,
     scoreReasons: Array.isArray(lead.score_reasons) ? (lead.score_reasons as ScoreReason[]) : [],
