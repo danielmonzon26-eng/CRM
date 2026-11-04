@@ -24,7 +24,15 @@ export type ActivityType =
   | "sync_matched"
   | "task_completed"
   | "deal_created"
-  | "deal_stage_change";
+  | "deal_stage_change"
+  | "event_registration";
+
+export type EventFormat = "in_person" | "online" | "hybrid";
+export type EventStatus = "draft" | "published" | "cancelled";
+export type EventTicketType = "free" | "paid";
+export type AttendanceMode = "in_person" | "online";
+export type RegistrationStatus = "registered" | "cancelled";
+export type EventResourceKind = "document" | "video";
 
 export type SourceKind = "open_data_api" | "web_scrape" | "enrichment";
 export type SyncRunStatus = "running" | "success" | "failed";
@@ -383,9 +391,152 @@ export type Database = {
         Update: Partial<Database["public"]["Tables"]["profiles"]["Insert"]>;
         Relationships: [];
       };
+      events: {
+        Row: {
+          id: string;
+          slug: string;
+          title: string;
+          event_type: string | null;
+          description: string | null;
+          image_url: string | null;
+          format: EventFormat;
+          venue_name: string | null;
+          venue_address: string | null;
+          online_url: string | null;
+          starts_at: string;
+          ends_at: string | null;
+          capacity: number | null;
+          ticket_type: EventTicketType;
+          ticket_price: number | null;
+          currency: string;
+          status: EventStatus;
+          created_by: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          slug: string;
+          title: string;
+          event_type?: string | null;
+          description?: string | null;
+          image_url?: string | null;
+          format?: EventFormat;
+          venue_name?: string | null;
+          venue_address?: string | null;
+          online_url?: string | null;
+          starts_at: string;
+          ends_at?: string | null;
+          capacity?: number | null;
+          ticket_type?: EventTicketType;
+          ticket_price?: number | null;
+          currency?: string;
+          status?: EventStatus;
+          created_by?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["events"]["Insert"]>;
+        Relationships: [];
+      };
+      event_registrations: {
+        Row: {
+          id: string;
+          event_id: string;
+          lead_id: string | null;
+          contact_id: string | null;
+          full_name: string;
+          email: string;
+          phone: string | null;
+          company_name: string | null;
+          attendance_mode: AttendanceMode;
+          status: RegistrationStatus;
+          checked_in_at: string | null;
+          ticket_code: string;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          event_id: string;
+          lead_id?: string | null;
+          contact_id?: string | null;
+          full_name: string;
+          email: string;
+          phone?: string | null;
+          company_name?: string | null;
+          attendance_mode: AttendanceMode;
+          status?: RegistrationStatus;
+          checked_in_at?: string | null;
+          ticket_code?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["event_registrations"]["Insert"]>;
+        Relationships: [];
+      };
+      event_resources: {
+        Row: {
+          id: string;
+          event_id: string;
+          kind: EventResourceKind;
+          title: string;
+          storage_path: string | null;
+          url: string | null;
+          created_by: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          event_id: string;
+          kind: EventResourceKind;
+          title: string;
+          storage_path?: string | null;
+          url?: string | null;
+          created_by?: string | null;
+          created_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["event_resources"]["Insert"]>;
+        Relationships: [];
+      };
     };
     Views: Record<string, never>;
-    Functions: Record<string, never>;
+    Functions: {
+      get_public_event: {
+        Args: { p_slug: string };
+        Returns: {
+          title: string;
+          event_type: string | null;
+          description: string | null;
+          image_url: string | null;
+          format: EventFormat;
+          venue_name: string | null;
+          venue_address: string | null;
+          starts_at: string;
+          ends_at: string | null;
+          ticket_type: EventTicketType;
+          ticket_price: number | null;
+          currency: string;
+          status: EventStatus;
+          spots_remaining: number | null;
+        }[];
+      };
+      register_for_event: {
+        Args: {
+          p_slug: string;
+          p_full_name: string;
+          p_email: string;
+          p_phone?: string | null;
+          p_company?: string | null;
+          p_attendance_mode?: string | null;
+        };
+        Returns: {
+          status: "registered" | "already_registered" | "sold_out" | "closed" | "not_found" | "invalid";
+          ticket_code?: string;
+          online_url?: string | null;
+        };
+      };
+    };
     Enums: Record<string, never>;
   };
 };

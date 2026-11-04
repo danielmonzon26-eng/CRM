@@ -45,10 +45,10 @@ export default async function LeadsTablePage({
   const end = Math.min(page * PAGE_SIZE, total);
 
   return (
-    <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
+    <main className="mx-auto max-w-[1600px] px-4 py-6 sm:px-6 lg:px-8">
       <header className="mb-5 flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h1 className="text-xl font-semibold tracking-tight text-slate-900">Leads</h1>
+          <h1 className="text-[28px] font-semibold leading-tight tracking-tight text-slate-900">Leads</h1>
           <p className="text-sm text-slate-500">{total.toLocaleString()} total leads</p>
         </div>
         <form action="/leads" className="relative w-full max-w-xs">

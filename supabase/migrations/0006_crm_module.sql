@@ -40,7 +40,12 @@ create policy "authenticated all tasks" on public.tasks
   for all to authenticated using (true) with check (true);
 
 -- activities.type gains 'task_completed' so finishing a task shows up on the lead
--- timeline alongside notes, status changes, etc.
+-- timeline alongside notes, status changes, etc. Migrations are all re-applied on every
+-- run, so this also lists types from later migrations; otherwise re-adding it would fail
+-- once rows of those types exist.
 alter table public.activities drop constraint if exists activities_type_check;
 alter table public.activities add constraint activities_type_check
-  check (type in ('note', 'status_change', 'enrichment_run', 'email_sent', 'call_logged', 'sync_matched', 'task_completed'));
+  check (type in (
+    'status_change', 'enrichment_run', 'email_sent', 'call_logged', 'sync_matched',
+    'task_completed', 'note', 'deal_created', 'deal_stage_change', 'event_registration'
+  ));

@@ -1,70 +1,63 @@
 "use client";
 
-import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { NAV_LINKS, TEAM_LINK } from "@/components/nav-links";
+import { useState } from "react";
+import { PanelLeftClose, PanelLeftOpen } from "lucide-react";
+import { AppNav } from "@/components/app-nav";
+import { VersionStamp, Wordmark } from "@/components/wordmark";
 
-function isActive(pathname: string, href: string): boolean {
-  return href === "/" ? pathname === "/" : pathname === href || pathname.startsWith(`${href}/`);
-}
+export const SIDEBAR_COOKIE = "sidebar-collapsed";
 
-export function Sidebar({ isAdmin, openTaskCount }: { isAdmin: boolean; openTaskCount: number }) {
-  const pathname = usePathname();
+export function Sidebar({
+  isAdmin,
+  openTaskCount,
+  initialCollapsed,
+}: {
+  isAdmin: boolean;
+  openTaskCount: number;
+  initialCollapsed: boolean;
+}) {
+  const [collapsed, setCollapsed] = useState(initialCollapsed);
+  const ToggleIcon = collapsed ? PanelLeftOpen : PanelLeftClose;
+
+  function toggle() {
+    const next = !collapsed;
+    setCollapsed(next);
+    // A cookie, not localStorage, so the server renders the right width with no flash.
+    document.cookie = `${SIDEBAR_COOKIE}=${next ? "1" : "0"}; path=/; max-age=31536000; samesite=lax`;
+  }
 
   return (
-    <aside className="hidden w-60 shrink-0 flex-col bg-ink-950 lg:flex">
-      <div className="flex h-14 items-center gap-1.5 border-b border-white/10 px-5">
-        <span className="text-base font-bold tracking-wide text-white">HI DAN</span>
+    <aside
+      className={`sticky top-0 hidden h-screen shrink-0 flex-col bg-ink-950 transition-[width] duration-150 lg:flex ${
+        collapsed ? "w-[72px]" : "w-60"
+      }`}
+    >
+      <div className={`flex h-16 items-center border-b border-white/10 ${collapsed ? "justify-center" : "px-5"}`}>
+        <Wordmark collapsed={collapsed} />
       </div>
 
-      <div className="border-b border-white/10 px-5 py-2.5 text-[11px] leading-snug text-white">
-        <p>{process.env.NEXT_PUBLIC_APP_VERSION}</p>
-        <p>Uploaded {process.env.NEXT_PUBLIC_APP_UPLOADED_AT}</p>
+      {!collapsed && (
+        <div className="border-b border-white/10 px-5 py-2.5">
+          <VersionStamp />
+        </div>
+      )}
+
+      <AppNav isAdmin={isAdmin} openTaskCount={openTaskCount} collapsed={collapsed} />
+
+      <div className="border-t border-white/10 p-3">
+        <button
+          type="button"
+          onClick={toggle}
+          aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+          title={collapsed ? "Expand sidebar" : undefined}
+          className={`flex w-full items-center gap-2.5 rounded-lg text-sm font-medium text-ink-200 hover:bg-white/5 hover:text-white ${
+            collapsed ? "h-10 justify-center" : "px-3 py-2"
+          }`}
+        >
+          <ToggleIcon className="h-[18px] w-[18px]" strokeWidth={2} />
+          {!collapsed && "Collapse"}
+        </button>
       </div>
-
-      <nav className="flex-1 space-y-0.5 overflow-y-auto px-3 py-4">
-        {NAV_LINKS.map((item) => {
-          const active = isActive(pathname, item.href);
-          const Icon = item.icon;
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={`flex items-center justify-between rounded-md px-3 py-2 text-sm font-medium transition-colors ${
-                active ? "bg-brand-600 text-white" : "text-ink-200 hover:bg-white/5 hover:text-white"
-              }`}
-            >
-              <span className="flex items-center gap-2.5">
-                <Icon className="h-4 w-4" strokeWidth={2} />
-                {item.label}
-              </span>
-              {item.showTaskBadge && openTaskCount > 0 && (
-                <span
-                  className={`rounded-full px-1.5 py-0.5 text-[10px] font-semibold leading-none ${
-                    active ? "bg-white text-brand-700" : "bg-white/10 text-ink-100"
-                  }`}
-                >
-                  {openTaskCount}
-                </span>
-              )}
-            </Link>
-          );
-        })}
-
-        {isAdmin && (
-          <Link
-            href={TEAM_LINK.href}
-            className={`flex items-center gap-2.5 rounded-md px-3 py-2 text-sm font-medium transition-colors ${
-              isActive(pathname, TEAM_LINK.href)
-                ? "bg-brand-600 text-white"
-                : "text-ink-200 hover:bg-white/5 hover:text-white"
-            }`}
-          >
-            <TEAM_LINK.icon className="h-4 w-4" strokeWidth={2} />
-            {TEAM_LINK.label}
-          </Link>
-        )}
-      </nav>
     </aside>
   );
 }

@@ -24,12 +24,12 @@ export default async function TeamPage() {
   const members = await getTeamMembers();
 
   return (
-    <main className="mx-auto max-w-2xl px-4 py-8">
+    <main className="mx-auto max-w-4xl px-4 py-6 sm:px-6 lg:px-8">
       <Link href="/" className="inline-flex items-center gap-1 text-sm text-slate-500 hover:text-slate-900">
         <ArrowLeft className="h-3.5 w-3.5" strokeWidth={2} />
         Back to board
       </Link>
-      <h1 className="mt-4 text-xl font-semibold tracking-tight text-slate-900">Team</h1>
+      <h1 className="mt-4 text-[28px] font-semibold leading-tight tracking-tight text-slate-900">Team</h1>
       <p className="text-sm text-slate-500">Admins can manage every lead and promote/demote roles.</p>
 
       <div className="mt-6 divide-y divide-slate-100 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-card">

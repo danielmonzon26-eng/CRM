@@ -4,6 +4,7 @@ import {
   ArrowLeft,
   ArrowUpRight,
   Building2,
+  CalendarDays,
   Handshake,
   Mail,
   Phone,
@@ -20,9 +21,11 @@ import { TaskList } from "@/components/task-list";
 import { TaskForm } from "@/components/task-form";
 import { DealCard } from "@/components/deal-card";
 import { CreateDealForm } from "@/components/create-deal-form";
+import { EventRegistrationsSection } from "@/components/event-registrations-section";
 import { getLeadDetail, getTeamMembers } from "@/lib/leads/queries";
 import { getTasksForSubject } from "@/lib/tasks/queries";
 import { getDealsForLead } from "@/lib/deals/queries";
+import { getEventRegistrationsForLead } from "@/lib/events/queries";
 import { getInitials } from "@/lib/text";
 import { NoteForm } from "./note-form";
 import { RevenueForm } from "./revenue-form";
@@ -38,22 +41,24 @@ const ACTIVITY_META: Record<string, { label: string; icon: typeof StickyNote }> 
   task_completed: { label: "Task completed", icon: CheckCircle2 },
   deal_created: { label: "Deal created", icon: Handshake },
   deal_stage_change: { label: "Deal stage change", icon: TrendingUp },
+  event_registration: { label: "Event registration", icon: CalendarDays },
 };
 
 export default async function LeadDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const [lead, members, tasks, deals] = await Promise.all([
+  const [lead, members, tasks, deals, eventRegistrations] = await Promise.all([
     getLeadDetail(id),
     getTeamMembers(),
     getTasksForSubject({ leadId: id }),
     getDealsForLead(id),
+    getEventRegistrationsForLead(id),
   ]);
   if (!lead) notFound();
 
   const primaryContact = lead.contacts.find((c) => c.is_primary) ?? lead.contacts[0] ?? null;
 
   return (
-    <main className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
+    <main className="mx-auto max-w-[1600px] px-4 py-6 sm:px-6 lg:px-8">
       <Link href="/" className="inline-flex items-center gap-1 text-sm text-slate-500 hover:text-slate-900">
         <ArrowLeft className="h-3.5 w-3.5" strokeWidth={2} />
         Back to board
@@ -65,7 +70,7 @@ export default async function LeadDetailPage({ params }: { params: Promise<{ id:
             {getInitials(lead.company.name) || <Building2 className="h-5 w-5" />}
           </div>
           <div>
-            <h1 className="text-2xl font-semibold tracking-tight text-slate-900">{lead.company.name}</h1>
+            <h1 className="text-[28px] font-semibold leading-tight tracking-tight text-slate-900">{lead.company.name}</h1>
             <p className="text-sm text-slate-500">
               {lead.company.address_line ?? "No address on file"} · {lead.company.community ?? "Calgary"}
             </p>
@@ -170,6 +175,10 @@ export default async function LeadDetailPage({ params }: { params: Promise<{ id:
                 <DealCard key={d.id} deal={d} />
               ))}
             </div>
+          </section>
+
+          <section>
+            <EventRegistrationsSection registrations={eventRegistrations} />
           </section>
 
           <section>

@@ -18,9 +18,9 @@ export default async function TasksPage({ searchParams }: { searchParams: Promis
   const tasks = await getTasksList(activeFilter);
 
   return (
-    <main className="mx-auto max-w-3xl px-4 py-8">
+    <main className="mx-auto max-w-[1600px] px-4 py-6 sm:px-6 lg:px-8">
       <header className="mb-6">
-        <h1 className="text-xl font-semibold tracking-tight text-slate-900">Tasks</h1>
+        <h1 className="text-[28px] font-semibold leading-tight tracking-tight text-slate-900">Tasks</h1>
         <p className="text-sm text-slate-500">Follow-ups, calls, and to-dos across every deal.</p>
       </header>
 

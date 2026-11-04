@@ -27,10 +27,10 @@ export default async function DealsPage() {
   ];
 
   return (
-    <main className="px-4 py-6 sm:px-6">
+    <main className="px-4 py-6 sm:px-6 lg:px-8">
       <div className="mx-auto max-w-[1700px]">
         <header className="mb-6">
-          <h1 className="text-xl font-semibold tracking-tight text-slate-900">Deals</h1>
+          <h1 className="text-[28px] font-semibold leading-tight tracking-tight text-slate-900">Deals</h1>
           <p className="text-sm text-slate-500">Track and manage your sales opportunities.</p>
         </header>
 
