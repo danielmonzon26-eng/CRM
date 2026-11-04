@@ -504,6 +504,7 @@ export type Database = {
           name: string;
           amount: number;
           event_id: string | null;
+          plan_month: string | null;
           owner_name: string | null;
           notes: string | null;
           sort_order: number;
@@ -518,6 +519,7 @@ export type Database = {
           name: string;
           amount?: number;
           event_id?: string | null;
+          plan_month?: string | null;
           owner_name?: string | null;
           notes?: string | null;
           sort_order?: number;
@@ -612,6 +614,31 @@ export type Database = {
         Update: Partial<Database["public"]["Tables"]["event_revenue"]["Insert"]>;
         Relationships: [];
       };
+      budget_changes: {
+        Row: {
+          id: string;
+          budget_id: string | null;
+          line_id: string | null;
+          table_name: string;
+          action: "insert" | "update" | "delete";
+          before_data: Record<string, unknown> | null;
+          after_data: Record<string, unknown> | null;
+          changed_by: string | null;
+          changed_at: string;
+        };
+        Insert: {
+          id?: string;
+          budget_id?: string | null;
+          line_id?: string | null;
+          table_name: string;
+          action: "insert" | "update" | "delete";
+          before_data?: Record<string, unknown> | null;
+          after_data?: Record<string, unknown> | null;
+          changed_by?: string | null;
+        };
+        Update: Partial<Database["public"]["Tables"]["budget_changes"]["Insert"]>;
+        Relationships: [];
+      };
       event_templates: {
         Row: {
           id: string;
@@ -698,6 +725,62 @@ export type Database = {
       import_budget: {
         Args: { p_budget: Record<string, unknown> };
         Returns: string;
+      };
+      crm_search_leads: {
+        Args: {
+          p_search?: string | null;
+          p_statuses?: string[] | null;
+          p_owner?: string | null;
+          p_industry?: string | null;
+          p_community?: string | null;
+          p_min_score?: number | null;
+          p_contact?: string | null;
+          p_event_id?: string | null;
+          p_sort?: string;
+          p_descending?: boolean;
+          p_limit?: number;
+          p_offset?: number;
+        };
+        Returns: {
+          id: string;
+          status: string;
+          score: number;
+          assigned_to: string | null;
+          created_at: string;
+          company_id: string;
+          company_name: string;
+          community: string | null;
+          industry: string | null;
+          primary_name: string | null;
+          primary_title: string | null;
+          primary_email: string | null;
+          contact_count: number;
+          total_count: number;
+        }[];
+      };
+      crm_lead_stage_counts: {
+        Args: {
+          p_search?: string | null;
+          p_owner?: string | null;
+          p_industry?: string | null;
+          p_community?: string | null;
+          p_min_score?: number | null;
+          p_contact?: string | null;
+          p_event_id?: string | null;
+        };
+        Returns: { status: string; lead_count: number; open_value: number }[];
+      };
+      crm_lead_facets: {
+        Args: Record<string, never>;
+        Returns: { industries: string[]; communities: string[] };
+      };
+      budget_add_line: {
+        Args: { p_budget_id: string; p_kind: string; p_section: string; p_name: string; p_plan_month?: string | null };
+        Returns: string;
+      };
+      budget_add_month: {
+        Args: { p_budget_id: string; p_month: string };
+        Returns: undefined;
       };
       get_public_event: {
         Args: { p_slug: string };

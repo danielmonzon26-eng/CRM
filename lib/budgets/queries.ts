@@ -28,7 +28,10 @@ export type LineSummary = {
   eventTitle: string | null;
   ownerName: string | null;
   notes: string | null;
+  planMonth: string | null;
   months: Record<string, number>;
+  /** Committed and actual spending by month, from each expense's date. */
+  spentByMonth: Record<string, { committed: number; actual: number }>;
   committed: number;
   actual: number;
   /** Budget minus committed and actual: what's still free to spend. */
@@ -71,6 +74,12 @@ function summarizeLine(
   eventTitle: string | null
 ): LineSummary {
   const { committed, actual } = totals(expenses);
+  const spentByMonth: LineSummary["spentByMonth"] = {};
+  for (const e of expenses) {
+    const month = `${e.incurred_on.slice(0, 7)}-01`;
+    const current = spentByMonth[month] ?? { committed: 0, actual: 0 };
+    spentByMonth[month] = { ...current, [e.status]: sumMoney([current[e.status], e.amount]) };
+  }
   return {
     id: line.id,
     budgetId: line.budget_id,
@@ -82,7 +91,9 @@ function summarizeLine(
     eventTitle,
     ownerName: line.owner_name,
     notes: line.notes,
+    planMonth: line.plan_month,
     months,
+    spentByMonth,
     committed,
     actual,
     remaining: fromCents(addCents([line.amount]) - addCents([committed, actual])),
@@ -190,6 +201,8 @@ export type ExpenseListItem = ExpenseRow & { itemName: string | null };
 export type LineDetail = {
   line: LineSummary;
   budgetName: string;
+  budgetMonths: string[];
+  sections: string[];
   items: ItemSummary[];
   expenses: ExpenseListItem[];
 };
@@ -206,6 +219,15 @@ async function loadLineDetail(line: Database["public"]["Tables"]["budget_lines"]
   const error = budgetResult.error ?? allocationsResult.error ?? itemsResult.error ?? expensesResult.error ?? eventResult.error;
   if (error) throw error;
   const budget = budgetResult.data!;
+  const [{ data: siblings, error: siblingsError }] = await Promise.all([
+    supabase.from("budget_lines").select("id, section").eq("budget_id", line.budget_id),
+  ]);
+  if (siblingsError) throw siblingsError;
+  const { data: budgetAllocations, error: budgetAllocationsError } = await supabase
+    .from("budget_allocations")
+    .select("month")
+    .in("line_id", siblings.map((l) => l.id));
+  if (budgetAllocationsError) throw budgetAllocationsError;
   const allocations = allocationsResult.data!;
   const items = itemsResult.data!;
   const expenses = expensesResult.data!;
@@ -214,6 +236,8 @@ async function loadLineDetail(line: Database["public"]["Tables"]["budget_lines"]
   return {
     line: summarizeLine(line, expenses, Object.fromEntries(allocations.map((a) => [a.month, a.amount])), eventResult.data?.title ?? null),
     budgetName: budget.name,
+    budgetMonths: [...new Set(budgetAllocations.map((a) => a.month))].sort(),
+    sections: [...new Set(siblings.map((l) => l.section))].sort(),
     items: items.map((item) => {
       const { committed, actual } = totals(expenses.filter((e) => e.item_id === item.id));
       return {
@@ -267,4 +291,41 @@ export async function getEventOptions(): Promise<{ id: string; title: string; st
   if (linkedError) throw linkedError;
   const linkedIds = new Set(linked.map((l) => l.event_id));
   return events.map((e) => ({ id: e.id, title: e.title, startsAt: e.starts_at, linked: linkedIds.has(e.id) }));
+}
+
+export type BudgetChangeRow = Database["public"]["Tables"]["budget_changes"]["Row"] & { lineName: string | null; changedByName: string | null };
+
+const CHANGE_LIMIT = 150;
+
+/** Recent history for a budget or one line, with names resolved. */
+export async function getBudgetChanges(filter: { budgetId?: string; lineId?: string }): Promise<BudgetChangeRow[]> {
+  const supabase = await createClient();
+  let query = supabase.from("budget_changes").select("*").order("changed_at", { ascending: false }).limit(CHANGE_LIMIT);
+  if (filter.lineId) query = query.eq("line_id", filter.lineId);
+  else if (filter.budgetId) query = query.eq("budget_id", filter.budgetId);
+  else return [];
+
+  const { data: changes, error } = await query;
+  if (error) throw error;
+
+  const lineIds = [...new Set(changes.map((c) => c.line_id).filter((id): id is string => id !== null))];
+  const actorIds = [...new Set(changes.map((c) => c.changed_by).filter((id): id is string => id !== null))];
+  const [{ data: lines, error: linesError }, { data: profiles, error: profilesError }] = await Promise.all([
+    supabase.from("budget_lines").select("id, name, kind").in("id", lineIds),
+    supabase.from("profiles").select("id, full_name, email").in("id", actorIds),
+  ]);
+  if (linesError) throw linesError;
+  if (profilesError) throw profilesError;
+
+  const lineById = new Map(lines.map((l) => [l.id, l]));
+  const nameById = new Map(profiles.map((p) => [p.id, p.full_name ?? p.email]));
+
+  return changes
+    // An event line's months and totals follow its items, so those rows only repeat the item change.
+    .filter((c) => !(c.table_name === "budget_allocations" && c.line_id && lineById.get(c.line_id)?.kind === "event"))
+    .map((c) => ({
+      ...c,
+      lineName: c.line_id ? lineById.get(c.line_id)?.name ?? ((c.before_data?.name as string) ?? null) : null,
+      changedByName: c.changed_by ? nameById.get(c.changed_by) ?? "Unknown" : null,
+    }));
 }

@@ -1,7 +1,7 @@
 import { BudgetImport } from "@/components/budget-import";
 import { BudgetOverviewView } from "@/components/budget-overview";
 import { Page, PageHeader } from "@/components/ui/page";
-import { getBudgetList, getBudgetOverview } from "@/lib/budgets/queries";
+import { getBudgetChanges, getBudgetList, getBudgetOverview } from "@/lib/budgets/queries";
 import Link from "next/link";
 
 export const dynamic = "force-dynamic";
@@ -9,6 +9,7 @@ export const dynamic = "force-dynamic";
 export default async function BudgetsPage({ searchParams }: { searchParams: Promise<{ budget?: string }> }) {
   const { budget: budgetId } = await searchParams;
   const [budgets, overview] = await Promise.all([getBudgetList(), getBudgetOverview(budgetId)]);
+  const changes = overview ? await getBudgetChanges({ budgetId: overview.id }) : [];
 
   return (
     <Page>
@@ -32,8 +33,13 @@ export default async function BudgetsPage({ searchParams }: { searchParams: Prom
       )}
       {overview ? (
         <div className="space-y-5">
-          <BudgetOverviewView budget={overview} />
-          <BudgetImport />
+          <BudgetOverviewView budget={overview} changes={changes} />
+          <details className="rounded-xl border border-slate-200 bg-white shadow-card">
+            <summary className="cursor-pointer px-5 py-3.5 text-sm font-medium text-slate-700">Import a different budget from Excel</summary>
+            <div className="border-t border-slate-100 p-1">
+              <BudgetImport />
+            </div>
+          </details>
         </div>
       ) : (
         <BudgetImport />

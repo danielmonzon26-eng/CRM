@@ -1,73 +1,42 @@
-import { LeadCard } from "@/components/lead-card";
+import { LeadsWorkspace } from "@/components/leads-workspace";
 import { StatsBar } from "@/components/stats-bar";
-import { getLeadsBoard, getPipelineStats } from "@/lib/leads/queries";
+import { Page, PageHeader } from "@/components/ui/page";
 import { getPipelineForecast } from "@/lib/deals/queries";
-import type { LeadStatus } from "@/lib/supabase/types";
+import { getEvents } from "@/lib/events/queries";
+import { parseLeadView } from "@/lib/leads/filters";
+import { getPipelineStats, getTeamMembers } from "@/lib/leads/queries";
+import { getLeadBoard, getLeadFacets, getLeadTablePage, getStageSummaries } from "@/lib/leads/search";
 
 export const dynamic = "force-dynamic";
 
-const COLUMNS: { status: LeadStatus; label: string; accent: string }[] = [
-  { status: "new", label: "New", accent: "bg-slate-400" },
-  { status: "researching", label: "Researching", accent: "bg-sky-500" },
-  { status: "contacted", label: "Contacted", accent: "bg-indigo-500" },
-  { status: "qualified", label: "Qualified", accent: "bg-amber-500" },
-  { status: "won", label: "Won", accent: "bg-emerald-500" },
-  { status: "lost", label: "Lost", accent: "bg-rose-400" },
-  { status: "unqualified", label: "Unqualified", accent: "bg-slate-300" },
-];
-
-export default async function CrmDashboardPage() {
-  const [leads, stats, forecast] = await Promise.all([getLeadsBoard(), getPipelineStats(), getPipelineForecast()]);
+export default async function CrmDashboardPage({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
+  const state = parseLeadView(await searchParams, "board");
+  const [stats, forecast, facets, members, events, board, table, stages] = await Promise.all([
+    getPipelineStats(),
+    getPipelineForecast(),
+    getLeadFacets(),
+    getTeamMembers(),
+    getEvents(),
+    state.view === "board" ? getLeadBoard(state) : Promise.resolve(null),
+    state.view === "table" ? getLeadTablePage(state) : Promise.resolve(null),
+    getStageSummaries(state),
+  ]);
 
   return (
-    <main className="px-4 py-6 sm:px-6 lg:px-8">
-      <div className="mx-auto max-w-[1600px]">
-        <header className="mb-5">
-          <h1 className="text-[28px] font-semibold leading-tight tracking-tight text-slate-900">CRM Dashboard</h1>
-          <p className="text-sm text-slate-500">
-            {leads.length} lead{leads.length === 1 ? "" : "s"} in the pipeline
-          </p>
-        </header>
-
-        <StatsBar stats={stats} forecast={forecast} />
-
-        {leads.length === 0 ? (
-          <div className="rounded-xl border border-dashed border-slate-300 bg-white px-6 py-16 text-center">
-            <p className="text-sm text-slate-500">
-              No leads yet. Run the ingestion and scoring crons (see README) to populate the pipeline.
-            </p>
-          </div>
-        ) : (
-          <div className="flex gap-4 overflow-x-auto pb-4">
-            {COLUMNS.map((col) => {
-              const columnLeads = leads.filter((l) => l.status === col.status);
-              return (
-                <div key={col.status} className="flex w-72 shrink-0 flex-col gap-3">
-                  <div className="flex items-center justify-between px-1">
-                    <h2 className="flex items-center gap-2 text-sm font-semibold text-slate-700">
-                      <span className={`h-2 w-2 rounded-full ${col.accent}`} />
-                      {col.label}
-                    </h2>
-                    <span className="rounded-full bg-slate-200 px-2 py-0.5 text-xs font-medium text-slate-600">
-                      {columnLeads.length}
-                    </span>
-                  </div>
-                  <div className="flex flex-col gap-2">
-                    {columnLeads.map((lead) => (
-                      <LeadCard key={lead.id} lead={lead} />
-                    ))}
-                    {columnLeads.length === 0 && (
-                      <div className="rounded-lg border border-dashed border-slate-200 px-3 py-6 text-center text-xs text-slate-400">
-                        No leads
-                      </div>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </div>
-    </main>
+    <Page>
+      <PageHeader title="CRM Dashboard" subtitle="Your pipeline, from first contact to closed." />
+      <StatsBar stats={stats} forecast={forecast} />
+      <LeadsWorkspace
+        state={state}
+        defaultView="board"
+        basePath="/crm"
+        board={board}
+        table={table}
+        stages={stages}
+        facets={facets}
+        members={members.map((m) => ({ id: m.id, name: m.fullName ?? m.email ?? "Unknown" }))}
+        events={events.map((e) => ({ id: e.id, title: e.title }))}
+      />
+    </Page>
   );
 }
