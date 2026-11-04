@@ -53,6 +53,19 @@ export async function getEventTemplates(): Promise<EventTemplate[]> {
   return data;
 }
 
+export type EventRevenueEntry = Database["public"]["Tables"]["event_revenue"]["Row"];
+
+export async function getEventRevenueEntries(eventId: string): Promise<EventRevenueEntry[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("event_revenue")
+    .select("*")
+    .eq("event_id", eventId)
+    .order("created_at", { ascending: false });
+  if (error) throw error;
+  return data;
+}
+
 export type EventDocument = EventResourceRow & { downloadUrl: string | null };
 
 export type EventDetail = {

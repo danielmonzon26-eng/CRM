@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { fetchAllPages } from "@/lib/supabase/paginate";
+import { getBudgetSnapshot, type BudgetSnapshot } from "@/lib/budgets/queries";
 import { getPipelineForecast } from "@/lib/deals/queries";
 import { isEventOver } from "@/lib/events/format";
 import type { ActivityType, EventFormat, EventStatus, TaskType } from "@/lib/supabase/types";
@@ -80,6 +81,7 @@ export type DashboardData = {
   unassignedLeadCount: number;
   registrations: DashboardRegistration[];
   programs: ProgramRow[];
+  budget: BudgetSnapshot | null;
 };
 
 function percent(part: number, whole: number): number | null {
@@ -96,6 +98,7 @@ export async function getDashboardData(): Promise<DashboardData> {
     events,
     allRegistrations,
     forecast,
+    budget,
     { count: contacts, error: contactsError },
     { count: overdueTasks, error: overdueError },
     { data: taskRows, error: tasksError },
@@ -121,6 +124,7 @@ export async function getDashboardData(): Promise<DashboardData> {
         .range(from, to)
     ),
     getPipelineForecast(),
+    getBudgetSnapshot(),
     supabase.from("contacts").select("id", { count: "exact", head: true }),
     supabase.from("tasks").select("id", { count: "exact", head: true }).is("completed_at", null).lt("due_at", nowIso),
     supabase
@@ -200,6 +204,7 @@ export async function getDashboardData(): Promise<DashboardData> {
   }
 
   return {
+    budget,
     kpis: {
       upcomingEvents: upcoming.length,
       eventsNext30Days: upcoming.filter((e) => new Date(e.starts_at).getTime() <= thirtyDays).length,

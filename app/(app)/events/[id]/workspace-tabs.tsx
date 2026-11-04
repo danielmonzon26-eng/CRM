@@ -14,12 +14,16 @@ import {
   Users,
   Wallet,
 } from "lucide-react";
+import { DeleteRevenueButton, EventLinePicker, RevenueForm } from "@/components/budget-controls";
 import { TaskForm } from "@/components/task-form";
 import { TaskList } from "@/components/task-list";
 import { buttonClass } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/page";
 import { EVENT_TIME_ZONE, FORMAT_LABELS, calgaryDateKey, formatEventWhen, formatTicketPrice, getVideoEmbedUrl } from "@/lib/events/format";
-import type { EventDetail } from "@/lib/events/queries";
+import { formatMoney } from "@/lib/budgets/money";
+import type { LineDetail, LineSummary } from "@/lib/budgets/queries";
+import type { EventDetail, EventRevenueEntry } from "@/lib/events/queries";
+import type { EventReportRow } from "@/lib/reports/queries";
 import type { TaskListRow } from "@/lib/tasks/queries";
 import { CopyButton, DocumentRow, DocumentUpload, RemoveResourceButton, VideoForm } from "./event-controls";
 import { RegistrationsTable } from "./registrations-table";
@@ -27,9 +31,7 @@ import { RegistrationsTable } from "./registrations-table";
 const CARD = "rounded-xl border border-slate-200 bg-white shadow-card";
 const shortDate = new Intl.DateTimeFormat("en-CA", { timeZone: EVENT_TIME_ZONE, month: "short", day: "numeric" });
 
-function money(value: number): string {
-  return new Intl.NumberFormat("en-CA", { style: "currency", currency: "CAD", maximumFractionDigits: 2 }).format(value);
-}
+const money = formatMoney;
 
 function percent(part: number, whole: number): number | null {
   return whole > 0 ? Math.round((part / whole) * 100) : null;
@@ -76,7 +78,17 @@ function buildTimeline(detail: EventDetail, tasks: TaskListRow[]): Milestone[] {
   return items.sort((a, b) => a.at.localeCompare(b.at));
 }
 
-export function OverviewTab({ detail, tasks, landingUrl }: { detail: EventDetail; tasks: TaskListRow[]; landingUrl: string }) {
+export function OverviewTab({
+  detail,
+  tasks,
+  landingUrl,
+  line,
+}: {
+  detail: EventDetail;
+  tasks: TaskListRow[];
+  landingUrl: string;
+  line: LineSummary | null;
+}) {
   const { event } = detail;
   const counts = getCounts(detail, tasks);
   const fill = event.capacity ? percent(counts.registered.length, event.capacity) : null;
@@ -105,9 +117,9 @@ export function OverviewTab({ detail, tasks, landingUrl }: { detail: EventDetail
         <Metric
           icon={Wallet}
           tone="bg-emerald-50 text-emerald-700"
-          value={event.budget_amount != null ? money(event.budget_amount) : "—"}
-          label="Budget allocated"
-          detail="Spending arrives with Budgets"
+          value={line ? money(line.amount) : event.budget_amount != null ? money(event.budget_amount) : "—"}
+          label="Budget"
+          detail={line ? `${money(line.actual)} spent · ${line.percentUsed}% used` : "Not linked to a budget line"}
         />
         <Metric
           icon={Target}
@@ -283,28 +295,120 @@ export function SpeakersTab({ detail }: { detail: EventDetail }) {
   );
 }
 
-export function BudgetTab({ detail }: { detail: EventDetail }) {
+export function BudgetTab({
+  detail,
+  line,
+  unlinkedLines,
+  revenue,
+  report,
+}: {
+  detail: EventDetail;
+  line: LineDetail | null;
+  unlinkedLines: { id: string; name: string; amount: number }[];
+  revenue: EventRevenueEntry[];
+  report: EventReportRow | null;
+}) {
   const { event } = detail;
+  const ticketEstimate = report?.revenue.ticketsEstimated ?? 0;
+
   return (
-    <div className="space-y-4">
-      <div className="flex justify-end"><EditLink eventId={event.id} step={3} label="Edit budget" /></div>
-      <section className="grid gap-3 sm:grid-cols-2">
-        <div className={`${CARD} p-4`}>
-          <p className="text-2xl font-semibold tracking-tight text-slate-900">{event.budget_amount != null ? money(event.budget_amount) : "—"}</p>
-          <p className="text-sm text-slate-600">Budget allocated</p>
-        </div>
-        <div className={`${CARD} p-4`}>
-          <p className="text-lg font-semibold text-slate-900">{event.funding_source ?? "—"}</p>
-          <p className="text-sm text-slate-600">Funding source</p>
-        </div>
-      </section>
-      {event.budget_notes && (
-        <section className={`${CARD} p-5 text-sm`}>
-          <h2 className="font-semibold text-slate-900">Notes</h2>
-          <p className="mt-1 whitespace-pre-line text-slate-600">{event.budget_notes}</p>
+    <div className="space-y-5">
+      {line ? (
+        <>
+          <section aria-label="Budget figures" className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+            {([
+              ["Budget", line.line.amount],
+              ["Committed", line.line.committed],
+              ["Actual", line.line.actual],
+              ["Remaining", line.line.remaining],
+            ] as [string, number][]).map(([label, value]) => (
+              <div key={label} className={`${CARD} p-4`}>
+                <p className={`text-2xl font-semibold tracking-tight ${label === "Remaining" && value < 0 ? "text-rose-700" : "text-slate-900"}`}>{formatMoney(value)}</p>
+                <p className="text-sm text-slate-600">{label}</p>
+              </div>
+            ))}
+          </section>
+          <section className={CARD}>
+            <header className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 px-5 py-3.5">
+              <div>
+                <h2 className="font-semibold text-slate-900">{line.line.name}</h2>
+                <p className="text-xs text-slate-500">{line.budgetName}</p>
+              </div>
+              <Link href={`/budgets/lines/${line.line.id}`} className={buttonClass("secondary", "sm")}>Add expenses</Link>
+            </header>
+            <div className="relative overflow-x-auto">
+              <table className="w-full min-w-[520px] text-left text-sm">
+                <thead className="text-xs uppercase tracking-wide text-slate-500">
+                  <tr>
+                    <th scope="col" className="px-5 py-2.5 font-medium">Item</th>
+                    <th scope="col" className="px-3 py-2.5 text-right font-medium">Budget</th>
+                    <th scope="col" className="px-3 py-2.5 text-right font-medium">Actual</th>
+                    <th scope="col" className="px-5 py-2.5 text-right font-medium">Remaining</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 border-t border-slate-100">
+                  {line.items.map((item) => (
+                    <tr key={item.id}>
+                      <td className="px-5 py-2.5 text-slate-800">{item.name}</td>
+                      <td className="px-3 py-2.5 text-right text-slate-700">{formatMoney(item.amount)}</td>
+                      <td className="px-3 py-2.5 text-right text-slate-700">{formatMoney(item.actual)}</td>
+                      <td className={`px-5 py-2.5 text-right font-medium ${item.remaining < 0 ? "text-rose-700" : "text-slate-900"}`}>{formatMoney(item.remaining)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </section>
+        </>
+      ) : (
+        <section className={`${CARD} p-5`}>
+          <h2 className="font-semibold text-slate-900">Budget</h2>
+          {unlinkedLines.length > 0 ? (
+            <>
+              <p className="mb-3 mt-1 text-sm text-slate-500">Tie this event to its line in the approved budget to track spending against it.</p>
+              <EventLinePicker eventId={event.id} lines={unlinkedLines} />
+            </>
+          ) : (
+            <p className="mt-1 text-sm text-slate-500">
+              {event.budget_amount != null ? `${formatMoney(event.budget_amount)} allocated. ` : ""}
+              No unlinked event lines are available. <Link href="/budgets" className="font-medium text-brand-600 hover:underline">Go to Budgets</Link>
+            </p>
+          )}
         </section>
       )}
-      <EmptyState icon={Wallet} title="Expense tracking isn't set up yet" description="Committed and actual spending will appear here once the Budgets module is built from your Excel sheet." />
+
+      <section className={CARD}>
+        <h2 className="border-b border-slate-100 px-5 py-3.5 font-semibold text-slate-900">Revenue</h2>
+        <div className="space-y-4 p-5">
+          <RevenueForm eventId={event.id} />
+          <ul className="divide-y divide-slate-100 text-sm">
+            {event.ticket_type === "paid" && (
+              <li className="flex items-center justify-between gap-3 py-2">
+                <span className="text-slate-700">Tickets (estimated: registered seats times the price)</span>
+                <span className="font-medium text-slate-900">{formatMoney(ticketEstimate)}</span>
+              </li>
+            )}
+            {revenue.map((r) => (
+              <li key={r.id} className="flex items-center justify-between gap-3 py-1">
+                <span className="min-w-0 text-slate-700">{r.source}{r.received_on ? ` · ${r.received_on}` : ""}</span>
+                <span className="flex shrink-0 items-center gap-1 font-medium text-slate-900">
+                  {formatMoney(r.amount)}
+                  <DeleteRevenueButton revenueId={r.id} label={`${r.source}, ${formatMoney(r.amount)}`} />
+                </span>
+              </li>
+            ))}
+            {event.ticket_type !== "paid" && revenue.length === 0 && <li className="py-2 text-slate-500">No revenue recorded yet.</li>}
+          </ul>
+        </div>
+      </section>
+
+      {(event.funding_source || event.budget_notes) && (
+        <section className={`${CARD} p-5 text-sm`}>
+          <h2 className="font-semibold text-slate-900">Planning notes</h2>
+          {event.funding_source && <p className="mt-1 text-slate-700">Funding source: {event.funding_source}</p>}
+          {event.budget_notes && <p className="mt-1 whitespace-pre-line text-slate-600">{event.budget_notes}</p>}
+        </section>
+      )}
     </div>
   );
 }
@@ -401,11 +505,68 @@ export function FilesTab({ detail }: { detail: EventDetail }) {
 
 const ANALYTICS_DAYS = 30;
 
-export function AnalyticsTab({ detail }: { detail: EventDetail }) {
+function ResultsPanel({ report }: { report: EventReportRow }) {
+  const panels: { title: string; rows: [string, string][] }[] = [
+    {
+      title: "People",
+      rows: [
+        ["Registered", String(report.people.registered)],
+        ["Checked in", String(report.people.checkedIn)],
+        ["On waitlist", String(report.people.waitlisted)],
+        ["New contacts", String(report.people.newContacts)],
+        ["Companies", String(report.people.companies)],
+      ],
+    },
+    {
+      title: "Revenue",
+      rows: [
+        ["Tickets (estimated)", formatMoney(report.revenue.ticketsEstimated)],
+        ["Sponsors and other", formatMoney(report.revenue.other)],
+        ["Total revenue", formatMoney(report.revenue.total)],
+        ["Open deals after registering", formatMoney(report.revenue.openPipeline)],
+        ["Deals won after registering", formatMoney(report.revenue.closedWon)],
+      ],
+    },
+    {
+      title: "Costs",
+      rows: [
+        ["Budget", report.costs.budget === null ? "—" : formatMoney(report.costs.budget)],
+        ["Committed", formatMoney(report.costs.committed)],
+        ["Actual", formatMoney(report.costs.actual)],
+        ["Per attendee", report.costPerAttendee === null ? "—" : formatMoney(report.costPerAttendee)],
+        ["Net (revenue minus actual)", formatMoney(report.net)],
+      ],
+    },
+  ];
+  return (
+    <section aria-label="Event results" className="grid gap-3 lg:grid-cols-3">
+      {panels.map((panel) => (
+        <div key={panel.title} className={`${CARD} p-4`}>
+          <h2 className="font-semibold text-slate-900">{panel.title}</h2>
+          <dl className="mt-2 space-y-1.5 text-sm">
+            {panel.rows.map(([label, value]) => (
+              <div key={label} className="flex items-baseline justify-between gap-3">
+                <dt className="text-slate-600">{label}</dt>
+                <dd className="font-medium text-slate-900">{value}</dd>
+              </div>
+            ))}
+          </dl>
+        </div>
+      ))}
+    </section>
+  );
+}
+
+export function AnalyticsTab({ detail, report }: { detail: EventDetail; report: EventReportRow | null }) {
   const { event, registrations } = detail;
   const active = registrations.filter((r) => r.status === "registered");
   if (registrations.length === 0) {
-    return <EmptyState icon={Ticket} title="No data yet" description="Analytics appear once people start registering." />;
+    return (
+      <div className="space-y-5">
+        {report && <ResultsPanel report={report} />}
+        <EmptyState icon={Ticket} title="No registrations yet" description="Registration trends appear once people start registering." />
+      </div>
+    );
   }
 
   const checkedIn = active.filter((r) => r.checked_in_at).length;
@@ -434,6 +595,7 @@ export function AnalyticsTab({ detail }: { detail: EventDetail }) {
 
   return (
     <div className="space-y-5">
+      {report && <ResultsPanel report={report} />}
       <section aria-label="Key figures" className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <Metric icon={Users} tone="bg-brand-50 text-brand-600" value={String(active.length)} label="Registered" detail={event.capacity ? `${percent(active.length, event.capacity)}% of ${event.capacity} capacity` : "No capacity limit"} />
         <Metric icon={ClipboardCheck} tone="bg-sky-50 text-sky-700" value={active.length ? `${percent(checkedIn, active.length)}%` : "—"} label="Attendance" detail={`${checkedIn} checked in`} />

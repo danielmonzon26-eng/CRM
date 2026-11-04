@@ -1,5 +1,6 @@
 import type { LucideIcon } from "lucide-react";
 import {
+  BarChart3,
   Briefcase,
   Building2,
   CalendarDays,
@@ -35,6 +36,7 @@ export const CRM_LINKS: NavLink[] = [
 
 export const WORK_TABS: NavLink[] = [
   { href: "/budgets", label: "Budgets", icon: Wallet },
+  { href: "/reports", label: "Reports", icon: BarChart3 },
   { href: "/tasks", label: "Tasks", icon: CheckSquare2, showTaskBadge: true },
 ];
 

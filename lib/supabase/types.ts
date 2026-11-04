@@ -35,6 +35,8 @@ export type RegistrationStatus = "registered" | "waitlisted" | "cancelled";
 export type AgendaItem = { time: string; title: string };
 export type Speaker = { name: string; title: string };
 export type EventResourceKind = "document" | "video";
+export type BudgetLineKind = "general" | "event";
+export type ExpenseStatus = "committed" | "actual";
 
 export type SourceKind = "open_data_api" | "web_scrape" | "enrichment";
 export type SyncRunStatus = "running" | "success" | "failed";
@@ -471,6 +473,145 @@ export type Database = {
         Update: Partial<Database["public"]["Tables"]["events"]["Insert"]>;
         Relationships: [];
       };
+      budgets: {
+        Row: {
+          id: string;
+          name: string;
+          period_label: string | null;
+          source_file: string | null;
+          notes: string | null;
+          created_by: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          name: string;
+          period_label?: string | null;
+          source_file?: string | null;
+          notes?: string | null;
+          created_by?: string | null;
+        };
+        Update: Partial<Database["public"]["Tables"]["budgets"]["Insert"]>;
+        Relationships: [];
+      };
+      budget_lines: {
+        Row: {
+          id: string;
+          budget_id: string;
+          kind: BudgetLineKind;
+          section: string;
+          name: string;
+          amount: number;
+          event_id: string | null;
+          owner_name: string | null;
+          notes: string | null;
+          sort_order: number;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          budget_id: string;
+          kind: BudgetLineKind;
+          section: string;
+          name: string;
+          amount?: number;
+          event_id?: string | null;
+          owner_name?: string | null;
+          notes?: string | null;
+          sort_order?: number;
+        };
+        Update: Partial<Database["public"]["Tables"]["budget_lines"]["Insert"]>;
+        Relationships: [];
+      };
+      budget_allocations: {
+        Row: {
+          line_id: string;
+          month: string;
+          amount: number;
+        };
+        Insert: {
+          line_id: string;
+          month: string;
+          amount?: number;
+        };
+        Update: Partial<Database["public"]["Tables"]["budget_allocations"]["Insert"]>;
+        Relationships: [];
+      };
+      budget_items: {
+        Row: {
+          id: string;
+          line_id: string;
+          name: string;
+          amount: number;
+          notes: string | null;
+          sort_order: number;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          line_id: string;
+          name: string;
+          amount?: number;
+          notes?: string | null;
+          sort_order?: number;
+        };
+        Update: Partial<Database["public"]["Tables"]["budget_items"]["Insert"]>;
+        Relationships: [];
+      };
+      budget_expenses: {
+        Row: {
+          id: string;
+          line_id: string;
+          item_id: string | null;
+          status: ExpenseStatus;
+          amount: number;
+          incurred_on: string;
+          vendor: string | null;
+          description: string | null;
+          created_by: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          line_id: string;
+          item_id?: string | null;
+          status?: ExpenseStatus;
+          amount: number;
+          incurred_on: string;
+          vendor?: string | null;
+          description?: string | null;
+          created_by?: string | null;
+        };
+        Update: Partial<Database["public"]["Tables"]["budget_expenses"]["Insert"]>;
+        Relationships: [];
+      };
+      event_revenue: {
+        Row: {
+          id: string;
+          event_id: string;
+          source: string;
+          amount: number;
+          received_on: string | null;
+          notes: string | null;
+          created_by: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          event_id: string;
+          source: string;
+          amount: number;
+          received_on?: string | null;
+          notes?: string | null;
+          created_by?: string | null;
+        };
+        Update: Partial<Database["public"]["Tables"]["event_revenue"]["Insert"]>;
+        Relationships: [];
+      };
       event_templates: {
         Row: {
           id: string;
@@ -554,6 +695,10 @@ export type Database = {
     };
     Views: Record<string, never>;
     Functions: {
+      import_budget: {
+        Args: { p_budget: Record<string, unknown> };
+        Returns: string;
+      };
       get_public_event: {
         Args: { p_slug: string };
         Returns: {

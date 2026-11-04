@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { ArrowUpRight, Download, Search } from "lucide-react";
 import { buttonClass } from "@/components/ui/button";
+import { downloadCsv } from "@/lib/csv";
 import { FORMAT_LABELS } from "@/lib/events/format";
 import type { EventRegistrationRow } from "@/lib/events/queries";
 import { RegistrationActions } from "./event-controls";
@@ -15,13 +16,6 @@ const STATUS_FILTERS = [
   ["waitlisted", "Waitlist"],
   ["cancelled", "Cancelled"],
 ] as const;
-
-/** Quotes a CSV value and defuses spreadsheet formulas, since these values come from a public form. */
-function csvCell(value: string | null): string {
-  const text = value ?? "";
-  const safe = /^[=+\-@\t\r]/.test(text) ? `'${text}` : text;
-  return `"${safe.replace(/"/g, '""')}"`;
-}
 
 function statusLabel(r: EventRegistrationRow): string {
   if (r.status === "cancelled") return "Cancelled";
@@ -51,18 +45,10 @@ export function RegistrationsTable({
   }, [registrations, search, status]);
 
   function exportCsv() {
-    const header = ["Name", "Email", "Phone", "Company", "Attending", "Status", "Registered"];
-    const rows = filtered.map((r) =>
-      [r.full_name, r.email, r.phone, r.company_name, FORMAT_LABELS[r.attendance_mode], statusLabel(r), r.created_at]
-        .map(csvCell)
-        .join(",")
-    );
-    const url = URL.createObjectURL(new Blob([[header.join(","), ...rows].join("\n")], { type: "text/csv" }));
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = fileName;
-    link.click();
-    URL.revokeObjectURL(url);
+    downloadCsv(fileName, [
+      ["Name", "Email", "Phone", "Company", "Attending", "Status", "Registered"],
+      ...filtered.map((r) => [r.full_name, r.email, r.phone, r.company_name, FORMAT_LABELS[r.attendance_mode], statusLabel(r), r.created_at]),
+    ]);
   }
 
   return (

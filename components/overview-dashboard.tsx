@@ -13,6 +13,7 @@ import {
   Users,
   Wallet,
 } from "lucide-react";
+import { formatMoney } from "@/lib/budgets/money";
 import type { DashboardData, DashboardEvent } from "@/lib/dashboard/queries";
 import { EVENT_TIME_ZONE, formatEventTime, STATUS_LABELS, STATUS_STYLES } from "@/lib/events/format";
 
@@ -210,9 +211,9 @@ export function OverviewDashboard({ data, firstName }: { data: DashboardData; fi
           <Kpi
             icon={Wallet}
             tone="bg-emerald-50 text-emerald-700"
-            value="—"
+            value={data.budget ? `${data.budget.percentUsed}%` : "—"}
             label="Budget utilization"
-            detail="Budgets aren't set up yet"
+            detail={data.budget ? `${formatMoney(data.budget.spent)} of ${formatMoney(data.budget.approved)}` : "No budget imported yet"}
             href="/budgets"
           />
           <Kpi
@@ -363,7 +364,25 @@ export function OverviewDashboard({ data, firstName }: { data: DashboardData; fi
             </Panel>
 
             <Panel title="Budget alerts" href="/budgets" linkLabel="Budgets">
-              <PanelEmpty icon={Wallet}>Alerts appear here once budgets are set up.</PanelEmpty>
+              {!data.budget ? (
+                <PanelEmpty icon={Wallet}>Alerts appear here once a budget is imported.</PanelEmpty>
+              ) : data.budget.alerts.length === 0 ? (
+                <PanelEmpty icon={Wallet}>No lines are near or over budget.</PanelEmpty>
+              ) : (
+                <ul className="divide-y divide-slate-100">
+                  {data.budget.alerts.map((alert) => (
+                    <li key={alert.lineId}>
+                      <Link href={`/budgets/lines/${alert.lineId}`} className="flex items-center justify-between gap-3 px-5 py-2.5 text-sm hover:bg-slate-50">
+                        <span className="min-w-0 truncate font-medium text-slate-800">{alert.name}</span>
+                        <span className={`flex shrink-0 items-center gap-1 text-xs font-medium ${alert.over ? "text-rose-700" : "text-amber-700"}`}>
+                          <AlertTriangle className="h-3.5 w-3.5" strokeWidth={2} />
+                          {alert.percentUsed}% used{alert.over ? " · Over budget" : ""}
+                        </span>
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              )}
             </Panel>
           </div>
         </div>

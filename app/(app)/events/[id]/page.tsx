@@ -3,6 +3,9 @@ import { notFound } from "next/navigation";
 import { CalendarDays, MapPin, MonitorPlay, Users } from "lucide-react";
 import { getEventDetail } from "@/lib/events/queries";
 import { STATUS_LABELS, STATUS_STYLES, formatEventWhen } from "@/lib/events/format";
+import { getEventRevenueEntries } from "@/lib/events/queries";
+import { getLineDetailForEvent, getUnlinkedEventLines } from "@/lib/budgets/queries";
+import { getEventReport } from "@/lib/reports/queries";
 import { getSiteUrl } from "@/lib/site-url";
 import { getTasksForSubject } from "@/lib/tasks/queries";
 import { EventActionsMenu } from "./event-controls";
@@ -42,7 +45,14 @@ export default async function EventWorkspacePage({
 }) {
   const { id } = await params;
   const { tab, notice } = await searchParams;
-  const [detail, tasks] = await Promise.all([getEventDetail(id), getTasksForSubject({ eventId: id })]);
+  const [detail, tasks, line, unlinkedLines, revenue, report] = await Promise.all([
+    getEventDetail(id),
+    getTasksForSubject({ eventId: id }),
+    getLineDetailForEvent(id),
+    getUnlinkedEventLines(),
+    getEventRevenueEntries(id),
+    getEventReport(id),
+  ]);
   if (!detail) notFound();
 
   const { event } = detail;
@@ -115,15 +125,15 @@ export default async function EventWorkspacePage({
           ))}
         </nav>
 
-        {active === "overview" && <OverviewTab detail={detail} tasks={tasks} landingUrl={landingUrl} />}
+        {active === "overview" && <OverviewTab detail={detail} tasks={tasks} landingUrl={landingUrl} line={line?.line ?? null} />}
         {active === "registrations" && <RegistrationsTab detail={detail} />}
         {active === "agenda" && <AgendaTab detail={detail} />}
         {active === "speakers" && <SpeakersTab detail={detail} />}
-        {active === "budget" && <BudgetTab detail={detail} />}
+        {active === "budget" && <BudgetTab detail={detail} line={line} unlinkedLines={unlinkedLines} revenue={revenue} report={report[0] ?? null} />}
         {active === "tasks" && <TasksTab eventId={event.id} tasks={tasks} />}
         {active === "communications" && <CommunicationsTab detail={detail} />}
         {active === "files" && <FilesTab detail={detail} />}
-        {active === "analytics" && <AnalyticsTab detail={detail} />}
+        {active === "analytics" && <AnalyticsTab detail={detail} report={report[0] ?? null} />}
       </div>
     </main>
   );

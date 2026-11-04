@@ -435,7 +435,7 @@ export function EventWizard({
                 <textarea id="budgetNotes" rows={4} value={values.budgetNotes} onChange={(e) => set("budgetNotes", e.target.value)} className={INPUT} />
               </div>
               <p className="text-xs text-slate-500">
-                Expense categories, vendors, and approvals will arrive with the full Budgets module, once your Excel sheet is imported.
+                If this event is linked to a line on the Budgets page, that line's amount and expenses are used in reports instead.
               </p>
             </section>
           )}

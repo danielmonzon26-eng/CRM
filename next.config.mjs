@@ -15,6 +15,8 @@ const uploadedAt = new Intl.DateTimeFormat("en-CA", {
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+  // Reads uploaded workbooks on the server only, and doesn't need bundling.
+  serverExternalPackages: ["exceljs"],
   // Keeps Next's dev-only badge from covering the version stamp in the sidebar.
   devIndicators: { position: "bottom-right" },
   env: {
