@@ -1,7 +1,8 @@
 import Link from "next/link";
-import { Building2, Search } from "lucide-react";
+import { Building2, Download, Search } from "lucide-react";
 import { getCompaniesList } from "@/lib/companies/queries";
 import { StatusPill } from "@/components/status-pill";
+import { buttonClass } from "@/components/ui/button";
 import { getInitials } from "@/lib/text";
 
 export const dynamic = "force-dynamic";
@@ -23,7 +24,12 @@ export default async function CompaniesPage({
             {companies.length.toLocaleString()} compan{companies.length === 1 ? "y" : "ies"}
           </p>
         </div>
-        <form action="/companies" className="relative w-full max-w-xs">
+        <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
+        <a href="/api/companies/export" className={buttonClass("secondary")}>
+          <Download className="h-4 w-4" strokeWidth={2} />
+          Export
+        </a>
+        <form action="/companies" className="relative w-full max-w-xs sm:w-72">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" strokeWidth={2} />
           <input
             type="search"
@@ -33,6 +39,7 @@ export default async function CompaniesPage({
             className="w-full rounded-md border border-slate-200 bg-white py-1.5 pl-9 pr-3 text-sm text-slate-700 placeholder:text-slate-400 focus:border-brand-400 focus:outline-none focus:ring-2 focus:ring-brand-100"
           />
         </form>
+        </div>
       </header>
 
       <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-card">
