@@ -1,5 +1,5 @@
 const BASE =
-  "inline-flex items-center justify-center gap-1.5 rounded-lg font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-400 focus-visible:ring-offset-1 disabled:opacity-50";
+  "inline-flex items-center justify-center gap-1.5 rounded-lg font-medium transition-[background-color,border-color,transform] active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-400 focus-visible:ring-offset-1 disabled:opacity-50";
 
 const VARIANTS = {
   primary: "bg-brand-600 text-white hover:bg-brand-700",

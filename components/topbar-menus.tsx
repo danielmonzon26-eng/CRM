@@ -12,7 +12,7 @@ import { getInitials } from "@/lib/text";
 import type { CurrentUser } from "@/lib/auth/session";
 
 const MENU =
-  "absolute right-0 top-full z-30 mt-2 w-56 overflow-hidden rounded-xl border border-slate-200 bg-white py-1 shadow-popover";
+  "animate-pop absolute right-0 top-full z-30 mt-2 w-56 overflow-hidden rounded-xl border border-slate-200 bg-white py-1 shadow-popover";
 const MENU_ITEM = "block w-full px-3.5 py-2 text-left text-sm text-slate-700 hover:bg-slate-50";
 
 function useMenu() {
@@ -127,7 +127,7 @@ export function MobileNavDrawer({ isAdmin, openTaskCount }: { isAdmin: boolean; 
         <Menu className="h-5 w-5" strokeWidth={2} />
       </button>
       {open && (
-        <div className="fixed inset-0 z-40 bg-ink-950/50">
+        <div className="animate-fade fixed inset-0 z-40 bg-ink-950/50">
           <div ref={ref} role="dialog" aria-modal="true" aria-label="Menu" className="flex h-full w-72 max-w-[85%] flex-col bg-ink-950">
             <div className="flex h-16 items-center justify-between border-b border-white/10 px-5">
               <Wordmark />

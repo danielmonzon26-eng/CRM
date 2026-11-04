@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { Plus, Trash2 } from "lucide-react";
 import { addBudgetExpense, addEventRevenue, deleteBudgetExpense, deleteEventRevenue, linkBudgetLine } from "@/app/actions/budgets";
 import { buttonClass } from "@/components/ui/button";
+import { useFeedback } from "@/components/ui/feedback";
 import { calgaryDateKey } from "@/lib/events/format";
 import type { ExpenseStatus } from "@/lib/supabase/types";
 
@@ -20,6 +21,7 @@ export function LineEventPicker({
   eventId: string | null;
   events: { id: string; title: string; startsAt: string; linked: boolean }[];
 }) {
+  const { toast } = useFeedback();
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
@@ -36,6 +38,7 @@ export function LineEventPicker({
           startTransition(async () => {
             const result = await linkBudgetLine(lineId, next);
             if (result.error) setError(result.error);
+            else toast(next ? "Event linked to this budget line" : "Event unlinked");
           });
         }}
         className={`${INPUT} mt-1`}
@@ -54,6 +57,7 @@ export function LineEventPicker({
 
 /** On an event: choose which budget line pays for it. */
 export function EventLinePicker({ eventId, lines }: { eventId: string; lines: { id: string; name: string; amount: number }[] }) {
+  const { toast } = useFeedback();
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
@@ -71,6 +75,7 @@ export function EventLinePicker({ eventId, lines }: { eventId: string; lines: { 
           startTransition(async () => {
             const result = await linkBudgetLine(lineId, eventId);
             if (result.error) setError(result.error);
+            else toast("Budget line linked");
           });
         }}
         className={`${INPUT} mt-1 max-w-md`}
@@ -91,6 +96,7 @@ export function ExpenseForm({ lineId, items }: { lineId: string; items: { id: st
   const [incurredOn, setIncurredOn] = useState(today);
   const [vendor, setVendor] = useState("");
   const [description, setDescription] = useState("");
+  const { toast } = useFeedback();
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
@@ -105,6 +111,7 @@ export function ExpenseForm({ lineId, items }: { lineId: string; items: { id: st
           if (result.error) {
             setError(result.error);
           } else {
+            toast("Expense added");
             setAmount("");
             setVendor("");
             setDescription("");
@@ -157,16 +164,17 @@ export function ExpenseForm({ lineId, items }: { lineId: string; items: { id: st
 
 export function DeleteExpenseButton({ expenseId, lineId, label }: { expenseId: string; lineId: string; label: string }) {
   const [isPending, startTransition] = useTransition();
+  const { confirm, toast } = useFeedback();
   return (
     <button
       type="button"
       disabled={isPending}
       aria-label={`Delete expense ${label}`}
-      onClick={() => {
-        if (!confirm(`Delete this expense (${label})?`)) return;
+      onClick={async () => {
+        if (!(await confirm({ title: `Delete this ${label} expense?`, body: "Budget totals update right away.", confirmLabel: "Delete", danger: true }))) return;
         startTransition(async () => {
           const result = await deleteBudgetExpense(expenseId, lineId);
-          if (result.error) alert(result.error);
+          toast(result.error ?? "Expense deleted", result.error ? "error" : "success");
         });
       }}
       className="rounded p-1.5 text-slate-500 hover:bg-slate-100 hover:text-rose-700 disabled:opacity-50"
@@ -180,6 +188,7 @@ export function RevenueForm({ eventId }: { eventId: string }) {
   const [source, setSource] = useState("");
   const [amount, setAmount] = useState("");
   const [receivedOn, setReceivedOn] = useState("");
+  const { toast } = useFeedback();
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
@@ -194,6 +203,7 @@ export function RevenueForm({ eventId }: { eventId: string }) {
           if (result.error) {
             setError(result.error);
           } else {
+            toast("Revenue added");
             setSource("");
             setAmount("");
             setReceivedOn("");
@@ -224,16 +234,17 @@ export function RevenueForm({ eventId }: { eventId: string }) {
 
 export function DeleteRevenueButton({ revenueId, label }: { revenueId: string; label: string }) {
   const [isPending, startTransition] = useTransition();
+  const { confirm, toast } = useFeedback();
   return (
     <button
       type="button"
       disabled={isPending}
       aria-label={`Delete revenue ${label}`}
-      onClick={() => {
-        if (!confirm(`Delete this revenue entry (${label})?`)) return;
+      onClick={async () => {
+        if (!(await confirm({ title: "Delete this revenue entry?", body: label, confirmLabel: "Delete", danger: true }))) return;
         startTransition(async () => {
           const result = await deleteEventRevenue(revenueId);
-          if (result.error) alert(result.error);
+          toast(result.error ?? "Revenue entry deleted", result.error ? "error" : "success");
         });
       }}
       className="rounded p-1.5 text-slate-500 hover:bg-slate-100 hover:text-rose-700 disabled:opacity-50"

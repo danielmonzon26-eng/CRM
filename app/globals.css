@@ -39,3 +39,59 @@
 .catapult-calendar .fc-timegrid-slot-lane:hover {
   background: #f6f7f9;
 }
+
+/*
+ * Motion: short and quiet, so the app feels responsive rather than animated. Everything
+ * below switches off for people who ask their device to reduce motion.
+ */
+@keyframes page-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes pop-in {
+  from { opacity: 0; transform: translateY(4px) scale(0.985); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes shimmer {
+  to { background-position: -200% 0; }
+}
+@keyframes route-progress {
+  from { width: 0; }
+  to { width: 85%; }
+}
+
+.animate-page { animation: page-in 180ms ease-out; }
+.animate-fade { animation: fade-in 120ms ease-out; }
+.animate-pop { animation: pop-in 140ms ease-out; }
+/* Only appears on a slow load, so quick pages never flash a placeholder. */
+.animate-fade-delayed { animation: fade-in 200ms ease-out 150ms both; }
+
+.skeleton {
+  background: linear-gradient(90deg, #e6eaf0 25%, #f1f4f8 50%, #e6eaf0 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.4s linear infinite;
+}
+
+.route-progress-loading { animation: route-progress 8s cubic-bezier(0.1, 0.7, 0.2, 1) forwards; }
+.route-progress-done { width: 100%; transition: width 120ms ease-out; }
+
+:focus-visible {
+  outline: 2px solid #ff6729;
+  outline-offset: 2px;
+}
+
+table { font-variant-numeric: tabular-nums; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-delay: 0ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

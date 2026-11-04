@@ -4,7 +4,6 @@ import { addCents, fromCents, sumMoney } from "@/lib/budgets/money";
 import type { Database } from "@/lib/supabase/types";
 
 type ExpenseRow = Database["public"]["Tables"]["budget_expenses"]["Row"];
-type ItemRow = Database["public"]["Tables"]["budget_items"]["Row"];
 
 const ALERT_AT_PERCENT = 90;
 
@@ -197,18 +196,21 @@ export type LineDetail = {
 
 async function loadLineDetail(line: Database["public"]["Tables"]["budget_lines"]["Row"]): Promise<LineDetail> {
   const supabase = await createClient();
-  const [{ data: budget, error: budgetError }, { data: allocations, error: allocationsError }, { data: items, error: itemsError }, { data: expenses, error: expensesError }, eventResult] =
-    await Promise.all([
-      supabase.from("budgets").select("name").eq("id", line.budget_id).single(),
-      supabase.from("budget_allocations").select("*").eq("line_id", line.id),
-      supabase.from("budget_items").select("*").eq("line_id", line.id).order("sort_order"),
-      supabase.from("budget_expenses").select("*").eq("line_id", line.id).order("incurred_on", { ascending: false }).order("created_at", { ascending: false }),
-      line.event_id ? supabase.from("events").select("title").eq("id", line.event_id).maybeSingle() : Promise.resolve({ data: null, error: null }),
-    ]);
-  const error = budgetError ?? allocationsError ?? itemsError ?? expensesError ?? eventResult.error;
+  const [budgetResult, allocationsResult, itemsResult, expensesResult, eventResult] = await Promise.all([
+    supabase.from("budgets").select("name").eq("id", line.budget_id).single(),
+    supabase.from("budget_allocations").select("*").eq("line_id", line.id),
+    supabase.from("budget_items").select("*").eq("line_id", line.id).order("sort_order"),
+    supabase.from("budget_expenses").select("*").eq("line_id", line.id).order("incurred_on", { ascending: false }).order("created_at", { ascending: false }),
+    line.event_id ? supabase.from("events").select("title").eq("id", line.event_id).maybeSingle() : Promise.resolve({ data: null, error: null }),
+  ]);
+  const error = budgetResult.error ?? allocationsResult.error ?? itemsResult.error ?? expensesResult.error ?? eventResult.error;
   if (error) throw error;
+  const budget = budgetResult.data!;
+  const allocations = allocationsResult.data!;
+  const items = itemsResult.data!;
+  const expenses = expensesResult.data!;
 
-  const itemName = new Map((items as ItemRow[]).map((i) => [i.id, i.name]));
+  const itemName = new Map(items.map((i) => [i.id, i.name]));
   return {
     line: summarizeLine(line, expenses, Object.fromEntries(allocations.map((a) => [a.month, a.amount])), eventResult.data?.title ?? null),
     budgetName: budget.name,

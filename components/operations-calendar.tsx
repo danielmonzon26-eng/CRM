@@ -13,6 +13,7 @@ import timeGridPlugin from "@fullcalendar/timegrid";
 import { AlertTriangle, CheckSquare2, ChevronLeft, ChevronRight, ExternalLink, MapPin, MonitorPlay, Plus, Users, X } from "lucide-react";
 import { rescheduleEvent, rescheduleTask } from "@/app/actions/calendar";
 import { buttonClass } from "@/components/ui/button";
+import { useFeedback } from "@/components/ui/feedback";
 import { useDismiss } from "@/components/ui/use-dismiss";
 import { describeConflict, findConflicts } from "@/lib/calendar/conflicts";
 import type { CalendarEvent, CalendarTask } from "@/lib/calendar/queries";
@@ -112,6 +113,7 @@ export function OperationsCalendar({
   const [showTasks, setShowTasks] = useState(true);
   const [panel, setPanel] = useState<Panel | null>(null);
   const [notice, setNotice] = useState<{ tone: "error" | "ok"; text: string } | null>(null);
+  const { confirm, toast } = useFeedback();
   const closePanel = useCallback(() => setPanel(null), []);
   const panelRef = useDismiss<HTMLElement>(panel !== null, closePanel);
 
@@ -219,9 +221,12 @@ export function OperationsCalendar({
     if (event.registered > 0) {
       warnings.push(`${event.registered} ${event.registered === 1 ? "person has" : "people have"} registered, and nobody is notified automatically.`);
     }
-    if (warnings.length > 0 && !confirm(`Move "${event.title}"?\n\n${warnings.join("\n")}`)) {
-      arg.revert();
-      return;
+    if (warnings.length > 0) {
+      const yes = await confirm({ title: `Move "${event.title}"?`, body: warnings.join("\n"), confirmLabel: "Move event" });
+      if (!yes) {
+        arg.revert();
+        return;
+      }
     }
 
     const result = await rescheduleEvent(sourceId, startsAt, endsAt);
@@ -230,7 +235,7 @@ export function OperationsCalendar({
       setNotice({ tone: "error", text: `That event didn't move: ${result.error}` });
       return;
     }
-    setNotice({ tone: "ok", text: `Moved "${event.title}" to ${formatInZone(startsAt, timeZone)}.` });
+    toast(`Moved "${event.title}" to ${formatInZone(startsAt, timeZone)}`);
     router.refresh();
   }
 
@@ -372,7 +377,7 @@ export function OperationsCalendar({
           ref={panelRef}
           role="dialog"
           aria-label="Details"
-          className="fixed inset-y-0 right-0 z-30 flex w-96 max-w-full flex-col overflow-y-auto border-l border-slate-200 bg-white p-5 shadow-popover"
+          className="animate-pop fixed inset-y-0 right-0 z-30 flex w-96 max-w-full flex-col overflow-y-auto border-l border-slate-200 bg-white p-5 shadow-popover"
         >
           <button type="button" aria-label="Close" onClick={closePanel} className="absolute right-3 top-3 rounded-lg p-1.5 text-slate-500 hover:bg-slate-100">
             <X className="h-5 w-5" strokeWidth={2} />

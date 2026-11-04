@@ -59,7 +59,7 @@ function Kpi({
   href: string;
 }) {
   return (
-    <Link href={href} className="rounded-xl border border-slate-200 bg-white p-4 shadow-card transition-colors hover:border-brand-200">
+    <Link href={href} className="rounded-xl border border-slate-200 bg-white p-4 shadow-card transition-[border-color,box-shadow,transform] hover:-translate-y-px hover:border-brand-200 hover:shadow-popover">
       <span className={`flex h-9 w-9 items-center justify-center rounded-lg ${tone}`}>
         <Icon className="h-[18px] w-[18px]" strokeWidth={2} />
       </span>

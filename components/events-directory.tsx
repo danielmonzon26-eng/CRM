@@ -18,6 +18,7 @@ import {
   X,
 } from "lucide-react";
 import { duplicateEvent, setEventsArchived } from "@/app/actions/events";
+import { useFeedback } from "@/components/ui/feedback";
 import { EmptyState } from "@/components/ui/page";
 import { buttonClass } from "@/components/ui/button";
 import {
@@ -104,6 +105,7 @@ export function EventsDirectory({ events, ownerNames }: { events: EventListItem[
   const [savedViews, setSavedViews] = useState<SavedView[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+  const { promptText, toast } = useFeedback();
 
   useEffect(() => {
     try {
@@ -155,8 +157,12 @@ export function EventsDirectory({ events, ownerNames }: { events: EventListItem[
     setError(null);
     startTransition(async () => {
       const result = await setEventsArchived(ids, archived);
-      if (result.error) setError(result.error);
-      else setSelected(new Set());
+      if (result.error) {
+        setError(result.error);
+      } else {
+        setSelected(new Set());
+        toast(`${ids.length === 1 ? "Event" : `${ids.length} events`} ${archived ? "archived" : "restored"}`);
+      }
     });
   }
 
@@ -169,8 +175,8 @@ export function EventsDirectory({ events, ownerNames }: { events: EventListItem[
     });
   }
 
-  function saveView() {
-    const name = prompt("Name this view")?.trim();
+  async function saveView() {
+    const name = await promptText({ title: "Save this view", label: "View name" });
     if (name) storeViews([...savedViews.filter((v) => v.name !== name), { name, tab, filters }]);
   }
 

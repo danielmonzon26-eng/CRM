@@ -2,8 +2,10 @@ import { cookies } from "next/headers";
 import { getCurrentUser } from "@/lib/auth/session";
 import { getOpenTaskCount } from "@/lib/tasks/queries";
 import { Breadcrumbs } from "@/components/breadcrumbs";
+import { RouteProgress } from "@/components/route-progress";
 import { Sidebar } from "@/components/sidebar";
 import { Topbar } from "@/components/topbar";
+import { FeedbackProvider } from "@/components/ui/feedback";
 
 export async function AppShell({ children }: { children: React.ReactNode }) {
   const [user, cookieStore] = await Promise.all([getCurrentUser(), cookies()]);
@@ -11,7 +13,9 @@ export async function AppShell({ children }: { children: React.ReactNode }) {
   const isAdmin = user?.role === "admin";
 
   return (
-    <div className="flex min-h-screen bg-canvas">
+    <FeedbackProvider>
+      <RouteProgress />
+      <div className="flex min-h-screen bg-canvas">
       <Sidebar
         isAdmin={isAdmin}
         openTaskCount={openTaskCount}
@@ -22,6 +26,7 @@ export async function AppShell({ children }: { children: React.ReactNode }) {
         <Breadcrumbs />
         <div className="flex-1">{children}</div>
       </div>
-    </div>
+      </div>
+    </FeedbackProvider>
   );
 }

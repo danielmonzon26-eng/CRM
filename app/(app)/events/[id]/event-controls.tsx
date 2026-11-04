@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState, useTransition } from "react";
+import { useCallback, useOptimistic, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Check, ChevronDown, Copy, FileText, Trash2, Upload } from "lucide-react";
@@ -14,6 +14,7 @@ import {
   setRegistrationCheckedIn,
 } from "@/app/actions/events";
 import { buttonClass } from "@/components/ui/button";
+import { useFeedback } from "@/components/ui/feedback";
 import { useDismiss } from "@/components/ui/use-dismiss";
 import { uploadEventDocument } from "@/lib/events/upload";
 import type { EventStatus, RegistrationStatus } from "@/lib/supabase/types";
@@ -53,12 +54,13 @@ export function EventActionsMenu({
   const close = useCallback(() => setOpen(false), []);
   const ref = useDismiss<HTMLDivElement>(open, close);
   const [isPending, startTransition] = useTransition();
+  const { toast, confirm } = useFeedback();
 
   const run = (action: () => Promise<{ error?: string; id?: string }>, then?: (id?: string) => void) => {
     close();
     startTransition(async () => {
       const result = await action();
-      if (result.error) alert(result.error);
+      if (result.error) toast(result.error, "error");
       else then?.(result.id);
     });
   };
@@ -78,32 +80,38 @@ export function EventActionsMenu({
         <ChevronDown className="h-4 w-4" strokeWidth={2} />
       </button>
       {open && (
-        <div role="menu" className="absolute right-0 top-full z-20 mt-2 w-56 overflow-hidden rounded-xl border border-slate-200 bg-white py-1 shadow-popover">
+        <div role="menu" className="animate-pop absolute right-0 top-full z-20 mt-2 w-56 overflow-hidden rounded-xl border border-slate-200 bg-white py-1 shadow-popover">
           <a role="menuitem" href={`/register/${slug}`} target="_blank" rel="noreferrer" onClick={close} className={item}>View landing page</a>
           <Link role="menuitem" href={`/events/${eventId}/edit`} onClick={close} className={item}>Edit details</Link>
           <button role="menuitem" type="button" onClick={() => run(() => duplicateEvent(eventId), (id) => router.push(`/events/${id}/edit`))} className={item}>
             Duplicate event
           </button>
           {status !== "published" && (
-            <button role="menuitem" type="button" onClick={() => run(() => setEventStatus(eventId, "published"))} className={item}>
+            <button role="menuitem" type="button" onClick={() => run(() => setEventStatus(eventId, "published"), () => toast("Event published"))} className={item}>
               {status === "cancelled" ? "Restore and publish" : "Publish"}
             </button>
           )}
           {status === "published" && (
-            <button role="menuitem" type="button" onClick={() => run(() => setEventStatus(eventId, "draft"))} className={item}>
+            <button role="menuitem" type="button" onClick={() => run(() => setEventStatus(eventId, "draft"), () => toast("Event unpublished"))} className={item}>
               Unpublish
             </button>
           )}
-          <button role="menuitem" type="button" onClick={() => run(() => setEventsArchived([eventId], !archived))} className={item}>
+          <button role="menuitem" type="button" onClick={() => run(() => setEventsArchived([eventId], !archived), () => toast(archived ? "Event restored" : "Event archived"))} className={item}>
             {archived ? "Restore from archive" : "Archive"}
           </button>
           {status !== "cancelled" && (
             <button
               role="menuitem"
               type="button"
-              onClick={() => {
-                if (confirm("Cancel this event? The landing page will say it's cancelled.")) run(() => setEventStatus(eventId, "cancelled"));
-                else close();
+              onClick={async () => {
+                close();
+                const yes = await confirm({
+                  title: "Cancel this event?",
+                  body: "The landing page will say it's cancelled, and registrants aren't notified automatically.",
+                  confirmLabel: "Cancel event",
+                  danger: true,
+                });
+                if (yes) run(() => setEventStatus(eventId, "cancelled"), () => toast("Event cancelled"));
               }}
               className={`${item} text-rose-700`}
             >
@@ -128,6 +136,8 @@ export function RegistrationActions({
   checkedIn: boolean;
 }) {
   const cancelled = status === "cancelled";
+  const [shownCheckedIn, setShownCheckedIn] = useOptimistic(checkedIn);
+  const { toast } = useFeedback();
   const [isPending, startTransition] = useTransition();
 
   return (
@@ -135,13 +145,22 @@ export function RegistrationActions({
       {status === "registered" && (
         <button
           type="button"
-          disabled={isPending}
-          onClick={() => startTransition(() => setRegistrationCheckedIn(registrationId, eventId, !checkedIn))}
-          className={`rounded-md px-2 py-1 text-xs font-medium disabled:opacity-50 ${
-            checkedIn ? "bg-emerald-50 text-emerald-700" : "border border-slate-200 text-slate-600 hover:bg-slate-50"
+          onClick={() =>
+            startTransition(async () => {
+              // Shows the new state immediately. React restores the old one if this fails.
+              setShownCheckedIn(!checkedIn);
+              try {
+                await setRegistrationCheckedIn(registrationId, eventId, !checkedIn);
+              } catch {
+                toast("That check-in didn't save. Please try again.", "error");
+              }
+            })
+          }
+          className={`rounded-md px-2 py-1 text-xs font-medium transition-colors ${
+            shownCheckedIn ? "bg-emerald-50 text-emerald-700" : "border border-slate-200 text-slate-600 hover:bg-slate-50"
           }`}
         >
-          {checkedIn ? "Checked in" : "Check in"}
+          {shownCheckedIn ? "Checked in" : "Check in"}
         </button>
       )}
       {status === "waitlisted" && (
@@ -237,13 +256,22 @@ export function DocumentRow({
 
 export function RemoveResourceButton({ id, eventId, label }: { id: string; eventId: string; label: string }) {
   const [isPending, startTransition] = useTransition();
+  const { confirm, toast } = useFeedback();
   return (
     <button
       type="button"
       disabled={isPending}
       aria-label={`Remove ${label}`}
-      onClick={() => {
-        if (confirm(`Remove "${label}"?`)) startTransition(() => removeEventResource(id, eventId));
+      onClick={async () => {
+        if (!(await confirm({ title: `Remove "${label}"?`, confirmLabel: "Remove", danger: true }))) return;
+        startTransition(async () => {
+          try {
+            await removeEventResource(id, eventId);
+            toast("Removed");
+          } catch {
+            toast(`"${label}" couldn't be removed. Please try again.`, "error");
+          }
+        });
       }}
       className="shrink-0 rounded p-1 text-slate-400 hover:bg-slate-100 hover:text-rose-600 disabled:opacity-50"
     >
