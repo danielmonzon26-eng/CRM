@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { ChevronRight } from "lucide-react";
 
 const LABELS: Record<string, string> = {
+  crm: "CRM",
   leads: "Leads",
   companies: "Companies",
   contacts: "Contacts",
@@ -28,7 +29,7 @@ export function Breadcrumbs() {
     label: LABELS[segment] ?? "Details",
     href: `/${segments.slice(0, i + 1).join("/")}`,
   }));
-  if (CRM_SECTIONS.has(segments[0])) crumbs.unshift({ label: "CRM", href: "/" });
+  if (CRM_SECTIONS.has(segments[0])) crumbs.unshift({ label: "CRM", href: "/crm" });
 
   return (
     <nav aria-label="Breadcrumb" className="px-4 pt-4 sm:px-6 lg:px-8">

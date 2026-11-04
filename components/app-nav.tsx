@@ -6,6 +6,7 @@ import {
   CRM_LINKS,
   CRM_TAB,
   EVENT_TABS,
+  OVERVIEW_TAB,
   TEAM_LINK,
   WORK_TABS,
   isActive,
@@ -65,6 +66,7 @@ export function AppNav({
 
   return (
     <nav aria-label="Main" className="flex-1 space-y-1 overflow-y-auto px-3 py-4">
+      {renderItem(OVERVIEW_TAB)}
       {EVENT_TABS.map((item) => renderItem(item))}
 
       <Link

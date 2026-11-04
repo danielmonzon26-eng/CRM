@@ -21,6 +21,7 @@ export async function updateLeadStatus(leadId: string, status: LeadStatus) {
   });
 
   revalidatePath("/");
+  revalidatePath("/crm");
   revalidatePath(`/leads/${leadId}`);
 }
 
@@ -88,5 +89,6 @@ export async function assignLead(leadId: string, assigneeId: string | null) {
   });
 
   revalidatePath("/");
+  revalidatePath("/crm");
   revalidatePath(`/leads/${leadId}`);
 }

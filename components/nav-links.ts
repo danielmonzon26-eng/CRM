@@ -5,6 +5,7 @@ import {
   CalendarDays,
   CheckSquare2,
   Handshake,
+  Home,
   LayoutGrid,
   ListChecks,
   ShieldCheck,
@@ -15,15 +16,17 @@ import {
 
 export type NavLink = { href: string; label: string; icon: LucideIcon; showTaskBadge?: boolean };
 
+export const OVERVIEW_TAB: NavLink = { href: "/", label: "Overview", icon: Home };
+
 export const EVENT_TABS: NavLink[] = [
   { href: "/events", label: "Events", icon: Ticket },
   { href: "/calendar", label: "Calendar", icon: CalendarDays },
 ];
 
-export const CRM_TAB: NavLink = { href: "/", label: "CRM", icon: Briefcase };
+export const CRM_TAB: NavLink = { href: "/crm", label: "CRM", icon: Briefcase };
 
 export const CRM_LINKS: NavLink[] = [
-  { href: "/", label: "Dashboard", icon: LayoutGrid },
+  { href: "/crm", label: "Dashboard", icon: LayoutGrid },
   { href: "/leads", label: "Leads", icon: ListChecks },
   { href: "/companies", label: "Companies", icon: Building2 },
   { href: "/contacts", label: "Contacts", icon: Users },
