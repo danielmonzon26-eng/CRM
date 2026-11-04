@@ -17,6 +17,11 @@ export function Sidebar({ isAdmin, openTaskCount }: { isAdmin: boolean; openTask
         <span className="text-base font-bold tracking-wide text-white">CATAPULT</span>
       </div>
 
+      <div className="border-b border-white/10 px-5 py-2.5 text-[11px] leading-snug text-white">
+        <p>{process.env.NEXT_PUBLIC_APP_VERSION}</p>
+        <p>Uploaded {process.env.NEXT_PUBLIC_APP_UPLOADED_AT}</p>
+      </div>
+
       <nav className="flex-1 space-y-0.5 overflow-y-auto px-3 py-4">
         {NAV_LINKS.map((item) => {
           const active = isActive(pathname, item.href);
