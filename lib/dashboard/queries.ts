@@ -125,7 +125,7 @@ export async function getDashboardData(): Promise<DashboardData> {
     supabase.from("tasks").select("id", { count: "exact", head: true }).is("completed_at", null).lt("due_at", nowIso),
     supabase
       .from("tasks")
-      .select("id, title, task_type, due_at, lead_id, company_id")
+      .select("id, title, task_type, due_at, lead_id, company_id, event_id")
       .is("completed_at", null)
       .not("due_at", "is", null)
       .lte("due_at", new Date(now + 7 * DAY_MS).toISOString())
@@ -228,7 +228,13 @@ export async function getDashboardData(): Promise<DashboardData> {
       title: t.title,
       taskType: t.task_type,
       dueAt: t.due_at!,
-      href: t.lead_id ? `/leads/${t.lead_id}` : t.company_id ? `/companies/${t.company_id}` : "/tasks",
+      href: t.lead_id
+        ? `/leads/${t.lead_id}`
+        : t.company_id
+          ? `/companies/${t.company_id}`
+          : t.event_id
+            ? `/events/${t.event_id}?tab=tasks`
+            : "/tasks",
     })),
     activity: activities.map((a) => ({
       id: a.id,

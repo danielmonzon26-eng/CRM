@@ -272,6 +272,7 @@ export type Database = {
           id: string;
           lead_id: string | null;
           company_id: string | null;
+          event_id: string | null;
           title: string;
           description: string | null;
           task_type: TaskType;
@@ -286,6 +287,7 @@ export type Database = {
           id?: string;
           lead_id?: string | null;
           company_id?: string | null;
+          event_id?: string | null;
           title: string;
           description?: string | null;
           task_type?: TaskType;

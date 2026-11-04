@@ -3,9 +3,18 @@
 import { useRef, useTransition } from "react";
 import { Plus } from "lucide-react";
 import { createTask } from "@/app/actions/tasks";
+import { fromDateTimeInput } from "@/lib/events/format";
 import type { TaskType } from "@/lib/supabase/types";
 
-export function TaskForm({ leadId, companyId }: { leadId?: string | null; companyId?: string | null }) {
+export function TaskForm({
+  leadId,
+  companyId,
+  eventId,
+}: {
+  leadId?: string | null;
+  companyId?: string | null;
+  eventId?: string | null;
+}) {
   const [isPending, startTransition] = useTransition();
   const formRef = useRef<HTMLFormElement>(null);
 
@@ -24,9 +33,11 @@ export function TaskForm({ leadId, companyId }: { leadId?: string | null; compan
           await createTask({
             title,
             taskType: data.get("taskType") as TaskType,
-            dueAt: data.get("dueAt") ? new Date(String(data.get("dueAt"))).toISOString() : null,
+            // End of that day in Calgary, so a task isn't overdue on the day it's due.
+            dueAt: data.get("dueAt") ? fromDateTimeInput(`${data.get("dueAt")}T23:59`) : null,
             leadId: leadId ?? null,
             companyId: companyId ?? null,
+            eventId: eventId ?? null,
           });
           form.reset();
         });

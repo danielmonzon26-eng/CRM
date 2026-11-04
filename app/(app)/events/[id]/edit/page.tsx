@@ -6,8 +6,16 @@ import { getTeamMembers } from "@/lib/leads/queries";
 
 export const dynamic = "force-dynamic";
 
-export default async function EditEventPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function EditEventPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ step?: string }>;
+}) {
   const { id } = await params;
+  const { step } = await searchParams;
+  const initialStep = Number(step);
   const [detail, members] = await Promise.all([getEventDetail(id), getTeamMembers()]);
   if (!detail) notFound();
 
@@ -20,6 +28,7 @@ export default async function EditEventPage({ params }: { params: Promise<{ id: 
         templates={[]}
         materials={detail.documents.map((d) => d.title)}
         videos={detail.videos.map((v) => v.url!)}
+        initialStep={Number.isInteger(initialStep) && initialStep >= 0 && initialStep <= 4 ? initialStep : 0}
       />
     </Page>
   );

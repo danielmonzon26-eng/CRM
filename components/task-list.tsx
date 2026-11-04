@@ -1,8 +1,10 @@
 "use client";
 
 import { useTransition } from "react";
+import Link from "next/link";
 import { Phone, Mail, CheckSquare, Users as UsersIcon, X } from "lucide-react";
 import { completeTask, reopenTask, deleteTask } from "@/app/actions/tasks";
+import { EVENT_TIME_ZONE } from "@/lib/events/format";
 import type { TaskListRow } from "@/lib/tasks/queries";
 
 const TYPE_META: Record<string, { label: string; icon: typeof CheckSquare }> = {
@@ -62,10 +64,15 @@ export function TaskList({ tasks, showCompany = false }: { tasks: TaskListRow[];
                 </span>
                 {task.dueAt && (
                   <span className={overdue ? "font-medium text-rose-600" : ""}>
-                    Due {new Date(task.dueAt).toLocaleDateString()}
+                    Due {new Date(task.dueAt).toLocaleDateString("en-CA", { timeZone: EVENT_TIME_ZONE, month: "short", day: "numeric", year: "numeric" })}
                   </span>
                 )}
                 {showCompany && task.companyName && <span>· {task.companyName}</span>}
+                {showCompany && task.eventId && (
+                  <Link href={`/events/${task.eventId}?tab=tasks`} className="text-brand-600 hover:underline">
+                    · {task.eventTitle ?? "Event"}
+                  </Link>
+                )}
               </div>
               {task.description && <p className="mt-1 text-sm text-slate-600">{task.description}</p>}
             </div>
