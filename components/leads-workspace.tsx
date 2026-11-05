@@ -81,7 +81,7 @@ function SortHeader({
   const active = state.sort === sort;
   const Icon = active ? (state.desc ? ArrowDown : ArrowUp) : ArrowUpDown;
   return (
-    <th scope="col" aria-sort={active ? (state.desc ? "descending" : "ascending") : "none"} className={`px-3 py-2.5 font-medium ${align === "right" ? "text-right" : ""}`}>
+    <th scope="col" aria-sort={active ? (state.desc ? "descending" : "ascending") : "none"} className={`px-2 py-2.5 font-medium ${align === "right" ? "text-right" : ""}`}>
       <Link
         href={href({ sort, desc: active ? !state.desc : sort === "score" || sort === "created", page: 1 })}
         scroll={false}
@@ -229,13 +229,13 @@ function LeadsTable({
                   className="h-4 w-4 accent-brand-600"
                 />
               </th>
+              <th scope="col" className="px-2 py-2.5 font-medium">Name</th>
               <SortHeader label="Company" sort="name" state={state} href={href} />
               <SortHeader label="Client type" sort="client_type" state={state} href={href} />
-              <th scope="col" className="px-3 py-2.5 font-medium">Programs</th>
-              <th scope="col" className="px-3 py-2.5 font-medium">Contact</th>
-              <th scope="col" className="px-3 py-2.5 font-medium">Industry</th>
+              <th scope="col" className="px-2 py-2.5 font-medium">Programs</th>
+              <th scope="col" className="px-2 py-2.5 font-medium">Industry</th>
               <SortHeader label="Fit" sort="score" state={state} href={href} />
-              <th scope="col" className="px-3 py-2.5 font-medium">Owner</th>
+              <th scope="col" className="px-2 py-2.5 font-medium">Owner</th>
               <SortHeader label="Status" sort="status" state={state} href={href} />
               <SortHeader label="Added" sort="created" state={state} href={href} />
               {/* Stays in view while the rest of the table scrolls sideways. */}
@@ -261,12 +261,7 @@ function LeadsTable({
                     className="h-4 w-4 accent-brand-600"
                   />
                 </td>
-                <td className="max-w-72 px-3 py-2.5">
-                  <Link href={`/leads/${lead.id}`} className="block truncate font-medium text-slate-900 hover:text-brand-700">{lead.companyName}</Link>
-                </td>
-                <td className="whitespace-nowrap px-3 py-2.5 text-slate-700">{clientTypeLabel(lead.clientType) ?? <span className="text-slate-500">—</span>}</td>
-                <td className="min-w-56 max-w-64 px-3 py-2.5">{lead.programs.length ? <ProgramChips programs={lead.programs} limit={MAX_ROW_PROGRAMS} /> : <span className="text-slate-500">—</span>}</td>
-                <td className="max-w-60 px-3 py-2.5 text-slate-700">
+                <td className="max-w-52 px-2 py-2.5 text-slate-700">
                   {lead.primaryName ? (
                     <>
                       <span className="block truncate">{lead.primaryName}{lead.contactCount > 1 ? ` +${lead.contactCount - 1}` : ""}</span>
@@ -276,21 +271,26 @@ function LeadsTable({
                     <span className="text-slate-500">None yet</span>
                   )}
                 </td>
-                <td className="max-w-52 px-3 py-2.5 text-slate-700">
-                  <span className="block truncate">{parseIndustry(lead.industry)?.subsector ?? lead.industry ?? "—"}</span>
+                <td className="max-w-56 px-2 py-2.5">
+                  <Link href={`/leads/${lead.id}`} className="block truncate font-medium text-slate-900 hover:text-brand-700">{lead.companyName}</Link>
+                </td>
+                <td className="whitespace-nowrap px-2 py-2.5 text-slate-700">{clientTypeLabel(lead.clientType) ?? <span className="text-slate-500">—</span>}</td>
+                <td className="min-w-36 max-w-64 px-2 py-2.5">{lead.programs.length ? <ProgramChips programs={lead.programs} limit={MAX_ROW_PROGRAMS} /> : <span className="text-slate-500">—</span>}</td>
+                <td className="max-w-40 px-2 py-2.5 text-slate-700">
+                  <span title={lead.industry ?? undefined} className="block truncate">{parseIndustry(lead.industry)?.subsector ?? lead.industry ?? "—"}</span>
                   {lead.community && <span className="block truncate text-xs text-slate-500">{lead.community}</span>}
                 </td>
-                <td className="px-3 py-2.5">{lead.score > 0 ? <FitBadge score={lead.score} /> : <span className="text-slate-500">—</span>}</td>
-                <td className="max-w-36 truncate px-3 py-2.5 text-slate-600">{memberName(lead.assignedTo) ?? <span className="text-slate-500">Unassigned</span>}</td>
-                <td className="px-3 py-2.5">
+                <td className="px-2 py-2.5">{lead.score > 0 ? <FitBadge score={lead.score} /> : <span className="text-slate-500">—</span>}</td>
+                <td className="max-w-36 truncate px-2 py-2.5 text-slate-600">{memberName(lead.assignedTo) ?? <span className="text-slate-500">Unassigned</span>}</td>
+                <td className="px-2 py-2.5">
                   <span className="inline-flex items-center gap-1.5 text-slate-700">
                     <span className={`h-2 w-2 rounded-full ${STATUS_DOTS[lead.status]}`} />
                     {STATUS_LABELS[lead.status]}
                   </span>
                 </td>
-                <td className="whitespace-nowrap px-3 py-2.5 text-xs text-slate-500">{lead.createdAt.slice(0, 10)}</td>
+                <td className="whitespace-nowrap px-2 py-2.5 text-xs text-slate-500">{lead.createdAt.slice(0, 10)}</td>
                 <td className={`sticky right-0 whitespace-nowrap border-l border-slate-100 px-3 py-2 transition-colors group-hover:bg-slate-50 ${selected.has(lead.id) ? "bg-brand-50" : "bg-white"}`}>
-                  <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center justify-between gap-1">
                     {lead.proposalId && lead.proposalStage ? (
                       <Link href={`/deals/${lead.proposalId}`} className="inline-flex items-center gap-1.5 text-sm font-medium text-slate-800 hover:text-brand-700 hover:underline">
                         <span className={`h-2 w-2 rounded-full ${DEAL_STAGE_META[lead.proposalStage as DealStage].accent}`} />
@@ -424,8 +424,8 @@ export function LeadsWorkspace({
       } while (rows.length < Math.min(total, EXPORT_CAP));
 
       downloadCsv("leads.csv", [
-        ["Company", "Client type", "Programs", "Contact", "Title", "Email", "Contacts", "Industry", "Community", "Fit score", "Owner", "Status", "Proposal stage", "Added"],
-        ...rows.map((r) => [r.companyName, clientTypeLabel(r.clientType), r.programs.map(programLabel).join("; "), r.primaryName, r.primaryTitle, r.primaryEmail, r.contactCount, r.industry, r.community, r.score, memberName(r.assignedTo), STATUS_LABELS[r.status], r.proposalStage ? DEAL_STAGE_META[r.proposalStage as DealStage].label : "", r.createdAt.slice(0, 10)]),
+        ["Name", "Title", "Email", "Contacts", "Company", "Client type", "Programs", "Industry", "Community", "Fit score", "Owner", "Status", "Proposal stage", "Added"],
+        ...rows.map((r) => [r.primaryName, r.primaryTitle, r.primaryEmail, r.contactCount, r.companyName, clientTypeLabel(r.clientType), r.programs.map(programLabel).join("; "), r.industry, r.community, r.score, memberName(r.assignedTo), STATUS_LABELS[r.status], r.proposalStage ? DEAL_STAGE_META[r.proposalStage as DealStage].label : "", r.createdAt.slice(0, 10)]),
       ]);
       toast(total > EXPORT_CAP ? `Exported the first ${EXPORT_CAP.toLocaleString()} leads` : `Exported ${rows.length.toLocaleString()} leads`);
     } catch {
