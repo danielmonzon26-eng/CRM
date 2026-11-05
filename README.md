@@ -220,7 +220,7 @@ curl -H "Authorization: Bearer $CRON_SECRET" "https://<your-deployment>/api/cron
 
 Real login via Supabase Auth magic links, replacing the no-auth gap from Step 6. A
 `profiles` table (role: `admin` | `rep`) is auto-created per signup by a database
-trigger; RLS enforces that only admins can change roles (`/team` page), not just the UI.
+trigger; RLS enforces that only admins can change roles (`/admin` page), not just the UI.
 All CRM reads/writes now go through the session-scoped client
 (`lib/supabase/server.ts`), so RLS actually governs access — the service-role client is
 used only by the cron routes now.
@@ -236,8 +236,8 @@ used only by the cron routes now.
 `daniel.monzon26@gmail.com` (pulled from this session's account context) as the one
 email that becomes `admin` automatically on first sign-in — everyone else defaults to
 `rep`. Edit that email in the migration if you want to sign in as admin with a
-different address, or just promote further admins from the `/team` page once you have
-one working admin account.
+different address, or just add further admins from the `/admin` page once you have one
+working admin account (see `docs/ADDING_TEAM_MEMBERS.md`).
 
 **Email delivery:** magic links send through Supabase's built-in email service by
 default, which is rate-limited on the free tier and can land in spam. Configure a
@@ -313,7 +313,7 @@ should return `{"ok":true,"supabase":"reachable","schema":"applied"}`.
 
 **4. Sign in once as bootstrap admin** — visit `/login`, request a magic link with
 `daniel.monzon26@gmail.com` (the email hardcoded as admin in `0003_auth_profiles.sql`),
-click the link, confirm you land on the pipeline board and `/team` shows your account
+click the link, confirm you land on the pipeline board and `/admin` shows your account
 as `admin`.
 
 **5. Verify each cron manually** before trusting the schedule — run these once against
@@ -337,7 +337,7 @@ schedule.
 - [ ] Redeployed after setting env vars
 - [ ] Supabase redirect URL added for the production domain
 - [ ] `/api/health` returns `schema: "applied"`
-- [ ] Signed in once as bootstrap admin, confirmed `/team` shows `admin`
+- [ ] Signed in once as bootstrap admin, confirmed `/admin` lists your account
 - [ ] All four cron routes manually verified once
 - [ ] Cron Jobs tab in Vercel shows all four schedules
 - [ ] (Later, not blocking) live-verify Calgary field names against real `TARGET_INDUSTRIES`

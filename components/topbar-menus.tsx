@@ -94,7 +94,7 @@ export function UserMenu({ user, isAdmin }: { user: CurrentUser; isAdmin: boolea
             <p className="text-xs capitalize text-slate-500">{user.role}</p>
           </div>
           {isAdmin && (
-            <Link role="menuitem" href="/team" onClick={close} className={MENU_ITEM}>Team</Link>
+            <Link role="menuitem" href="/admin" onClick={close} className={MENU_ITEM}>Admin</Link>
           )}
           <button
             role="menuitem"

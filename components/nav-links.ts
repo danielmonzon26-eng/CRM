@@ -38,7 +38,7 @@ export const WORK_TABS: NavLink[] = [
   { href: "/tasks", label: "Tasks", icon: CheckSquare2, showTaskBadge: true },
 ];
 
-export const TEAM_LINK: NavLink = { href: "/team", label: "Team", icon: ShieldCheck };
+export const TEAM_LINK: NavLink = { href: "/admin", label: "Admin", icon: ShieldCheck };
 
 export function isActive(pathname: string, href: string): boolean {
   if (href === "/crm" && (pathname === "/deals" || pathname.startsWith("/deals/"))) return true;

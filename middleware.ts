@@ -7,7 +7,7 @@ type CookieToSet = { name: string; value: string; options: CookieOptions };
 // API routes, which authenticate via their own CRON_SECRET bearer token rather than a user
 // session, and event registration pages, which only use the limited database functions in
 // supabase/migrations/0008_events_module.sql.
-const PUBLIC_PATHS = ["/login", "/auth/callback", "/auth/reset-password", "/api/cron", "/api/health", "/register"];
+const PUBLIC_PATHS = ["/login", "/auth/callback", "/auth/reset-password", "/auth/accept", "/api/cron", "/api/health", "/register"];
 
 function isPublicPath(pathname: string): boolean {
   return PUBLIC_PATHS.some((path) => pathname === path || pathname.startsWith(`${path}/`));
