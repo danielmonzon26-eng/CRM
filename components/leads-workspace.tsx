@@ -11,7 +11,6 @@ import {
   ChevronRight,
   Download,
   Pencil,
-  Search,
   SearchX,
   X,
 } from "lucide-react";
@@ -21,6 +20,7 @@ import { ProgramChips } from "@/components/lead-badges";
 import { LeadQuickEdit } from "@/components/lead-quick-edit";
 import { buttonClass } from "@/components/ui/button";
 import { useFeedback } from "@/components/ui/feedback";
+import { FilterSelect, SearchField } from "@/components/ui/filter-controls";
 import { EmptyState } from "@/components/ui/page";
 import { DEAL_STAGE_META } from "@/lib/deals/stages";
 import { downloadCsv } from "@/lib/csv";
@@ -36,7 +36,6 @@ import {
 import type { LeadFacets, LeadRow, StageSummary } from "@/lib/leads/search";
 import type { DealStage, LeadStatus } from "@/lib/supabase/types";
 
-const SELECT = "rounded-lg border border-slate-200 bg-white px-2.5 py-2 text-sm text-slate-700 focus:border-brand-400 focus:outline-none focus:ring-2 focus:ring-brand-100";
 const SEARCH_DELAY_MS = 250;
 const EXPORT_CAP = 10000;
 
@@ -437,76 +436,31 @@ export function LeadsWorkspace({
   return (
     <div>
       <div className="mb-3 flex flex-wrap items-center gap-2">
-        <div className="relative min-w-64 flex-1">
-          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" strokeWidth={2} />
-          <input
-            type="search"
-            aria-label="Search leads"
-            placeholder="Search by company, contact, title, or email..."
-            value={search}
-            onChange={(e) => onSearch(e.target.value)}
-            className={`${SELECT} w-full pl-9 pr-8`}
-          />
-          {isNavigating && <span aria-hidden="true" className="absolute right-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 animate-spin rounded-full border-2 border-slate-200 border-t-brand-500" />}
-        </div>
+        <SearchField
+          className="flex-1"
+          label="Search leads"
+          placeholder="Search by company, contact, title, or email..."
+          value={search}
+          onChange={onSearch}
+          isLoading={isNavigating}
+        />
         <button type="button" disabled={isExporting || matching === 0} onClick={() => void exportAll()} className={buttonClass("secondary")}>
           <Download className="h-4 w-4" strokeWidth={2} />
           {isExporting ? "Exporting..." : "Export"}
         </button>
       </div>
 
-      <div className="mb-3 flex flex-wrap items-center gap-2">
-        <select aria-label="Status" value={state.status} onChange={(e) => go({ status: e.target.value })} className={SELECT}>
-          <option value="">Status: All</option>
-          {ALL_STATUSES.map((s) => (
-            <option key={s} value={s}>{STATUS_LABELS[s]} ({(stages.find((x) => x.status === s)?.count ?? 0).toLocaleString()})</option>
-          ))}
-        </select>
-        <select aria-label="Client type" value={state.clientType} onChange={(e) => go({ clientType: e.target.value })} className={SELECT}>
-          <option value="">Client type: All</option>
-          {CLIENT_TYPES.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
-          <option value="none">{NOT_SET_LABEL}</option>
-        </select>
-        <select aria-label="Program" value={state.program} onChange={(e) => go({ program: e.target.value })} className={`${SELECT} max-w-56`}>
-          <option value="">Program: All</option>
-          {LEAD_PROGRAMS.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
-          <option value="none">None selected</option>
-        </select>
-        <select aria-label="Proposal" value={state.proposal} onChange={(e) => go({ proposal: e.target.value })} className={SELECT}>
-          <option value="">Proposal: Any</option>
-          <option value="has">Has a proposal</option>
-          <option value="none">No proposal</option>
-        </select>
-        <select aria-label="Owner" value={state.owner} onChange={(e) => go({ owner: e.target.value })} className={SELECT}>
-          <option value="">Owner: Anyone</option>
-          <option value="unassigned">Unassigned</option>
-          {members.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
-        </select>
-        <select aria-label="Industry" value={state.industry} onChange={(e) => go({ industry: e.target.value })} className={`${SELECT} max-w-52`}>
-          <option value="">Industry: All</option>
-          {facets.industries.map((i) => <option key={i} value={i}>{i}</option>)}
-        </select>
-        <select aria-label="Community" value={state.community} onChange={(e) => go({ community: e.target.value })} className={`${SELECT} max-w-52`}>
-          <option value="">Community: All</option>
-          {facets.communities.map((c) => <option key={c} value={c}>{c}</option>)}
-        </select>
-        <select aria-label="Fit score" value={state.score} onChange={(e) => go({ score: e.target.value })} className={SELECT}>
-          <option value="">Fit: Any</option>
-          <option value="40">Fit 40+</option>
-          <option value="70">Fit 70+</option>
-        </select>
-        <select aria-label="Contact" value={state.contact} onChange={(e) => go({ contact: e.target.value })} className={SELECT}>
-          <option value="">Contact: Any</option>
-          <option value="has_contact">Has a contact</option>
-          <option value="has_email">Has an email</option>
-          <option value="none">No contact</option>
-        </select>
-        {events.length > 0 && (
-          <select aria-label="Registered for event" value={state.event} onChange={(e) => go({ event: e.target.value })} className={`${SELECT} max-w-56`}>
-            <option value="">Event: Any</option>
-            {events.map((e) => <option key={e.id} value={e.id}>{e.title}</option>)}
-          </select>
-        )}
+      <div className="mb-4 flex flex-wrap items-center gap-2">
+        <FilterSelect label="Status" value={state.status} onChange={(status) => go({ status })} options={ALL_STATUSES.map((s) => ({ value: s as string, label: STATUS_LABELS[s], count: stages.find((x) => x.status === s)?.count ?? 0 }))} />
+        <FilterSelect label="Client type" value={state.clientType} onChange={(clientType) => go({ clientType })} options={[...CLIENT_TYPES.map(([value, label]) => ({ value: value as string, label })), { value: "none", label: NOT_SET_LABEL }]} />
+        <FilterSelect label="Program" value={state.program} onChange={(program) => go({ program })} options={[...LEAD_PROGRAMS.map(([value, label]) => ({ value: value as string, label })), { value: "none", label: "None selected" }]} />
+        <FilterSelect label="Proposal" value={state.proposal} allLabel="Any" onChange={(proposal) => go({ proposal })} options={[{ value: "has", label: "Has a proposal" }, { value: "none", label: "No proposal" }]} />
+        <FilterSelect label="Owner" value={state.owner} allLabel="Anyone" onChange={(owner) => go({ owner })} options={[{ value: "unassigned", label: "Unassigned" }, ...members.map((m) => ({ value: m.id, label: m.name }))]} />
+        <FilterSelect label="Industry" value={state.industry} onChange={(industry) => go({ industry })} options={facets.industries.map((i) => ({ value: i, label: i }))} />
+        <FilterSelect label="Community" value={state.community} onChange={(community) => go({ community })} options={facets.communities.map((c) => ({ value: c, label: c }))} />
+        <FilterSelect label="Fit" value={state.score} allLabel="Any" onChange={(score) => go({ score })} options={[{ value: "40", label: "Fit 40+" }, { value: "70", label: "Fit 70+" }]} />
+        <FilterSelect label="Contact" value={state.contact} allLabel="Any" onChange={(contact) => go({ contact })} options={[{ value: "has_contact", label: "Has a contact" }, { value: "has_email", label: "Has an email" }, { value: "none", label: "No contact" }]} />
+        {events.length > 0 && <FilterSelect label="Event" value={state.event} allLabel="Any" onChange={(event) => go({ event })} options={events.map((e) => ({ value: e.id, label: e.title }))} />}
       </div>
 
       <div className="mb-3 flex min-h-6 flex-wrap items-center gap-2 text-sm" aria-live="polite">

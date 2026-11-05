@@ -2,11 +2,12 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { CalendarDays, FileText, GripVertical, MoreHorizontal, Search, SearchX } from "lucide-react";
+import { CalendarDays, FileText, GripVertical, MoreHorizontal, SearchX } from "lucide-react";
 import { updateDealStage } from "@/app/actions/deals";
 import { OwnerAvatar, ProgramChips } from "@/components/lead-badges";
 import { buttonClass } from "@/components/ui/button";
 import { useFeedback } from "@/components/ui/feedback";
+import { FilterSelect, SearchField } from "@/components/ui/filter-controls";
 import { EmptyState } from "@/components/ui/page";
 import { formatMoney } from "@/lib/budgets/money";
 import type { ProposalRow } from "@/lib/deals/queries";
@@ -14,7 +15,6 @@ import { DEAL_STAGES, DEAL_STAGE_META, OPEN_DEAL_STAGES } from "@/lib/deals/stag
 import { CLIENT_TYPES, LEAD_PROGRAMS, clientTypeLabel } from "@/lib/leads/classification";
 import type { DealStage } from "@/lib/supabase/types";
 
-const SELECT = "rounded-lg border border-slate-200 bg-white px-2.5 py-2 text-sm text-slate-700 focus:border-brand-400 focus:outline-none focus:ring-2 focus:ring-brand-100";
 const MAX_CARD_PROGRAMS = 2;
 
 const STAGE_HEADERS: Record<DealStage, string> = {
@@ -185,36 +185,12 @@ export function ProposalsBoard({
 
   return (
     <div>
-      <div className="mb-3 flex flex-wrap items-center gap-2">
-        <div className="relative min-w-64 flex-1">
-          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" strokeWidth={2} />
-          <input
-            type="search"
-            aria-label="Search proposals"
-            placeholder="Search by proposal, company, or contact..."
-            value={filters.q}
-            onChange={(e) => setFilter({ q: e.target.value })}
-            className={`${SELECT} w-full pl-9`}
-          />
-        </div>
-        <select aria-label="Client type" value={filters.clientType} onChange={(e) => setFilter({ clientType: e.target.value })} className={SELECT}>
-          <option value="">Client type: All</option>
-          {CLIENT_TYPES.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
-        </select>
-        <select aria-label="Program" value={filters.program} onChange={(e) => setFilter({ program: e.target.value })} className={`${SELECT} max-w-56`}>
-          <option value="">Program: All</option>
-          {LEAD_PROGRAMS.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
-        </select>
-        <select aria-label="Owner" value={filters.owner} onChange={(e) => setFilter({ owner: e.target.value })} className={SELECT}>
-          <option value="">Owner: Anyone</option>
-          <option value="unassigned">Unassigned</option>
-          {members.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
-        </select>
-        <select aria-label="Sort cards by" value={sort} onChange={(e) => setSort(e.target.value as Sort)} className={SELECT}>
-          <option value="closing">Sort: Closing soonest</option>
-          <option value="largest">Sort: Largest</option>
-          <option value="newest">Sort: Newest</option>
-        </select>
+      <SearchField className="mb-3" label="Search proposals" placeholder="Search by proposal, company, or contact..." value={filters.q} onChange={(q) => setFilter({ q })} />
+      <div className="mb-4 flex flex-wrap items-center gap-2">
+        <FilterSelect label="Client type" value={filters.clientType} onChange={(clientType) => setFilter({ clientType })} options={CLIENT_TYPES.map(([value, label]) => ({ value: value as string, label }))} />
+        <FilterSelect label="Program" value={filters.program} onChange={(program) => setFilter({ program })} options={LEAD_PROGRAMS.map(([value, label]) => ({ value: value as string, label }))} />
+        <FilterSelect label="Owner" value={filters.owner} allLabel="Anyone" onChange={(owner) => setFilter({ owner })} options={[{ value: "unassigned", label: "Unassigned" }, ...members.map((m) => ({ value: m.id, label: m.name }))]} />
+        <FilterSelect label="Sort" required value={sort} onChange={(value) => setSort(value as Sort)} options={[{ value: "closing", label: "Closing soonest" }, { value: "largest", label: "Largest" }, { value: "newest", label: "Newest" }]} />
       </div>
 
       {visible.length === 0 ? (

@@ -12,13 +12,13 @@ import {
   List,
   MapPin,
   Pencil,
-  Search,
   Ticket,
   Users,
   X,
 } from "lucide-react";
 import { duplicateEvent, setEventsArchived } from "@/app/actions/events";
 import { useFeedback } from "@/components/ui/feedback";
+import { FilterSelect, SearchField } from "@/components/ui/filter-controls";
 import { EmptyState } from "@/components/ui/page";
 import { buttonClass } from "@/components/ui/button";
 import {
@@ -35,7 +35,7 @@ import type { EventListItem } from "@/lib/events/queries";
 const TABS = ["All events", "Upcoming", "Drafts", "Published", "Completed", "Archived"] as const;
 type Tab = (typeof TABS)[number];
 
-const SELECT = "rounded-lg border border-slate-200 bg-white px-2.5 py-2 text-sm text-slate-700 focus:border-brand-400 focus:outline-none focus:ring-2 focus:ring-brand-100";
+const SELECT = "h-9 rounded-lg border border-slate-300 bg-white px-2.5 text-sm text-slate-700 shadow-sm hover:border-slate-400 focus:border-brand-600 focus:outline-none focus:ring-2 focus:ring-brand-100";
 const VIEWS_KEY = "catapult-event-views";
 
 type Filters = { search: string; program: string; type: string; status: string; from: string; to: string };
@@ -225,24 +225,10 @@ export function EventsDirectory({ events, ownerNames }: { events: EventListItem[
       </div>
 
       <div className="mb-4 flex flex-wrap items-center gap-2">
-        <div className="relative min-w-52 flex-1">
-          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" strokeWidth={2} />
-          <input type="search" aria-label="Search events" placeholder="Search events..." value={filters.search} onChange={(e) => setFilter("search", e.target.value)} className={`${SELECT} w-full pl-9`} />
-        </div>
-        <select aria-label="Program" value={filters.program} onChange={(e) => setFilter("program", e.target.value)} className={SELECT}>
-          <option value="">Program: All</option>
-          {programs.map((p) => <option key={p} value={p}>{p}</option>)}
-        </select>
-        <select aria-label="Event type" value={filters.type} onChange={(e) => setFilter("type", e.target.value)} className={SELECT}>
-          <option value="">Type: All</option>
-          {types.map((t) => <option key={t} value={t}>{t}</option>)}
-        </select>
-        <select aria-label="Status" value={filters.status} onChange={(e) => setFilter("status", e.target.value)} className={SELECT}>
-          <option value="">Status: All</option>
-          <option value="draft">Draft</option>
-          <option value="published">Published</option>
-          <option value="cancelled">Cancelled</option>
-        </select>
+        <SearchField className="w-full" label="Search events" placeholder="Search events..." value={filters.search} onChange={(value) => setFilter("search", value)} />
+        <FilterSelect label="Program" value={filters.program} onChange={(value) => setFilter("program", value)} options={programs.map((p) => ({ value: p, label: p }))} />
+        <FilterSelect label="Type" value={filters.type} onChange={(value) => setFilter("type", value)} options={types.map((t) => ({ value: t, label: t }))} />
+        <FilterSelect label="Status" value={filters.status} onChange={(value) => setFilter("status", value)} options={[{ value: "draft", label: "Draft" }, { value: "published", label: "Published" }, { value: "cancelled", label: "Cancelled" }]} />
         <label className="flex items-center gap-1.5 text-xs text-slate-500">
           From
           <input type="date" value={filters.from} onChange={(e) => setFilter("from", e.target.value)} className={SELECT} />

@@ -6,6 +6,7 @@ import { HandCoins, Handshake, Plus, Trash2 } from "lucide-react";
 import { addBudgetRevenue, deleteBudgetRevenue, updateBudgetRevenue } from "@/app/actions/budgets";
 import { EditableMoney, EditableText } from "@/components/budget-editable";
 import { buttonClass } from "@/components/ui/button";
+import { FilterSelect } from "@/components/ui/filter-controls";
 import { useFeedback } from "@/components/ui/feedback";
 import type { BudgetRevenueEntry, WonDeal } from "@/lib/budgets/analysis";
 import { formatMoney, sumMoney } from "@/lib/budgets/money";
@@ -167,10 +168,7 @@ export function BudgetRevenueLedger({ budgetId, entries, quarter }: { budgetId: 
           <p className="mt-0.5 text-xs text-slate-500">Counts toward revenue once marked Received. Click anything to change it.</p>
         </div>
         <div className="flex items-center gap-2">
-          <select aria-label="Revenue type" value={kind} onChange={(e) => setKind(e.target.value)} className="rounded-lg border border-[#8493a8] bg-white px-2 py-1.5 text-sm text-slate-700">
-            <option value="">All types</option>
-            {KINDS.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
-          </select>
+          <FilterSelect label="Type" value={kind} onChange={setKind} options={KINDS.map(([value, label]) => ({ value: value as string, label }))} />
           <button ref={addRef} type="button" onClick={() => setIsAdding(true)} className={buttonClass("primary", "sm")}>
             <Plus className="h-3.5 w-3.5" strokeWidth={2.25} />
             Add

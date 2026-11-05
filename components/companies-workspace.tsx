@@ -2,10 +2,11 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { ArrowDown, ArrowUp, ArrowUpDown, Building2, ChevronLeft, ChevronRight, Search, SearchX, X } from "lucide-react";
+import { ArrowDown, ArrowUp, ArrowUpDown, Building2, ChevronLeft, ChevronRight, SearchX, X } from "lucide-react";
 import { CompanyExport } from "@/components/company-export";
 import { StatusPill } from "@/components/status-pill";
 import { buttonClass } from "@/components/ui/button";
+import { FilterSelect, SearchField } from "@/components/ui/filter-controls";
 import { EmptyState, PageHeader } from "@/components/ui/page";
 import type { CompanyListRow } from "@/lib/companies/queries";
 import { FILTERS_CLEARED, type CompanySort, type CompanyView } from "@/lib/companies/view";
@@ -14,7 +15,6 @@ import { ALL_STATUSES, STATUS_LABELS } from "@/lib/leads/filters";
 import { getInitials } from "@/lib/text";
 import type { LeadStatus } from "@/lib/supabase/types";
 
-const SELECT = "rounded-lg border border-[#8493a8] bg-white px-2.5 py-2 text-sm text-slate-700";
 const PAGE_SIZE = 50;
 // Catapult Ready's revenue requirement, matching the lead scoring.
 const QUALIFYING_REVENUE = 2_000_000;
@@ -125,55 +125,22 @@ export function CompaniesWorkspace({ companies, initial }: { companies: CompanyL
     <div>
       <PageHeader title="Companies" subtitle={`${companies.length.toLocaleString()} ${companies.length === 1 ? "company" : "companies"}`} actions={<CompanyExport />} />
 
-      <div className="relative mb-3">
-        <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" strokeWidth={2} />
-        <input
-          type="search"
-          aria-label="Search companies by keyword"
-          placeholder="Search by company, industry, community, website, phone, address, or contact..."
-          value={view.q}
-          onChange={(e) => update({ q: e.target.value })}
-          className={`${SELECT} w-full pl-9`}
-        />
-      </div>
+      <SearchField
+        className="mb-3"
+        label="Search companies by keyword"
+        placeholder="Search by company, industry, community, website, phone, address, or contact..."
+        value={view.q}
+        onChange={(q) => update({ q })}
+      />
 
-      <div className="mb-3 flex flex-wrap items-center gap-2">
-        <select aria-label="Status" value={view.status} onChange={(e) => update({ status: e.target.value })} className={SELECT}>
-          <option value="">Status: All</option>
-          {ALL_STATUSES.map((s) => <option key={s} value={s}>{STATUS_LABELS[s]}</option>)}
-          <option value="none">No lead</option>
-        </select>
-        <select aria-label="Client type" value={view.clientType} onChange={(e) => update({ clientType: e.target.value })} className={SELECT}>
-          <option value="">Client type: All</option>
-          {CLIENT_TYPES.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
-          <option value="none">Not set</option>
-        </select>
-        <select aria-label="Program" value={view.program} onChange={(e) => update({ program: e.target.value })} className={`${SELECT} max-w-56`}>
-          <option value="">Program: All</option>
-          {LEAD_PROGRAMS.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
-          <option value="none">None selected</option>
-        </select>
-        <select aria-label="Industry" value={view.industry} onChange={(e) => update({ industry: e.target.value })} className={`${SELECT} max-w-56`}>
-          <option value="">Industry: All</option>
-          {industries.map((i) => <option key={i} value={i}>{i}</option>)}
-          <option value="none">Not set</option>
-        </select>
-        <select aria-label="Community" value={view.community} onChange={(e) => update({ community: e.target.value })} className={`${SELECT} max-w-56`}>
-          <option value="">Community: All</option>
-          {communities.map((c) => <option key={c} value={c}>{c}</option>)}
-          <option value="none">Not set</option>
-        </select>
-        <select aria-label="Contacts" value={view.contact} onChange={(e) => update({ contact: e.target.value })} className={SELECT}>
-          <option value="">Contacts: Any</option>
-          <option value="has">Has contacts</option>
-          <option value="none">No contacts</option>
-        </select>
-        <select aria-label="Estimated revenue" value={view.revenue} onChange={(e) => update({ revenue: e.target.value })} className={SELECT}>
-          <option value="">Revenue: Any</option>
-          <option value="qualifying">$2M or more</option>
-          <option value="known">Revenue known</option>
-          <option value="unknown">Revenue unknown</option>
-        </select>
+      <div className="mb-4 flex flex-wrap items-center gap-2">
+        <FilterSelect label="Status" value={view.status} onChange={(status) => update({ status })} options={[...ALL_STATUSES.map((s) => ({ value: s as string, label: STATUS_LABELS[s] })), { value: "none", label: "No lead" }]} />
+        <FilterSelect label="Client type" value={view.clientType} onChange={(clientType) => update({ clientType })} options={[...CLIENT_TYPES.map(([value, label]) => ({ value: value as string, label })), { value: "none", label: "Not set" }]} />
+        <FilterSelect label="Program" value={view.program} onChange={(program) => update({ program })} options={[...LEAD_PROGRAMS.map(([value, label]) => ({ value: value as string, label })), { value: "none", label: "None selected" }]} />
+        <FilterSelect label="Industry" value={view.industry} onChange={(industry) => update({ industry })} options={[...industries.map((i) => ({ value: i, label: i })), { value: "none", label: "Not set" }]} />
+        <FilterSelect label="Community" value={view.community} onChange={(community) => update({ community })} options={[...communities.map((c) => ({ value: c, label: c })), { value: "none", label: "Not set" }]} />
+        <FilterSelect label="Contacts" value={view.contact} allLabel="Any" onChange={(contact) => update({ contact })} options={[{ value: "has", label: "Has contacts" }, { value: "none", label: "No contacts" }]} />
+        <FilterSelect label="Revenue" value={view.revenue} allLabel="Any" onChange={(revenue) => update({ revenue })} options={[{ value: "qualifying", label: "$2M or more" }, { value: "known", label: "Revenue known" }, { value: "unknown", label: "Revenue unknown" }]} />
       </div>
 
       <div className="mb-3 flex min-h-6 flex-wrap items-center gap-2 text-sm">

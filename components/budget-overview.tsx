@@ -10,6 +10,7 @@ import { EditableMoney } from "@/components/budget-editable";
 import { BudgetLineRows, type EventOption } from "@/components/budget-line-rows";
 import { buttonClass } from "@/components/ui/button";
 import { useFeedback } from "@/components/ui/feedback";
+import { FilterSelect, SearchField } from "@/components/ui/filter-controls";
 import { EmptyState } from "@/components/ui/page";
 import { monthLabel } from "@/lib/budgets/history";
 import { addCents, formatMoney, fromCents, sumMoney } from "@/lib/budgets/money";
@@ -307,26 +308,10 @@ export function BudgetOverviewView({ budget, changes, events }: { budget: Budget
       </section>
 
       <div className="flex flex-wrap items-center gap-2">
-        <div className="relative min-w-52 flex-1">
-          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" strokeWidth={2} />
-          <input type="search" aria-label="Search budget lines" placeholder="Search lines, sections, or events..." value={search} onChange={(e) => setSearch(e.target.value)} className={`${SELECT} w-full pl-9`} />
-        </div>
-        <select aria-label="Section" value={section} onChange={(e) => setSection(e.target.value)} className={SELECT}>
-          <option value="">Section: All</option>
-          {sections.map((s) => <option key={s} value={s}>{s}</option>)}
-        </select>
-        <select aria-label="Type" value={kind} onChange={(e) => setKind(e.target.value)} className={SELECT}>
-          <option value="">Type: All</option>
-          <option value="general">General</option>
-          <option value="event">Event</option>
-        </select>
-        <select aria-label="Status" value={status} onChange={(e) => setStatus(e.target.value as Status)} className={SELECT}>
-          <option value="">Status: All</option>
-          <option value="over">Over budget</option>
-          <option value="near">90% or more used</option>
-          <option value="unspent">No spending yet</option>
-          <option value="unlinked">Event not linked</option>
-        </select>
+        <SearchField className="flex-1" label="Search budget lines" placeholder="Search lines, sections, or events..." value={search} onChange={setSearch} />
+        <FilterSelect label="Section" value={section} onChange={setSection} options={sections.map((s) => ({ value: s, label: s }))} />
+        <FilterSelect label="Type" value={kind} onChange={setKind} options={[{ value: "general", label: "General" }, { value: "event", label: "Event" }]} />
+        <FilterSelect label="Status" value={status} onChange={(value) => setStatus(value as Status)} options={[{ value: "over", label: "Over budget" }, { value: "near", label: "90% or more used" }, { value: "unspent", label: "No spending yet" }, { value: "unlinked", label: "Event not linked" }]} />
         {hasFilters && (
           <button type="button" onClick={clearFilters} className={buttonClass("ghost", "sm")}>
             <X className="h-3.5 w-3.5" strokeWidth={2} />

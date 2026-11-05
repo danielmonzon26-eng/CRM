@@ -5,13 +5,13 @@ import { Download, Plus, Search, Wallet } from "lucide-react";
 import { BudgetLineRows, type EventOption } from "@/components/budget-line-rows";
 import { AddLineForm } from "@/components/budget-overview";
 import { buttonClass } from "@/components/ui/button";
+import { FilterSelect, SearchField } from "@/components/ui/filter-controls";
 import { EmptyState } from "@/components/ui/page";
 import { addCents, formatMoney, fromCents, sumMoney } from "@/lib/budgets/money";
 import { quarterLabel, quarterOf } from "@/lib/budgets/quarters";
 import type { BudgetOverview } from "@/lib/budgets/queries";
 import { downloadCsv } from "@/lib/csv";
 
-const SELECT = "rounded-lg border border-[#8493a8] bg-white px-2.5 py-2 text-sm text-slate-700";
 const COLUMNS = 6;
 
 type LineFigures = { plan: number; committed: number; actual: number; remaining: number };
@@ -73,23 +73,10 @@ export function BudgetItemsView({ budget, events }: { budget: BudgetOverview; ev
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center gap-2">
-        <div className="relative min-w-52 flex-1">
-          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" strokeWidth={2} />
-          <input type="search" aria-label="Search line items" placeholder="Search lines, items, or events..." value={search} onChange={(e) => setSearch(e.target.value)} className={`${SELECT} w-full pl-9`} />
-        </div>
-        <select aria-label="Quarter" value={quarter} onChange={(e) => setQuarter(e.target.value)} className={SELECT}>
-          <option value="">Quarter: All</option>
-          {quarters.map((q) => <option key={q} value={q}>{quarterLabel(q)}</option>)}
-        </select>
-        <select aria-label="Section" value={section} onChange={(e) => setSection(e.target.value)} className={SELECT}>
-          <option value="">Section: All</option>
-          {sections.map((s) => <option key={s} value={s}>{s}</option>)}
-        </select>
-        <select aria-label="Type" value={kind} onChange={(e) => setKind(e.target.value)} className={SELECT}>
-          <option value="">Type: All</option>
-          <option value="general">General</option>
-          <option value="event">Event</option>
-        </select>
+        <SearchField className="flex-1" label="Search line items" placeholder="Search lines, items, or events..." value={search} onChange={setSearch} />
+        <FilterSelect label="Quarter" value={quarter} onChange={setQuarter} options={quarters.map((q) => ({ value: q, label: quarterLabel(q) }))} />
+        <FilterSelect label="Section" value={section} onChange={setSection} options={sections.map((s) => ({ value: s, label: s }))} />
+        <FilterSelect label="Type" value={kind} onChange={setKind} options={[{ value: "general", label: "General" }, { value: "event", label: "Event" }]} />
         <button type="button" onClick={exportCsv} disabled={lines.length === 0} className={buttonClass("secondary")}>
           <Download className="h-4 w-4" strokeWidth={2} />
           Export
