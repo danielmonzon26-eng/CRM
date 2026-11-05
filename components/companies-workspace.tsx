@@ -8,6 +8,7 @@ import { StatusPill } from "@/components/status-pill";
 import { buttonClass } from "@/components/ui/button";
 import { EmptyState, PageHeader } from "@/components/ui/page";
 import type { CompanyListRow } from "@/lib/companies/queries";
+import { FILTERS_CLEARED, type CompanySort, type CompanyView } from "@/lib/companies/view";
 import { CLIENT_TYPES, LEAD_PROGRAMS, clientTypeLabel, programLabel } from "@/lib/leads/classification";
 import { ALL_STATUSES, STATUS_LABELS } from "@/lib/leads/filters";
 import { getInitials } from "@/lib/text";
@@ -20,41 +21,6 @@ const QUALIFYING_REVENUE = 2_000_000;
 
 const CONTACT_LABELS: Record<string, string> = { has: "Has contacts", none: "No contacts" };
 const REVENUE_LABELS: Record<string, string> = { qualifying: "$2M or more", known: "Revenue known", unknown: "Revenue unknown" };
-const SORTS = ["name", "community", "industry", "revenue", "contacts", "status"] as const;
-
-type Sort = (typeof SORTS)[number];
-export type CompanyView = {
-  q: string;
-  status: string;
-  clientType: string;
-  program: string;
-  industry: string;
-  community: string;
-  contact: string;
-  revenue: string;
-  sort: Sort;
-  desc: boolean;
-  page: number;
-};
-
-const FILTERS_CLEARED = { q: "", status: "", clientType: "", program: "", industry: "", community: "", contact: "", revenue: "" };
-
-export function parseCompanyView(params: Record<string, string | undefined>): CompanyView {
-  return {
-    q: params.q ?? "",
-    status: params.status ?? "",
-    clientType: params.clientType ?? "",
-    program: params.program ?? "",
-    industry: params.industry ?? "",
-    community: params.community ?? "",
-    contact: params.contact ?? "",
-    revenue: params.revenue ?? "",
-    sort: SORTS.includes(params.sort as Sort) ? (params.sort as Sort) : "name",
-    desc: params.desc === "1",
-    page: Math.max(Number(params.page) || 1, 1),
-  };
-}
-
 function viewToQuery(view: CompanyView): string {
   const params = new URLSearchParams();
   for (const key of Object.keys(FILTERS_CLEARED) as (keyof typeof FILTERS_CLEARED)[]) {
@@ -84,7 +50,7 @@ function matches(company: CompanyListRow, view: CompanyView, terms: string[]): b
 }
 
 /** Blanks always sort last, whichever way the column is sorted. */
-function compareCompanies(a: CompanyListRow, b: CompanyListRow, sort: Sort, desc: boolean): number {
+function compareCompanies(a: CompanyListRow, b: CompanyListRow, sort: CompanySort, desc: boolean): number {
   const value = (c: CompanyListRow): string | number | null => {
     if (sort === "community") return c.community?.toLowerCase() ?? null;
     if (sort === "industry") return c.industry?.toLowerCase() ?? null;
@@ -138,7 +104,7 @@ export function CompaniesWorkspace({ companies, initial }: { companies: CompanyL
     ...(view.revenue ? [{ label: REVENUE_LABELS[view.revenue], clear: { revenue: "" } }] : []),
   ];
 
-  const SortHeader = ({ label, sort }: { label: string; sort: Sort }) => {
+  const SortHeader = ({ label, sort }: { label: string; sort: CompanySort }) => {
     const active = view.sort === sort;
     const Icon = active ? (view.desc ? ArrowDown : ArrowUp) : ArrowUpDown;
     return (

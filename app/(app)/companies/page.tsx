@@ -1,6 +1,7 @@
-import { CompaniesWorkspace, parseCompanyView } from "@/components/companies-workspace";
+import { CompaniesWorkspace } from "@/components/companies-workspace";
 import { Page } from "@/components/ui/page";
 import { getCompaniesList } from "@/lib/companies/queries";
+import { parseCompanyView } from "@/lib/companies/view";
 
 export const dynamic = "force-dynamic";
 
