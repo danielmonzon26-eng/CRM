@@ -8,6 +8,7 @@ import { loadLeadQuickEdit, saveLeadQuickEdit } from "@/app/actions/leads";
 import { buttonClass } from "@/components/ui/button";
 import { useFeedback } from "@/components/ui/feedback";
 import { Skeleton } from "@/components/ui/skeleton";
+import { NAICS_SECTORS, industryLabelForCode, parseIndustry } from "@/lib/industries/naics";
 import { CLIENT_TYPES, LEAD_PROGRAMS } from "@/lib/leads/classification";
 import { ALL_STATUSES, STATUS_LABELS } from "@/lib/leads/filters";
 import { getQuickEditChanges, type QuickEditChanges, type QuickEditRecord, type QuickEditValues } from "@/lib/leads/quick-edit";
@@ -93,10 +94,16 @@ function QuickEditFields({
           </label>
           <label className={LABEL}>
             Industry
-            <input list="quick-edit-industries" {...text("industry")} />
-            <datalist id="quick-edit-industries">
-              {facets.industries.map((i) => <option key={i} value={i} />)}
-            </datalist>
+            <select value={values.industry} onChange={(e) => onChange({ industry: e.target.value })} className={FIELD}>
+              <option value="">Not set</option>
+              {/* Older license wording stays selectable until someone changes it. */}
+              {values.industry && !parseIndustry(values.industry) && <option value={values.industry}>{values.industry}</option>}
+              {NAICS_SECTORS.map((sector) => (
+                <optgroup key={sector.code} label={sector.title}>
+                  {sector.subsectors.map((sub) => <option key={sub.code} value={industryLabelForCode(sub.code)!}>{sub.title}</option>)}
+                </optgroup>
+              ))}
+            </select>
           </label>
           <label className={LABEL}>
             Community

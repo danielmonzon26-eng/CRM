@@ -24,6 +24,7 @@ import { FilterSelect, SearchField } from "@/components/ui/filter-controls";
 import { EmptyState } from "@/components/ui/page";
 import { DEAL_STAGE_META } from "@/lib/deals/stages";
 import { downloadCsv } from "@/lib/csv";
+import { industryOptions, parseIndustry } from "@/lib/industries/naics";
 import { CLIENT_TYPES, LEAD_PROGRAMS, clientTypeLabel, programLabel } from "@/lib/leads/classification";
 import {
   ALL_STATUSES,
@@ -276,7 +277,7 @@ function LeadsTable({
                   )}
                 </td>
                 <td className="max-w-52 px-3 py-2.5 text-slate-700">
-                  <span className="block truncate">{lead.industry ?? "—"}</span>
+                  <span className="block truncate">{parseIndustry(lead.industry)?.subsector ?? lead.industry ?? "—"}</span>
                   {lead.community && <span className="block truncate text-xs text-slate-500">{lead.community}</span>}
                 </td>
                 <td className="px-3 py-2.5">{lead.score > 0 ? <FitBadge score={lead.score} /> : <span className="text-slate-500">—</span>}</td>
@@ -400,7 +401,7 @@ export function LeadsWorkspace({
     ...(state.program ? [{ label: `Program: ${state.program === "none" ? "None selected" : programLabel(state.program)}`, clear: { program: "" } }] : []),
     ...(state.proposal ? [{ label: PROPOSAL_LABELS[state.proposal], clear: { proposal: "" } }] : []),
     ...(state.owner ? [{ label: `Owner: ${state.owner === "unassigned" ? "Unassigned" : memberName(state.owner)}`, clear: { owner: "" } }] : []),
-    ...(state.industry ? [{ label: `Industry: ${state.industry}`, clear: { industry: "" } }] : []),
+    ...(state.industry ? [{ label: `Industry: ${parseIndustry(state.industry)?.subsector ?? state.industry}`, clear: { industry: "" } }] : []),
     ...(state.community ? [{ label: `Community: ${state.community}`, clear: { community: "" } }] : []),
     ...(state.score ? [{ label: SCORE_LABELS[state.score], clear: { score: "" } }] : []),
     ...(state.contact ? [{ label: CONTACT_LABELS[state.contact], clear: { contact: "" } }] : []),
@@ -456,7 +457,7 @@ export function LeadsWorkspace({
         <FilterSelect label="Program" value={state.program} onChange={(program) => go({ program })} options={[...LEAD_PROGRAMS.map(([value, label]) => ({ value: value as string, label })), { value: "none", label: "None selected" }]} />
         <FilterSelect label="Proposal" value={state.proposal} allLabel="Any" onChange={(proposal) => go({ proposal })} options={[{ value: "has", label: "Has a proposal" }, { value: "none", label: "No proposal" }]} />
         <FilterSelect label="Owner" value={state.owner} allLabel="Anyone" onChange={(owner) => go({ owner })} options={[{ value: "unassigned", label: "Unassigned" }, ...members.map((m) => ({ value: m.id, label: m.name }))]} />
-        <FilterSelect label="Industry" value={state.industry} onChange={(industry) => go({ industry })} options={facets.industries.map((i) => ({ value: i, label: i }))} />
+        <FilterSelect label="Industry" value={state.industry} onChange={(industry) => go({ industry })} options={industryOptions(facets.industries)} />
         <FilterSelect label="Community" value={state.community} onChange={(community) => go({ community })} options={facets.communities.map((c) => ({ value: c, label: c }))} />
         <FilterSelect label="Fit" value={state.score} allLabel="Any" onChange={(score) => go({ score })} options={[{ value: "40", label: "Fit 40+" }, { value: "70", label: "Fit 70+" }]} />
         <FilterSelect label="Contact" value={state.contact} allLabel="Any" onChange={(contact) => go({ contact })} options={[{ value: "has_contact", label: "Has a contact" }, { value: "has_email", label: "Has an email" }, { value: "none", label: "No contact" }]} />

@@ -8,6 +8,7 @@ const LABELS: Record<string, string> = {
   crm: "CRM",
   leads: "Leads",
   companies: "Companies",
+  "import-industries": "Import industries",
   contacts: "Contacts",
   deals: "Proposals",
   tasks: "Tasks",

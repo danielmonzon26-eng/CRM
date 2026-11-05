@@ -10,6 +10,7 @@ import { FilterSelect, SearchField } from "@/components/ui/filter-controls";
 import { EmptyState, PageHeader } from "@/components/ui/page";
 import type { CompanyListRow } from "@/lib/companies/queries";
 import { FILTERS_CLEARED, type CompanySort, type CompanyView } from "@/lib/companies/view";
+import { industryOptions, matchesIndustryFilter, parseIndustry } from "@/lib/industries/naics";
 import { CLIENT_TYPES, LEAD_PROGRAMS, clientTypeLabel, programLabel } from "@/lib/leads/classification";
 import { ALL_STATUSES, STATUS_LABELS } from "@/lib/leads/filters";
 import { getInitials } from "@/lib/text";
@@ -38,7 +39,7 @@ function matches(company: CompanyListRow, view: CompanyView, terms: string[]): b
   if (view.status === "none" ? company.status !== null : view.status && company.status !== view.status) return false;
   if (view.clientType === "none" ? company.clientType !== null : view.clientType && company.clientType !== view.clientType) return false;
   if (view.program === "none" ? company.programs.length > 0 : view.program && !company.programs.includes(view.program)) return false;
-  if (view.industry === "none" ? company.industry !== null : view.industry && company.industry !== view.industry) return false;
+  if (view.industry === "none" ? company.industry !== null : view.industry && !matchesIndustryFilter(company.industry, view.industry)) return false;
   if (view.community === "none" ? company.community !== null : view.community && company.community !== view.community) return false;
   if (view.contact === "has" && company.contactCount === 0) return false;
   if (view.contact === "none" && company.contactCount > 0) return false;
@@ -65,6 +66,17 @@ function compareCompanies(a: CompanyListRow, b: CompanyListRow, sort: CompanySor
   if (y === null) return -1;
   const order = x < y ? -1 : 1;
   return desc ? -order : order;
+}
+
+function IndustryCell({ industry }: { industry: string | null }) {
+  const parts = parseIndustry(industry);
+  if (!parts) return <>{industry ?? "—"}</>;
+  return (
+    <>
+      <span className="block text-slate-800">{parts.subsector}</span>
+      <span className="block text-xs text-slate-500">{parts.sector}</span>
+    </>
+  );
 }
 
 function distinct(values: (string | null)[]): string[] {
@@ -98,7 +110,7 @@ export function CompaniesWorkspace({ companies, initial }: { companies: CompanyL
     ...(view.status ? [{ label: `Status: ${view.status === "none" ? "No lead" : STATUS_LABELS[view.status as LeadStatus]}`, clear: { status: "" } }] : []),
     ...(view.clientType ? [{ label: `Client type: ${view.clientType === "none" ? "Not set" : clientTypeLabel(view.clientType)}`, clear: { clientType: "" } }] : []),
     ...(view.program ? [{ label: `Program: ${view.program === "none" ? "None selected" : programLabel(view.program)}`, clear: { program: "" } }] : []),
-    ...(view.industry ? [{ label: `Industry: ${view.industry === "none" ? "Not set" : view.industry}`, clear: { industry: "" } }] : []),
+    ...(view.industry ? [{ label: `Industry: ${view.industry === "none" ? "Not set" : view.industry.replace("sector:", "")}`, clear: { industry: "" } }] : []),
     ...(view.community ? [{ label: `Community: ${view.community === "none" ? "Not set" : view.community}`, clear: { community: "" } }] : []),
     ...(view.contact ? [{ label: CONTACT_LABELS[view.contact], clear: { contact: "" } }] : []),
     ...(view.revenue ? [{ label: REVENUE_LABELS[view.revenue], clear: { revenue: "" } }] : []),
@@ -123,7 +135,7 @@ export function CompaniesWorkspace({ companies, initial }: { companies: CompanyL
 
   return (
     <div>
-      <PageHeader title="Companies" subtitle={`${companies.length.toLocaleString()} ${companies.length === 1 ? "company" : "companies"}`} actions={<CompanyExport />} />
+      <PageHeader title="Companies" subtitle={`${companies.length.toLocaleString()} ${companies.length === 1 ? "company" : "companies"}`} actions={<><Link href="/companies/import-industries" className={buttonClass("secondary")}>Import industries</Link><CompanyExport /></>} />
 
       <SearchField
         className="mb-3"
@@ -137,7 +149,7 @@ export function CompaniesWorkspace({ companies, initial }: { companies: CompanyL
         <FilterSelect label="Status" value={view.status} onChange={(status) => update({ status })} options={[...ALL_STATUSES.map((s) => ({ value: s as string, label: STATUS_LABELS[s] })), { value: "none", label: "No lead" }]} />
         <FilterSelect label="Client type" value={view.clientType} onChange={(clientType) => update({ clientType })} options={[...CLIENT_TYPES.map(([value, label]) => ({ value: value as string, label })), { value: "none", label: "Not set" }]} />
         <FilterSelect label="Program" value={view.program} onChange={(program) => update({ program })} options={[...LEAD_PROGRAMS.map(([value, label]) => ({ value: value as string, label })), { value: "none", label: "None selected" }]} />
-        <FilterSelect label="Industry" value={view.industry} onChange={(industry) => update({ industry })} options={[...industries.map((i) => ({ value: i, label: i })), { value: "none", label: "Not set" }]} />
+        <FilterSelect label="Industry" value={view.industry} onChange={(industry) => update({ industry })} options={[{ value: "none", label: "Not set" }, ...industryOptions(industries, { wholeSectors: true })]} />
         <FilterSelect label="Community" value={view.community} onChange={(community) => update({ community })} options={[...communities.map((c) => ({ value: c, label: c })), { value: "none", label: "Not set" }]} />
         <FilterSelect label="Contacts" value={view.contact} allLabel="Any" onChange={(contact) => update({ contact })} options={[{ value: "has", label: "Has contacts" }, { value: "none", label: "No contacts" }]} />
         <FilterSelect label="Revenue" value={view.revenue} allLabel="Any" onChange={(revenue) => update({ revenue })} options={[{ value: "qualifying", label: "$2M or more" }, { value: "known", label: "Revenue known" }, { value: "unknown", label: "Revenue unknown" }]} />
@@ -197,7 +209,7 @@ export function CompaniesWorkspace({ companies, initial }: { companies: CompanyL
                       </Link>
                     </th>
                     <td className="px-4 py-2.5 text-slate-600">{c.community ?? "—"}</td>
-                    <td className="px-4 py-2.5 text-slate-600">{c.industry ?? "—"}</td>
+                    <td className="max-w-80 px-4 py-2.5 text-slate-600"><IndustryCell industry={c.industry} /></td>
                     <td className="px-4 py-2.5 text-slate-600">{c.estimatedAnnualRevenue != null ? `$${c.estimatedAnnualRevenue.toLocaleString()}` : "—"}</td>
                     <td className="px-4 py-2.5 text-slate-600">{c.contactCount}</td>
                     <td className="px-4 py-2.5">{c.status ? <StatusPill status={c.status} /> : <span className="text-slate-500">No lead</span>}</td>

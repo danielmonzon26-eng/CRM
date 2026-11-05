@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { parseIndustry } from "@/lib/industries/naics";
 import { clientTypeLabel, isClientType, isLeadProgram, programLabel } from "@/lib/leads/classification";
 import { ALL_STATUSES, type LeadFilters, type LeadSort } from "@/lib/leads/filters";
 import { getLeadQuickEdit } from "@/lib/leads/queries";
@@ -89,7 +90,7 @@ export async function saveLeadQuickEdit(
       .from("companies")
       .update({
         ...(changes.companyName ? { name: changes.companyName } : {}),
-        ...(changes.industry !== undefined ? { industry: changes.industry || null } : {}),
+        ...(changes.industry !== undefined ? { industry: changes.industry || null, naics_code: parseIndustry(changes.industry)?.code ?? null } : {}),
         ...(changes.community !== undefined ? { community: changes.community || null } : {}),
         ...(changes.website !== undefined ? { website: changes.website || null, domain: extractDomain(changes.website) } : {}),
         ...(changes.companyPhone !== undefined ? { phone: changes.companyPhone || null } : {}),
