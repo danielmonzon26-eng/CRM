@@ -18,19 +18,41 @@ export type DealListRow = {
   primaryContactName: string | null;
   leadId: string | null;
   owner: string | null;
+  createdAt: string;
 };
+
+export type ProposalRow = DealListRow & { clientType: string | null; programs: string[] };
+
+const ID_BATCH_SIZE = 200;
+
+function idBatches(ids: (string | null)[]): string[][] {
+  const unique = [...new Set(ids.filter((id): id is string => id !== null))];
+  const batches: string[][] = [];
+  for (let i = 0; i < unique.length; i += ID_BATCH_SIZE) batches.push(unique.slice(i, i + ID_BATCH_SIZE));
+  return batches;
+}
 
 async function attachCompanyAndContactNames<T extends { companyId: string; primaryContactId: string | null }>(
   supabase: Awaited<ReturnType<typeof createClient>>,
   rows: T[]
 ): Promise<Map<string, { companyName: string; contactName: string | null }>> {
-  const companies = await fetchAllPages((from, to) => supabase.from("companies").select("id, name").range(from, to));
-  const companyById = new Map(companies.map((c) => [c.id, c.name]));
-
-  const contacts = await fetchAllPages((from, to) =>
-    supabase.from("contacts").select("id, full_name").range(from, to)
+  const companies = await Promise.all(
+    idBatches(rows.map((r) => r.companyId)).map(async (ids) => {
+      const { data, error } = await supabase.from("companies").select("id, name").in("id", ids);
+      if (error) throw error;
+      return data;
+    })
   );
-  const contactById = new Map(contacts.map((c) => [c.id, c.full_name]));
+  const companyById = new Map(companies.flat().map((c) => [c.id, c.name]));
+
+  const contacts = await Promise.all(
+    idBatches(rows.map((r) => r.primaryContactId)).map(async (ids) => {
+      const { data, error } = await supabase.from("contacts").select("id, full_name").in("id", ids);
+      if (error) throw error;
+      return data;
+    })
+  );
+  const contactById = new Map(contacts.flat().map((c) => [c.id, c.full_name]));
 
   const result = new Map<string, { companyName: string; contactName: string | null }>();
   for (const row of rows) {
@@ -49,7 +71,7 @@ export async function getDealsBoard(): Promise<DealListRow[]> {
     supabase
       .from("deals")
       .select(
-        "id, name, stage, amount, currency, expected_close_date, probability, next_step, next_step_due_date, company_id, primary_contact_id, lead_id, owner"
+        "id, name, stage, amount, currency, expected_close_date, probability, next_step, next_step_due_date, company_id, primary_contact_id, lead_id, owner, created_at"
       )
       .order("created_at", { ascending: false })
       .range(from, to)
@@ -78,7 +100,26 @@ export async function getDealsBoard(): Promise<DealListRow[]> {
       primaryContactName: meta?.contactName ?? null,
       leadId: d.lead_id,
       owner: d.owner,
+      createdAt: d.created_at,
     };
+  });
+}
+
+/** Every proposal, with the client type and programs of the lead it came from. */
+export async function getProposalBoard(): Promise<ProposalRow[]> {
+  const deals = await getDealsBoard();
+  const supabase = await createClient();
+  const leads = await Promise.all(
+    idBatches(deals.map((d) => d.leadId)).map(async (ids) => {
+      const { data, error } = await supabase.from("leads").select("id, client_type, programs").in("id", ids);
+      if (error) throw error;
+      return data;
+    })
+  );
+  const leadById = new Map(leads.flat().map((l) => [l.id, l]));
+  return deals.map((deal) => {
+    const lead = deal.leadId ? leadById.get(deal.leadId) : undefined;
+    return { ...deal, clientType: lead?.client_type ?? null, programs: lead?.programs ?? [] };
   });
 }
 

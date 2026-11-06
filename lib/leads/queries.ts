@@ -1,6 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
-import { fetchAllPages } from "@/lib/supabase/paginate";
 import type { ActivityType, LeadStatus, UserRole } from "@/lib/supabase/types";
+import type { QuickEditRecord } from "@/lib/leads/quick-edit";
 import type { ScoreReason } from "@/lib/leads/scoring";
 
 /**
@@ -9,122 +9,6 @@ import type { ScoreReason } from "@/lib/leads/scoring";
  * file must therefore be called from a request context with a valid session (a Server
  * Component or Server Action on a route the middleware already protects).
  */
-
-export type PipelineStats = {
-  total: number;
-  newThisWeek: number;
-  byStatus: Record<LeadStatus, number>;
-};
-
-export type LeadTableRow = {
-  id: string;
-  status: LeadStatus;
-  score: number;
-  createdAt: string;
-  companyId: string;
-  companyName: string;
-  community: string | null;
-  industry: string | null;
-  primaryContact: { fullName: string; title: string | null; email: string | null } | null;
-};
-
-export type LeadTablePage = {
-  rows: LeadTableRow[];
-  total: number;
-  page: number;
-  pageSize: number;
-};
-
-type LeadTableQueryRow = {
-  id: string;
-  status: LeadStatus;
-  score: number;
-  created_at: string;
-  company_id: string;
-  companies: { name: string; community: string | null; industry: string | null } | null;
-  contacts: { full_name: string; title: string | null; email: string | null; is_primary: boolean }[];
-};
-
-/**
- * Server-side paginated + filtered lead table. Filters the embedded `companies`
- * resource via PostgREST's `!inner` join syntax (a real SQL WHERE, not a giant
- * `.in()` id list) so this stays cheap regardless of how many rows match.
- */
-export async function getLeadsTable(opts: {
-  search?: string;
-  status?: LeadStatus | "all";
-  page?: number;
-  pageSize?: number;
-}): Promise<LeadTablePage> {
-  const supabase = await createClient();
-  const page = Math.max(1, opts.page ?? 1);
-  const pageSize = opts.pageSize ?? 25;
-  const from = (page - 1) * pageSize;
-  const to = from + pageSize - 1;
-
-  let query = supabase
-    .from("leads")
-    .select(
-      "id, status, score, created_at, company_id, companies!inner(name, community, industry), contacts(full_name, title, email, is_primary)",
-      { count: "exact" }
-    )
-    .order("created_at", { ascending: false });
-
-  if (opts.status && opts.status !== "all") {
-    query = query.eq("status", opts.status);
-  }
-  if (opts.search?.trim()) {
-    query = query.ilike("companies.name", `%${opts.search.trim()}%`);
-  }
-
-  const { data, error, count } = await query.range(from, to);
-  if (error) throw error;
-
-  const rows = ((data ?? []) as unknown as LeadTableQueryRow[]).map((row) => {
-    const primary = row.contacts.find((c) => c.is_primary) ?? row.contacts[0] ?? null;
-    return {
-      id: row.id,
-      status: row.status,
-      score: row.score,
-      createdAt: row.created_at,
-      companyId: row.company_id,
-      companyName: row.companies?.name ?? "Unknown company",
-      community: row.companies?.community ?? null,
-      industry: row.companies?.industry ?? null,
-      primaryContact: primary ? { fullName: primary.full_name, title: primary.title, email: primary.email } : null,
-    };
-  });
-
-  return { rows, total: count ?? 0, page, pageSize };
-}
-
-const EMPTY_STATUS_COUNTS: Record<LeadStatus, number> = {
-  new: 0,
-  researching: 0,
-  contacted: 0,
-  qualified: 0,
-  unqualified: 0,
-  won: 0,
-  lost: 0,
-};
-
-export async function getPipelineStats(): Promise<PipelineStats> {
-  const supabase = await createClient();
-  const rows = await fetchAllPages((from, to) =>
-    supabase.from("leads").select("status, created_at").range(from, to)
-  );
-
-  const byStatus = { ...EMPTY_STATUS_COUNTS };
-  const weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
-  let newThisWeek = 0;
-
-  for (const row of rows) {
-    byStatus[row.status]++;
-    if (new Date(row.created_at).getTime() >= weekAgo) newThisWeek++;
-  }
-
-  return { total: rows.length, newThisWeek, byStatus };
-}
 
 export type TeamMember = { id: string; email: string | null; fullName: string | null; role: UserRole };
 
@@ -135,57 +19,42 @@ export async function getTeamMembers(): Promise<TeamMember[]> {
   return data.map((p) => ({ id: p.id, email: p.email, fullName: p.full_name, role: p.role }));
 }
 
-export type BoardLead = {
-  id: string;
-  status: LeadStatus;
-  score: number;
-  companyName: string;
-  community: string | null;
-  industry: string | null;
-  primaryContact: { fullName: string; title: string | null } | null;
-  contactCount: number;
-};
-
-export async function getLeadsBoard(): Promise<BoardLead[]> {
+/** Current values for the quick edit popup, including the primary contact the Leads table shows. */
+export async function getLeadQuickEdit(leadId: string): Promise<QuickEditRecord | null> {
   const supabase = await createClient();
 
-  const leads = await fetchAllPages((from, to) =>
-    supabase.from("leads").select("id, status, score, company_id").range(from, to)
-  );
-  if (leads.length === 0) return [];
+  const { data: lead, error: leadError } = await supabase.from("leads").select("*").eq("id", leadId).maybeSingle();
+  if (leadError) throw leadError;
+  if (!lead) return null;
 
-  const companies = await fetchAllPages((from, to) =>
-    supabase.from("companies").select("id, name, community, industry").range(from, to)
-  );
-  const companyById = new Map(companies.map((c) => [c.id, c]));
+  const [{ data: company, error: companyError }, { data: contacts, error: contactsError }] = await Promise.all([
+    supabase.from("companies").select("name, industry, community, website, phone").eq("id", lead.company_id).single(),
+    supabase.from("contacts").select("id, full_name, title, email, phone").eq("lead_id", leadId).order("is_primary", { ascending: false }).order("created_at"),
+  ]);
+  if (companyError) throw companyError;
+  if (contactsError) throw contactsError;
 
-  const contacts = await fetchAllPages((from, to) =>
-    supabase.from("contacts").select("lead_id, full_name, title, is_primary").range(from, to)
-  );
-
-  const contactsByLead = new Map<string, { full_name: string; title: string | null; is_primary: boolean }[]>();
-  for (const c of contacts) {
-    const list = contactsByLead.get(c.lead_id) ?? [];
-    list.push(c);
-    contactsByLead.set(c.lead_id, list);
-  }
-
-  return leads.map((lead) => {
-    const company = companyById.get(lead.company_id);
-    const leadContacts = contactsByLead.get(lead.id) ?? [];
-    const primary = leadContacts.find((c) => c.is_primary) ?? leadContacts[0] ?? null;
-
-    return {
-      id: lead.id,
+  const contact = contacts[0] ?? null;
+  return {
+    leadId,
+    contactId: contact?.id ?? null,
+    otherContacts: Math.max(contacts.length - 1, 0),
+    values: {
       status: lead.status,
-      score: lead.score,
-      companyName: company?.name ?? "Unknown company",
-      community: company?.community ?? null,
-      industry: company?.industry ?? null,
-      primaryContact: primary ? { fullName: primary.full_name, title: primary.title } : null,
-      contactCount: leadContacts.length,
-    };
-  });
+      assignedTo: lead.assigned_to ?? "",
+      clientType: lead.client_type ?? "",
+      programs: lead.programs,
+      companyName: company.name,
+      industry: company.industry ?? "",
+      community: company.community ?? "",
+      website: company.website ?? "",
+      companyPhone: company.phone ?? "",
+      contactName: contact?.full_name ?? "",
+      contactTitle: contact?.title ?? "",
+      contactEmail: contact?.email ?? "",
+      contactPhone: contact?.phone ?? "",
+    },
+  };
 }
 
 export type LeadDetail = {
@@ -194,6 +63,8 @@ export type LeadDetail = {
   score: number;
   scoreReasons: ScoreReason[];
   assignedTo: string | null;
+  clientType: string | null;
+  programs: string[];
   company: {
     id: string;
     name: string;
@@ -237,6 +108,8 @@ export async function getLeadDetail(leadId: string): Promise<LeadDetail | null> 
 
   return {
     id: lead.id,
+    clientType: lead.client_type,
+    programs: lead.programs,
     status: lead.status,
     score: lead.score,
     scoreReasons: Array.isArray(lead.score_reasons) ? (lead.score_reasons as ScoreReason[]) : [],

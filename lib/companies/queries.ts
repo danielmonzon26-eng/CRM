@@ -12,33 +12,33 @@ export type CompanyListRow = {
   status: LeadStatus | null;
   score: number | null;
   contactCount: number;
+  clientType: string | null;
+  programs: string[];
+  /** Lowercase text the keyword search looks through: the company and its contacts. */
+  searchText: string;
 };
 
-export async function getCompaniesList(search?: string): Promise<CompanyListRow[]> {
+export async function getCompaniesList(): Promise<CompanyListRow[]> {
   const supabase = await createClient();
 
-  let companyQuery = supabase
-    .from("companies")
-    .select("id, name, community, industry, estimated_annual_revenue")
-    .order("name");
-  if (search?.trim()) {
-    companyQuery = companyQuery.ilike("name", `%${search.trim()}%`);
-  }
-
-  const companies = await fetchAllPages((from, to) => companyQuery.range(from, to));
+  const companies = await fetchAllPages((from, to) =>
+    supabase.from("companies").select("id, name, community, industry, website, phone, address_line, estimated_annual_revenue").order("name").range(from, to)
+  );
   if (companies.length === 0) return [];
 
   const leads = await fetchAllPages((from, to) =>
-    supabase.from("leads").select("id, company_id, status, score").range(from, to)
+    supabase.from("leads").select("id, company_id, status, score, client_type, programs").range(from, to)
   );
   const leadByCompany = new Map(leads.map((l) => [l.company_id, l]));
 
   const contacts = await fetchAllPages((from, to) =>
-    supabase.from("contacts").select("lead_id").range(from, to)
+    supabase.from("contacts").select("lead_id, full_name, title, email").range(from, to)
   );
   const contactCounts = new Map<string, number>();
+  const contactText = new Map<string, string[]>();
   for (const c of contacts) {
     contactCounts.set(c.lead_id, (contactCounts.get(c.lead_id) ?? 0) + 1);
+    contactText.set(c.lead_id, [...(contactText.get(c.lead_id) ?? []), c.full_name, c.title ?? "", c.email ?? ""]);
   }
 
   return companies.map((c) => {
@@ -53,6 +53,12 @@ export async function getCompaniesList(search?: string): Promise<CompanyListRow[
       status: lead?.status ?? null,
       score: lead?.score ?? null,
       contactCount: lead ? contactCounts.get(lead.id) ?? 0 : 0,
+      clientType: lead?.client_type ?? null,
+      programs: lead?.programs ?? [],
+      searchText: [c.name, c.community, c.industry, c.website, c.phone, c.address_line, ...(lead ? contactText.get(lead.id) ?? [] : [])]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase(),
     };
   });
 }

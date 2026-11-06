@@ -13,7 +13,7 @@ export function DealStageSelect({ dealId, stage }: { dealId: string; stage: Deal
   if (confirmingLoss) {
     return (
       <div className="flex flex-col gap-1.5 rounded-md border border-rose-200 bg-rose-50 p-2">
-        <label className="text-[11px] font-medium text-rose-700">Reason for losing this deal</label>
+        <label className="text-[11px] font-medium text-rose-700">Reason for losing this proposal</label>
         <input
           autoFocus
           value={reason}

@@ -24,12 +24,27 @@ export type ActivityType =
   | "sync_matched"
   | "task_completed"
   | "deal_created"
-  | "deal_stage_change";
+  | "deal_stage_change"
+  | "event_registration";
+
+export type EventFormat = "in_person" | "online" | "hybrid";
+export type EventStatus = "draft" | "published" | "cancelled";
+export type EventTicketType = "free" | "paid";
+export type AttendanceMode = "in_person" | "online";
+export type RegistrationStatus = "registered" | "waitlisted" | "cancelled";
+export type AgendaItem = { time: string; title: string };
+export type Speaker = { name: string; title: string };
+export type EventResourceKind = "document" | "video";
+export type BudgetLineKind = "general" | "event";
+export type ExpenseStatus = "committed" | "actual";
 
 export type SourceKind = "open_data_api" | "web_scrape" | "enrichment";
 export type SyncRunStatus = "running" | "success" | "failed";
 export type UserRole = "admin" | "rep";
 export type TaskType = "todo" | "call" | "email" | "meeting";
+
+export type BudgetRevenueKind = "grant" | "sponsorship" | "other";
+export type BudgetRevenueStatus = "pending" | "approved" | "received" | "declined";
 
 export type DealStage =
   | "discovery_scheduled"
@@ -159,12 +174,16 @@ export type Database = {
           assigned_to: string | null;
           deal_value: number | null;
           expected_close_date: string | null;
+          client_type: string | null;
+          programs: string[];
           created_at: string;
           updated_at: string;
         };
         Insert: {
           id?: string;
           company_id: string;
+          client_type?: string | null;
+          programs?: string[];
           status?: LeadStatus;
           score?: number;
           score_reasons?: unknown[];
@@ -262,6 +281,7 @@ export type Database = {
           id: string;
           lead_id: string | null;
           company_id: string | null;
+          event_id: string | null;
           title: string;
           description: string | null;
           task_type: TaskType;
@@ -276,6 +296,7 @@ export type Database = {
           id?: string;
           lead_id?: string | null;
           company_id?: string | null;
+          event_id?: string | null;
           title: string;
           description?: string | null;
           task_type?: TaskType;
@@ -383,9 +404,486 @@ export type Database = {
         Update: Partial<Database["public"]["Tables"]["profiles"]["Insert"]>;
         Relationships: [];
       };
+      events: {
+        Row: {
+          id: string;
+          slug: string;
+          title: string;
+          event_type: string | null;
+          description: string | null;
+          image_url: string | null;
+          format: EventFormat;
+          venue_name: string | null;
+          venue_address: string | null;
+          online_url: string | null;
+          starts_at: string;
+          ends_at: string | null;
+          capacity: number | null;
+          program: string | null;
+          owner_id: string | null;
+          archived_at: string | null;
+          agenda: AgendaItem[];
+          speakers: Speaker[];
+          collect_company: boolean;
+          collect_phone: boolean;
+          waitlist_enabled: boolean;
+          registration_opens_at: string | null;
+          registration_closes_at: string | null;
+          confirmation_message: string | null;
+          budget_amount: number | null;
+          funding_source: string | null;
+          budget_notes: string | null;
+          ticket_type: EventTicketType;
+          ticket_price: number | null;
+          currency: string;
+          status: EventStatus;
+          created_by: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          slug: string;
+          title: string;
+          event_type?: string | null;
+          description?: string | null;
+          image_url?: string | null;
+          format?: EventFormat;
+          venue_name?: string | null;
+          venue_address?: string | null;
+          online_url?: string | null;
+          starts_at: string;
+          ends_at?: string | null;
+          capacity?: number | null;
+          program?: string | null;
+          owner_id?: string | null;
+          archived_at?: string | null;
+          agenda?: AgendaItem[];
+          speakers?: Speaker[];
+          collect_company?: boolean;
+          collect_phone?: boolean;
+          waitlist_enabled?: boolean;
+          registration_opens_at?: string | null;
+          registration_closes_at?: string | null;
+          confirmation_message?: string | null;
+          budget_amount?: number | null;
+          funding_source?: string | null;
+          budget_notes?: string | null;
+          ticket_type?: EventTicketType;
+          ticket_price?: number | null;
+          currency?: string;
+          status?: EventStatus;
+          created_by?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["events"]["Insert"]>;
+        Relationships: [];
+      };
+      budgets: {
+        Row: {
+          id: string;
+          name: string;
+          period_label: string | null;
+          source_file: string | null;
+          start_month: string | null;
+          end_month: string | null;
+          notes: string | null;
+          created_by: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          name: string;
+          period_label?: string | null;
+          source_file?: string | null;
+          start_month?: string | null;
+          end_month?: string | null;
+          notes?: string | null;
+          created_by?: string | null;
+        };
+        Update: Partial<Database["public"]["Tables"]["budgets"]["Insert"]>;
+        Relationships: [];
+      };
+      budget_lines: {
+        Row: {
+          id: string;
+          budget_id: string;
+          kind: BudgetLineKind;
+          section: string;
+          name: string;
+          amount: number;
+          event_id: string | null;
+          plan_month: string | null;
+          owner_name: string | null;
+          notes: string | null;
+          sort_order: number;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          budget_id: string;
+          kind: BudgetLineKind;
+          section: string;
+          name: string;
+          amount?: number;
+          event_id?: string | null;
+          plan_month?: string | null;
+          owner_name?: string | null;
+          notes?: string | null;
+          sort_order?: number;
+        };
+        Update: Partial<Database["public"]["Tables"]["budget_lines"]["Insert"]>;
+        Relationships: [];
+      };
+      budget_allocations: {
+        Row: {
+          line_id: string;
+          month: string;
+          amount: number;
+        };
+        Insert: {
+          line_id: string;
+          month: string;
+          amount?: number;
+        };
+        Update: Partial<Database["public"]["Tables"]["budget_allocations"]["Insert"]>;
+        Relationships: [];
+      };
+      budget_items: {
+        Row: {
+          id: string;
+          line_id: string;
+          name: string;
+          amount: number;
+          notes: string | null;
+          sort_order: number;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          line_id: string;
+          name: string;
+          amount?: number;
+          notes?: string | null;
+          sort_order?: number;
+        };
+        Update: Partial<Database["public"]["Tables"]["budget_items"]["Insert"]>;
+        Relationships: [];
+      };
+      budget_revenue: {
+        Row: {
+          id: string;
+          budget_id: string;
+          kind: BudgetRevenueKind;
+          source: string;
+          amount: number;
+          status: BudgetRevenueStatus;
+          expected_on: string;
+          notes: string | null;
+          created_by: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          budget_id: string;
+          kind: BudgetRevenueKind;
+          source: string;
+          amount: number;
+          status?: BudgetRevenueStatus;
+          expected_on: string;
+          notes?: string | null;
+          created_by?: string | null;
+        };
+        Update: Partial<Database["public"]["Tables"]["budget_revenue"]["Insert"]>;
+        Relationships: [];
+      };
+      budget_expenses: {
+        Row: {
+          id: string;
+          line_id: string;
+          item_id: string | null;
+          status: ExpenseStatus;
+          amount: number;
+          incurred_on: string;
+          vendor: string | null;
+          description: string | null;
+          created_by: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          line_id: string;
+          item_id?: string | null;
+          status?: ExpenseStatus;
+          amount: number;
+          incurred_on: string;
+          vendor?: string | null;
+          description?: string | null;
+          created_by?: string | null;
+        };
+        Update: Partial<Database["public"]["Tables"]["budget_expenses"]["Insert"]>;
+        Relationships: [];
+      };
+      event_revenue: {
+        Row: {
+          id: string;
+          event_id: string;
+          source: string;
+          amount: number;
+          received_on: string | null;
+          notes: string | null;
+          created_by: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          event_id: string;
+          source: string;
+          amount: number;
+          received_on?: string | null;
+          notes?: string | null;
+          created_by?: string | null;
+        };
+        Update: Partial<Database["public"]["Tables"]["event_revenue"]["Insert"]>;
+        Relationships: [];
+      };
+      budget_changes: {
+        Row: {
+          id: string;
+          budget_id: string | null;
+          line_id: string | null;
+          table_name: string;
+          action: "insert" | "update" | "delete";
+          before_data: Record<string, unknown> | null;
+          after_data: Record<string, unknown> | null;
+          changed_by: string | null;
+          changed_at: string;
+        };
+        Insert: {
+          id?: string;
+          budget_id?: string | null;
+          line_id?: string | null;
+          table_name: string;
+          action: "insert" | "update" | "delete";
+          before_data?: Record<string, unknown> | null;
+          after_data?: Record<string, unknown> | null;
+          changed_by?: string | null;
+        };
+        Update: Partial<Database["public"]["Tables"]["budget_changes"]["Insert"]>;
+        Relationships: [];
+      };
+      event_templates: {
+        Row: {
+          id: string;
+          name: string;
+          data: Record<string, unknown>;
+          created_by: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          name: string;
+          data?: Record<string, unknown>;
+          created_by?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["event_templates"]["Insert"]>;
+        Relationships: [];
+      };
+      event_registrations: {
+        Row: {
+          id: string;
+          event_id: string;
+          lead_id: string | null;
+          contact_id: string | null;
+          full_name: string;
+          email: string;
+          phone: string | null;
+          company_name: string | null;
+          attendance_mode: AttendanceMode;
+          status: RegistrationStatus;
+          checked_in_at: string | null;
+          ticket_code: string;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          event_id: string;
+          lead_id?: string | null;
+          contact_id?: string | null;
+          full_name: string;
+          email: string;
+          phone?: string | null;
+          company_name?: string | null;
+          attendance_mode: AttendanceMode;
+          status?: RegistrationStatus;
+          checked_in_at?: string | null;
+          ticket_code?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["event_registrations"]["Insert"]>;
+        Relationships: [];
+      };
+      event_resources: {
+        Row: {
+          id: string;
+          event_id: string;
+          kind: EventResourceKind;
+          title: string;
+          storage_path: string | null;
+          url: string | null;
+          created_by: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          event_id: string;
+          kind: EventResourceKind;
+          title: string;
+          storage_path?: string | null;
+          url?: string | null;
+          created_by?: string | null;
+          created_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["event_resources"]["Insert"]>;
+        Relationships: [];
+      };
     };
     Views: Record<string, never>;
-    Functions: Record<string, never>;
+    Functions: {
+      import_budget: {
+        Args: { p_budget: Record<string, unknown> };
+        Returns: string;
+      };
+      crm_search_leads: {
+        Args: {
+          p_search?: string | null;
+          p_statuses?: string[] | null;
+          p_owner?: string | null;
+          p_industry?: string | null;
+          p_community?: string | null;
+          p_min_score?: number | null;
+          p_contact?: string | null;
+          p_event_id?: string | null;
+          p_client_type?: string | null;
+          p_program?: string | null;
+          p_proposal?: string | null;
+          p_sort?: string;
+          p_descending?: boolean;
+          p_limit?: number;
+          p_offset?: number;
+        };
+        Returns: {
+          id: string;
+          status: string;
+          score: number;
+          assigned_to: string | null;
+          created_at: string;
+          company_id: string;
+          company_name: string;
+          community: string | null;
+          industry: string | null;
+          client_type: string | null;
+          programs: string[];
+          primary_name: string | null;
+          primary_title: string | null;
+          primary_email: string | null;
+          primary_contact_id: string | null;
+          contact_count: number;
+          proposal_id: string | null;
+          proposal_stage: string | null;
+          total_count: number;
+        }[];
+      };
+      crm_lead_stage_counts: {
+        Args: {
+          p_search?: string | null;
+          p_owner?: string | null;
+          p_industry?: string | null;
+          p_community?: string | null;
+          p_min_score?: number | null;
+          p_contact?: string | null;
+          p_event_id?: string | null;
+          p_client_type?: string | null;
+          p_program?: string | null;
+          p_proposal?: string | null;
+        };
+        Returns: { status: string; lead_count: number; open_value: number }[];
+      };
+      crm_change_lead_program: {
+        Args: { p_lead_ids: string[]; p_program: string; p_add: boolean };
+        Returns: number;
+      };
+      crm_lead_facets: {
+        Args: Record<string, never>;
+        Returns: { industries: string[]; communities: string[] };
+      };
+      budget_add_line: {
+        Args: { p_budget_id: string; p_kind: string; p_section: string; p_name: string; p_plan_month?: string | null };
+        Returns: string;
+      };
+      budget_add_months: {
+        Args: { p_budget_id: string; p_months: string[] };
+        Returns: undefined;
+      };
+      budget_add_month: {
+        Args: { p_budget_id: string; p_month: string };
+        Returns: undefined;
+      };
+      get_public_event: {
+        Args: { p_slug: string };
+        Returns: {
+          title: string;
+          program: string | null;
+          event_type: string | null;
+          description: string | null;
+          image_url: string | null;
+          format: EventFormat;
+          venue_name: string | null;
+          venue_address: string | null;
+          starts_at: string;
+          ends_at: string | null;
+          agenda: AgendaItem[];
+          speakers: Speaker[];
+          collect_company: boolean;
+          collect_phone: boolean;
+          waitlist_enabled: boolean;
+          registration_opens_at: string | null;
+          registration_closes_at: string | null;
+          ticket_type: EventTicketType;
+          ticket_price: number | null;
+          currency: string;
+          status: EventStatus;
+          spots_remaining: number | null;
+        }[];
+      };
+      register_for_event: {
+        Args: {
+          p_slug: string;
+          p_full_name: string;
+          p_email: string;
+          p_phone?: string | null;
+          p_company?: string | null;
+          p_attendance_mode?: string | null;
+        };
+        Returns: {
+          status: "registered" | "waitlisted" | "already_registered" | "sold_out" | "closed" | "not_open" | "not_found" | "invalid";
+          ticket_code?: string;
+          online_url?: string | null;
+          confirmation_message?: string | null;
+        };
+      };
+    };
     Enums: Record<string, never>;
   };
 };

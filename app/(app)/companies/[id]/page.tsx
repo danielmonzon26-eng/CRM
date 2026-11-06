@@ -8,7 +8,9 @@ import { getDealsForCompany } from "@/lib/deals/queries";
 import { TaskList } from "@/components/task-list";
 import { TaskForm } from "@/components/task-form";
 import { DealCard } from "@/components/deal-card";
-import { CreateDealForm } from "@/components/create-deal-form";
+import { CreateProposal } from "@/components/create-proposal";
+import { EventRegistrationsSection } from "@/components/event-registrations-section";
+import { getEventRegistrationsForLead } from "@/lib/events/queries";
 import { getInitials } from "@/lib/text";
 
 export const dynamic = "force-dynamic";
@@ -18,16 +20,17 @@ export default async function CompanyDetailPage({ params }: { params: Promise<{ 
   const company = await getCompanyDetail(id);
   if (!company) notFound();
 
-  const [allContacts, tasks, deals] = await Promise.all([
+  const [allContacts, tasks, deals, eventRegistrations] = await Promise.all([
     getContactsList(),
     getTasksForSubject({ companyId: id, leadId: company.leadId ?? undefined }),
     getDealsForCompany(id),
+    company.leadId ? getEventRegistrationsForLead(company.leadId) : [],
   ]);
   const contacts = allContacts.filter((c) => c.companyId === id);
   const primaryContact = contacts.find((c) => c.isPrimary) ?? contacts[0] ?? null;
 
   return (
-    <main className="mx-auto max-w-3xl px-4 py-8">
+    <main className="mx-auto max-w-6xl px-4 py-6 sm:px-6 lg:px-8">
       <Link href="/companies" className="inline-flex items-center gap-1 text-sm text-slate-500 hover:text-slate-900">
         <ArrowLeft className="h-3.5 w-3.5" strokeWidth={2} />
         Back to companies
@@ -39,7 +42,7 @@ export default async function CompanyDetailPage({ params }: { params: Promise<{ 
             {getInitials(company.name) || <Building2 className="h-5 w-5" />}
           </div>
           <div>
-            <h1 className="text-2xl font-semibold tracking-tight text-slate-900">{company.name}</h1>
+            <h1 className="text-[28px] font-semibold leading-tight tracking-tight text-slate-900">{company.name}</h1>
             <p className="text-sm text-slate-500">
               {company.address_line ?? "No address on file"} · {company.community ?? company.city}
             </p>
@@ -111,8 +114,8 @@ export default async function CompanyDetailPage({ params }: { params: Promise<{ 
 
       <section className="mt-8">
         <div className="flex items-center justify-between">
-          <h2 className="text-sm font-semibold text-slate-700">Deals ({deals.length})</h2>
-          <CreateDealForm
+          <h2 className="text-sm font-semibold text-slate-700">Proposals ({deals.length})</h2>
+          <CreateProposal
             companyId={company.id}
             leadId={company.leadId}
             primaryContactId={primaryContact?.id ?? null}
@@ -120,11 +123,15 @@ export default async function CompanyDetailPage({ params }: { params: Promise<{ 
           />
         </div>
         <div className="mt-2 space-y-2">
-          {deals.length === 0 && <p className="text-sm text-slate-400">No deals yet.</p>}
+          {deals.length === 0 && <p className="text-sm text-slate-400">No proposals yet.</p>}
           {deals.map((d) => (
             <DealCard key={d.id} deal={d} />
           ))}
         </div>
+      </section>
+
+      <section className="mt-8">
+        <EventRegistrationsSection registrations={eventRegistrations} />
       </section>
 
       <section className="mt-8">

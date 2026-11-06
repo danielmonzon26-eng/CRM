@@ -12,6 +12,8 @@ export type TaskListRow = {
   leadId: string | null;
   companyId: string | null;
   companyName: string | null;
+  eventId: string | null;
+  eventTitle: string | null;
 };
 
 export type TaskFilter = "open" | "overdue" | "completed" | "all";
@@ -21,7 +23,7 @@ export async function getTasksList(filter: TaskFilter = "open"): Promise<TaskLis
 
   let query = supabase
     .from("tasks")
-    .select("id, title, description, task_type, due_at, completed_at, lead_id, company_id")
+    .select("id, title, description, task_type, due_at, completed_at, lead_id, company_id, event_id")
     .order("due_at", { ascending: true, nullsFirst: false });
 
   if (filter === "open") query = query.is("completed_at", null);
@@ -47,6 +49,12 @@ export async function getTasksList(filter: TaskFilter = "open"): Promise<TaskLis
   if (error) throw error;
   const companyNameById = new Map((companies ?? []).map((c) => [c.id, c.name]));
 
+  const eventIds = [...new Set(tasks.map((t) => t.event_id).filter((id): id is string => id !== null))];
+  const { data: events, error: eventsError } =
+    eventIds.length > 0 ? await supabase.from("events").select("id, title").in("id", eventIds) : { data: [], error: null };
+  if (eventsError) throw eventsError;
+  const eventTitleById = new Map((events ?? []).map((e) => [e.id, e.title]));
+
   return tasks.map((t) => {
     const companyId = t.company_id ?? (t.lead_id ? companyIdByLead.get(t.lead_id) ?? null : null);
     return {
@@ -59,6 +67,8 @@ export async function getTasksList(filter: TaskFilter = "open"): Promise<TaskLis
       leadId: t.lead_id,
       companyId,
       companyName: companyId ? companyNameById.get(companyId) ?? null : null,
+      eventId: t.event_id,
+      eventTitle: t.event_id ? eventTitleById.get(t.event_id) ?? null : null,
     };
   });
 }
@@ -73,16 +83,21 @@ export async function getOpenTaskCount(): Promise<number> {
   return count ?? 0;
 }
 
-export async function getTasksForSubject(opts: { leadId?: string; companyId?: string }): Promise<TaskListRow[]> {
+export async function getTasksForSubject(opts: {
+  leadId?: string;
+  companyId?: string;
+  eventId?: string;
+}): Promise<TaskListRow[]> {
   const supabase = await createClient();
   let query = supabase
     .from("tasks")
-    .select("id, title, description, task_type, due_at, completed_at, lead_id, company_id")
+    .select("id, title, description, task_type, due_at, completed_at, lead_id, company_id, event_id")
     .order("completed_at", { ascending: true, nullsFirst: true })
     .order("due_at", { ascending: true, nullsFirst: false });
 
   if (opts.leadId) query = query.eq("lead_id", opts.leadId);
   else if (opts.companyId) query = query.eq("company_id", opts.companyId);
+  else if (opts.eventId) query = query.eq("event_id", opts.eventId);
   else return [];
 
   const { data, error } = await query;
@@ -98,5 +113,7 @@ export async function getTasksForSubject(opts: { leadId?: string; companyId?: st
     leadId: t.lead_id,
     companyId: t.company_id,
     companyName: null,
+    eventId: t.event_id,
+    eventTitle: null,
   }));
 }

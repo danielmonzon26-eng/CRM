@@ -25,7 +25,7 @@ export function DealCard({ deal }: { deal: DealListRow }) {
       </div>
 
       {deal.nextStep && <p className="mt-1.5 truncate text-xs text-slate-500">Next: {deal.nextStep}</p>}
-      <p className="mt-1 text-[11px] text-slate-400">Closes {new Date(deal.expectedCloseDate).toLocaleDateString()}</p>
+      <p className="mt-1 text-[11px] text-slate-400">Closes {new Date(`${deal.expectedCloseDate}T00:00:00Z`).toLocaleDateString("en-CA", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" })}</p>
     </Link>
   );
 }

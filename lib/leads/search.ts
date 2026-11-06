@@ -1,0 +1,111 @@
+import { createClient } from "@/lib/supabase/server";
+import { ALL_STATUSES, TABLE_PAGE_SIZE, type LeadFilters, type LeadSort, type LeadViewState } from "@/lib/leads/filters";
+import type { LeadStatus } from "@/lib/supabase/types";
+
+export type LeadRow = {
+  id: string;
+  status: LeadStatus;
+  score: number;
+  assignedTo: string | null;
+  createdAt: string;
+  companyId: string;
+  companyName: string;
+  community: string | null;
+  industry: string | null;
+  clientType: string | null;
+  programs: string[];
+  primaryName: string | null;
+  primaryTitle: string | null;
+  primaryEmail: string | null;
+  primaryContactId: string | null;
+  contactCount: number;
+  proposalId: string | null;
+  proposalStage: string | null;
+};
+
+export type StageSummary = { status: LeadStatus; count: number; openValue: number };
+export type LeadFacets = { industries: string[]; communities: string[] };
+
+function filterArgs(filters: LeadFilters) {
+  return {
+    p_search: filters.q || null,
+    p_owner: filters.owner || null,
+    p_industry: filters.industry || null,
+    p_community: filters.community || null,
+    p_min_score: filters.score ? Number(filters.score) : null,
+    p_contact: filters.contact || null,
+    p_event_id: filters.event || null,
+    p_client_type: filters.clientType || null,
+    p_program: filters.program || null,
+    p_proposal: filters.proposal || null,
+  };
+}
+
+export async function searchLeads(
+  filters: LeadFilters,
+  options: { statuses?: string[] | null; sort: LeadSort; desc: boolean; limit: number; offset: number }
+): Promise<{ rows: LeadRow[]; total: number }> {
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("crm_search_leads", {
+    ...filterArgs(filters),
+    p_statuses: options.statuses ?? null,
+    p_sort: options.sort,
+    p_descending: options.desc,
+    p_limit: options.limit,
+    p_offset: options.offset,
+  });
+  if (error) throw error;
+
+  return {
+    total: data.length ? Number(data[0].total_count) : 0,
+    rows: data.map((r) => ({
+      id: r.id,
+      status: r.status as LeadStatus,
+      score: r.score,
+      assignedTo: r.assigned_to,
+      createdAt: r.created_at,
+      companyId: r.company_id,
+      companyName: r.company_name,
+      community: r.community,
+      industry: r.industry,
+      clientType: r.client_type,
+      programs: r.programs,
+      primaryName: r.primary_name,
+      primaryTitle: r.primary_title,
+      primaryEmail: r.primary_email,
+      primaryContactId: r.primary_contact_id,
+      contactCount: r.contact_count,
+      proposalId: r.proposal_id,
+      proposalStage: r.proposal_stage,
+    })),
+  };
+}
+
+export async function getStageSummaries(filters: LeadFilters): Promise<StageSummary[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("crm_lead_stage_counts", filterArgs(filters));
+  if (error) throw error;
+  const byStatus = new Map(data.map((row) => [row.status, row]));
+  return ALL_STATUSES.map((status) => ({
+    status,
+    count: Number(byStatus.get(status)?.lead_count ?? 0),
+    openValue: Number(byStatus.get(status)?.open_value ?? 0),
+  }));
+}
+
+export async function getLeadFacets(): Promise<LeadFacets> {
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("crm_lead_facets");
+  if (error) throw error;
+  return data;
+}
+
+export async function getLeadTablePage(state: LeadViewState) {
+  return searchLeads(state, {
+    statuses: state.status ? [state.status] : null,
+    sort: state.sort,
+    desc: state.desc,
+    limit: TABLE_PAGE_SIZE,
+    offset: (state.page - 1) * TABLE_PAGE_SIZE,
+  });
+}

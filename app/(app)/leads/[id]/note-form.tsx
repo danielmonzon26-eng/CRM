@@ -24,7 +24,7 @@ export function NoteForm({ leadId }: { leadId: string }) {
         name="body"
         required
         rows={2}
-        placeholder="Log a note on this deal…"
+        placeholder="Log a note on this lead…"
         className="flex-1 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm focus:border-brand-400 focus:outline-none focus:ring-1 focus:ring-brand-200"
       />
       <button

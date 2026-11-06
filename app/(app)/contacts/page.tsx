@@ -11,22 +11,23 @@ export default async function ContactsPage({ searchParams }: { searchParams: Pro
   const contacts = await getContactsList(q);
 
   return (
-    <main className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
+    <main className="mx-auto max-w-[1600px] px-4 py-6 sm:px-6 lg:px-8">
       <header className="mb-6 flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h1 className="text-xl font-semibold tracking-tight text-slate-900">Contacts</h1>
+          <h1 className="text-[28px] font-semibold leading-tight tracking-tight text-slate-900">Contacts</h1>
           <p className="text-sm text-slate-500">
             {contacts.length.toLocaleString()} contact{contacts.length === 1 ? "" : "s"}
           </p>
         </div>
         <form action="/contacts" className="relative w-full max-w-xs">
-          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" strokeWidth={2} />
+          <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" strokeWidth={2} />
           <input
             type="search"
             name="q"
             defaultValue={q ?? ""}
             placeholder="Search name or email…"
-            className="w-full rounded-md border border-slate-200 bg-white py-1.5 pl-9 pr-3 text-sm text-slate-700 placeholder:text-slate-400 focus:border-brand-400 focus:outline-none focus:ring-2 focus:ring-brand-100"
+            aria-label="Search contacts"
+            className="h-10 w-full rounded-lg border border-slate-300 bg-white pl-10 pr-3 text-sm text-slate-900 shadow-sm transition-colors placeholder:text-slate-500 hover:border-slate-400 focus:border-brand-600 focus:outline-none focus:ring-2 focus:ring-brand-100"
           />
         </form>
       </header>
@@ -40,7 +41,7 @@ export default async function ContactsPage({ searchParams }: { searchParams: Pro
               <th className="px-4 py-2.5 font-medium">Company</th>
               <th className="px-4 py-2.5 font-medium">Email</th>
               <th className="px-4 py-2.5 font-medium">Phone</th>
-              <th className="px-4 py-2.5 font-medium">Deal status</th>
+              <th className="px-4 py-2.5 font-medium">Proposal status</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">

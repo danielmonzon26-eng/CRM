@@ -15,10 +15,10 @@ export default async function DealDetailPage({ params }: { params: Promise<{ id:
   if (!deal) notFound();
 
   return (
-    <main className="mx-auto max-w-5xl px-4 py-8 sm:px-6">
-      <Link href="/deals" className="inline-flex items-center gap-1 text-sm text-slate-500 hover:text-slate-900">
+    <main className="mx-auto max-w-6xl px-4 py-6 sm:px-6 lg:px-8">
+      <Link href="/crm" className="inline-flex items-center gap-1 text-sm text-slate-500 hover:text-slate-900">
         <ArrowLeft className="h-3.5 w-3.5" strokeWidth={2} />
-        Back to deals
+        Back to proposals
       </Link>
 
       <div className="mt-4 flex flex-wrap items-start justify-between gap-4">
@@ -27,7 +27,7 @@ export default async function DealDetailPage({ params }: { params: Promise<{ id:
             {getInitials(deal.companyName) || <Building2 className="h-5 w-5" />}
           </div>
           <div>
-            <h1 className="text-2xl font-semibold tracking-tight text-slate-900">{deal.name}</h1>
+            <h1 className="text-[28px] font-semibold leading-tight tracking-tight text-slate-900">{deal.name}</h1>
             <p className="text-sm text-slate-500">
               <Link href={`/companies/${deal.companyId}`} className="hover:text-brand-700 hover:underline">
                 {deal.companyName}
@@ -81,7 +81,7 @@ export default async function DealDetailPage({ params }: { params: Promise<{ id:
 
         <aside className="space-y-4 lg:sticky lg:top-20 lg:self-start">
           <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-card">
-            <h2 className="text-xs font-semibold uppercase tracking-wide text-slate-400">Deal properties</h2>
+            <h2 className="text-xs font-semibold uppercase tracking-wide text-slate-400">Proposal details</h2>
             <div className="mt-3 space-y-3">
               <div>
                 <label className="text-xs font-medium text-slate-500">Stage</label>

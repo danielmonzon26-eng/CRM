@@ -11,6 +11,7 @@ export async function createTask(input: {
   dueAt?: string | null;
   leadId?: string | null;
   companyId?: string | null;
+  eventId?: string | null;
 }) {
   const title = input.title.trim();
   if (!title) return;
@@ -27,12 +28,14 @@ export async function createTask(input: {
     due_at: input.dueAt || null,
     lead_id: input.leadId ?? null,
     company_id: input.leadId ? null : input.companyId ?? null,
+    event_id: input.eventId ?? null,
     created_by: user?.id ?? null,
     assigned_to: user?.id ?? null,
   });
   if (error) throw error;
 
   revalidatePath("/tasks");
+  revalidatePath("/events/[id]", "page");
   if (input.leadId) revalidatePath(`/leads/${input.leadId}`);
   if (input.companyId) revalidatePath(`/companies/${input.companyId}`);
 }
@@ -61,6 +64,7 @@ export async function completeTask(taskId: string, leadId: string | null) {
   }
 
   revalidatePath("/tasks");
+  revalidatePath("/events/[id]", "page");
   if (leadId) revalidatePath(`/leads/${leadId}`);
   if (task.company_id) revalidatePath(`/companies/${task.company_id}`);
 }
@@ -71,6 +75,7 @@ export async function reopenTask(taskId: string, leadId: string | null) {
   if (error) throw error;
 
   revalidatePath("/tasks");
+  revalidatePath("/events/[id]", "page");
   if (leadId) revalidatePath(`/leads/${leadId}`);
 }
 
@@ -80,6 +85,7 @@ export async function deleteTask(taskId: string, leadId: string | null, companyI
   if (error) throw error;
 
   revalidatePath("/tasks");
+  revalidatePath("/events/[id]", "page");
   if (leadId) revalidatePath(`/leads/${leadId}`);
   if (companyId) revalidatePath(`/companies/${companyId}`);
 }
