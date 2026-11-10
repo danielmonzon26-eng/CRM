@@ -61,7 +61,8 @@ update public.leads l set programs = coalesce(
 alter table public.leads add constraint leads_programs_check
   check (programs <@ array['elevate_ip', 'education', 'operations_assistance', 'capital']::text[]);
 
--- A proposal moves its lead to the Proposal stage, and a won proposal makes it a Client.
+-- A proposal moves its lead to the Proposal stage, and an accepted one makes it a Client.
+-- ('closed_won' is the name 0019 renames to 'accepted'; both are listed so either order works.)
 -- Stages only move forward this way; people can still set any stage by hand.
 create or replace function public.sync_lead_stage_from_deal()
 returns trigger
@@ -73,7 +74,7 @@ begin
   if new.lead_id is null then
     return new;
   end if;
-  if new.stage = 'closed_won' then
+  if new.stage in ('closed_won', 'accepted') then
     update public.leads
       set status = 'client',
           engagement = case when engagement = 'do_not_contact' then engagement else 'engaged' end
@@ -97,7 +98,7 @@ create trigger deals_sync_lead_stage
 -- Leads that already have proposals catch up once.
 update public.leads l set status = 'client'
   where l.status <> 'client'
-    and exists (select 1 from public.deals d where d.lead_id = l.id and d.stage = 'closed_won');
+    and exists (select 1 from public.deals d where d.lead_id = l.id and d.stage in ('closed_won', 'accepted'));
 update public.leads l set status = 'proposal'
   where l.status in ('engagement', 'in_contact', 'discovery_meeting', 'client_meeting')
     and exists (select 1 from public.deals d where d.lead_id = l.id);
@@ -342,7 +343,7 @@ as $$
     count(*),
     coalesce(sum((
       select sum(d.amount) from public.deals d
-      where d.lead_id = f.id and d.stage not in ('closed_won', 'closed_lost')
+      where d.lead_id = f.id and d.stage not in ('closed_won', 'closed_lost', 'accepted', 'declined')
     )), 0)
   from public.crm_filtered_leads(p_search, p_engagement, p_industry, p_community, p_min_score, p_contact, p_event_id, p_client_type, p_program, p_proposal) f
   group by f.status;

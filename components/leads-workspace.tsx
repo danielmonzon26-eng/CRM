@@ -58,6 +58,12 @@ function FitBadge({ score }: { score: number }) {
   return <span title="Fit score out of 100" className={`shrink-0 whitespace-nowrap rounded px-1.5 py-0.5 text-[11px] font-semibold tabular-nums ${tone}`}>Fit {score}</span>;
 }
 
+/** Discovery coverage, coloured by the pilot routing thresholds. */
+function BmcBadge({ score }: { score: number }) {
+  const tone = score >= 75 ? "bg-emerald-50 text-emerald-800" : score >= 50 ? "bg-sky-50 text-sky-800" : score >= 25 ? "bg-amber-50 text-amber-800" : "bg-slate-100 text-slate-600";
+  return <span title="Canvas covered in the latest discovery call" className={`whitespace-nowrap rounded px-1.5 py-0.5 text-[11px] font-semibold tabular-nums ${tone}`}>{Math.round(score)}%</span>;
+}
+
 function SortHeader({
   label,
   sort,
@@ -221,6 +227,7 @@ function LeadsTable({
               <th scope="col" className="px-2 py-2.5 font-medium">Work</th>
               <th scope="col" className="px-2 py-2.5 font-medium">Industry</th>
               <SortHeader label="Fit" sort="score" state={state} href={href} />
+              <th scope="col" className="px-2 py-2.5 font-medium" title="Business Model Canvas covered in the latest discovery call">BMC</th>
               <SortHeader label="Stage" sort="status" state={state} href={href} />
               <SortHeader label="Added" sort="created" state={state} href={href} />
               {/* Stays in view while the rest of the table scrolls sideways. */}
@@ -269,6 +276,7 @@ function LeadsTable({
                   {lead.community && <span className="block truncate text-xs text-slate-500">{lead.community}</span>}
                 </td>
                 <td className="px-2 py-2.5">{lead.score > 0 ? <FitBadge score={lead.score} /> : <span className="text-slate-500">—</span>}</td>
+                <td className="px-2 py-2.5">{lead.bmcScore != null ? <BmcBadge score={lead.bmcScore} /> : <span className="text-slate-500">—</span>}</td>
                 <td className="px-2 py-2.5">
                   <span className="inline-flex items-center gap-1.5 whitespace-nowrap text-slate-700">
                     <span className={`h-2 w-2 rounded-full ${STATUS_DOTS[lead.status]}`} />
@@ -281,7 +289,7 @@ function LeadsTable({
                     {lead.proposalId && lead.proposalStage ? (
                       <Link href={`/deals/${lead.proposalId}`} className="inline-flex items-center gap-1.5 text-sm font-medium text-slate-800 hover:text-brand-700 hover:underline">
                         <span className={`h-2 w-2 rounded-full ${DEAL_STAGE_META[lead.proposalStage as DealStage].accent}`} />
-                        {DEAL_STAGE_META[lead.proposalStage as DealStage].label}
+                        {DEAL_STAGE_META[lead.proposalStage as DealStage].short}
                       </Link>
                     ) : (
                       <CreateProposal
@@ -409,8 +417,8 @@ export function LeadsWorkspace({
       } while (rows.length < Math.min(total, EXPORT_CAP));
 
       downloadCsv("leads.csv", [
-        ["Name", "Title", "Email", "Contacts", "Company", "Client type", "Work", "Industry", "Community", "Fit score", "Stage", "Proposal stage", "Added"],
-        ...rows.map((r) => [r.primaryName, r.primaryTitle, r.primaryEmail, r.contactCount, r.companyName, clientTypeLabel(r.clientType), r.programs.map(programLabel).join("; "), r.industry, r.community, r.score, STATUS_LABELS[r.status], r.proposalStage ? DEAL_STAGE_META[r.proposalStage as DealStage].label : "", r.createdAt.slice(0, 10)]),
+        ["Name", "Title", "Email", "Contacts", "Company", "Client type", "Work", "Industry", "Community", "Fit score", "BMC %", "Stage", "Proposal stage", "Added"],
+        ...rows.map((r) => [r.primaryName, r.primaryTitle, r.primaryEmail, r.contactCount, r.companyName, clientTypeLabel(r.clientType), r.programs.map(programLabel).join("; "), r.industry, r.community, r.score, r.bmcScore == null ? "" : Math.round(r.bmcScore), STATUS_LABELS[r.status], r.proposalStage ? DEAL_STAGE_META[r.proposalStage as DealStage].label : "", r.createdAt.slice(0, 10)]),
       ]);
       toast(total > EXPORT_CAP ? `Exported the first ${EXPORT_CAP.toLocaleString()} leads` : `Exported ${rows.length.toLocaleString()} leads`);
     } catch {

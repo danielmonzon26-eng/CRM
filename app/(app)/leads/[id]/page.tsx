@@ -19,6 +19,7 @@ import {
 import { ContactCards } from "@/components/contact-cards";
 import { CreateProposal } from "@/components/create-proposal";
 import { DealCard } from "@/components/deal-card";
+import { DiscoverySummary } from "@/components/discovery-summary";
 import { EventRegistrationsSection } from "@/components/event-registrations-section";
 import { LeadProperties } from "@/components/lead-properties";
 import { RecordCommunication } from "@/components/outlook/record-communication";
@@ -29,6 +30,7 @@ import { buttonClass } from "@/components/ui/button";
 import { getCurrentUser } from "@/lib/auth/session";
 import { toContactCard } from "@/lib/contacts/queries";
 import { getDealsForLead } from "@/lib/deals/queries";
+import { getDiscoveryCalls } from "@/lib/discovery/queries";
 import { getEventRegistrationsForLead } from "@/lib/events/queries";
 import { getLeadDetail } from "@/lib/leads/queries";
 import { canUserSend } from "@/lib/outlook/queries";
@@ -55,12 +57,13 @@ const activityTime = new Intl.DateTimeFormat("en-CA", { dateStyle: "medium", tim
 
 export default async function LeadDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const [lead, user, tasks, deals, eventRegistrations] = await Promise.all([
+  const [lead, user, tasks, deals, eventRegistrations, discoveryCalls] = await Promise.all([
     getLeadDetail(id),
     getCurrentUser(),
     getTasksForSubject({ leadId: id }),
     getDealsForLead(id),
     getEventRegistrationsForLead(id),
+    getDiscoveryCalls(id),
   ]);
   if (!lead) notFound();
 
@@ -131,10 +134,12 @@ export default async function LeadDetailPage({ params }: { params: Promise<{ id:
             </div>
           </section>
 
+          <DiscoverySummary leadId={lead.id} calls={discoveryCalls} />
+
           <section id="proposals" aria-labelledby="proposals-title" className="scroll-mt-20">
             <div className="flex items-center justify-between gap-2">
               <h2 id="proposals-title" className="text-sm font-semibold text-slate-700">Proposals ({deals.length})</h2>
-              <CreateProposal companyId={lead.company.id} leadId={lead.id} primaryContactId={primaryContact?.id ?? null} defaultName={lead.company.name} />
+              <CreateProposal companyId={lead.company.id} leadId={lead.id} primaryContactId={primaryContact?.id ?? null} defaultName={lead.company.name} defaultWorkTypes={lead.programs} />
             </div>
             <div className="mt-2 space-y-2">
               {deals.length === 0 && <p className="text-sm text-slate-500">No proposal yet for this lead.</p>}

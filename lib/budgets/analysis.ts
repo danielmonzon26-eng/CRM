@@ -54,7 +54,7 @@ export async function getWonDeals(budget: BudgetOverview): Promise<WonDeal[]> {
   if (budget.months.length === 0) return [];
   const supabase = await createClient();
   const deals = await fetchAllPages((from, to) =>
-    supabase.from("deals").select("id, name, amount, company_id, closed_at, expected_close_date").eq("stage", "closed_won").range(from, to)
+    supabase.from("deals").select("id, name, amount, company_id, closed_at, expected_close_date").eq("stage", "accepted").range(from, to)
   );
   const firstDay = budget.months[0];
   const lastMonth = budget.months[budget.months.length - 1];

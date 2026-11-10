@@ -5,12 +5,14 @@ import { getCompanyDetail } from "@/lib/companies/queries";
 import { getContactsForLead } from "@/lib/contacts/queries";
 import { getTasksForSubject } from "@/lib/tasks/queries";
 import { getDealsForCompany } from "@/lib/deals/queries";
+import { getDiscoveryCalls } from "@/lib/discovery/queries";
 import { getEventRegistrationsForLead } from "@/lib/events/queries";
 import { getCurrentUser } from "@/lib/auth/session";
 import { canUserSend } from "@/lib/outlook/queries";
 import { ContactCards } from "@/components/contact-cards";
 import { CreateProposal } from "@/components/create-proposal";
 import { DealCard } from "@/components/deal-card";
+import { DiscoverySummary } from "@/components/discovery-summary";
 import { EventRegistrationsSection } from "@/components/event-registrations-section";
 import { LeadProperties } from "@/components/lead-properties";
 import { MakeLeadButton } from "@/components/make-lead-button";
@@ -29,12 +31,13 @@ export default async function CompanyDetailPage({ params }: { params: Promise<{ 
   if (!company) notFound();
   const lead = company.lead;
 
-  const [user, contacts, tasks, deals, eventRegistrations] = await Promise.all([
+  const [user, contacts, tasks, deals, eventRegistrations, discoveryCalls] = await Promise.all([
     getCurrentUser(),
     lead ? getContactsForLead(lead.id) : [],
     getTasksForSubject({ companyId: id, leadId: lead?.id }),
     getDealsForCompany(id),
     lead ? getEventRegistrationsForLead(lead.id) : [],
+    lead ? getDiscoveryCalls(lead.id) : [],
   ]);
   const canSend = user ? await canUserSend(user.id) : false;
   const primaryContact = contacts.find((c) => c.isPrimary) ?? contacts[0] ?? null;
@@ -109,10 +112,12 @@ export default async function CompanyDetailPage({ params }: { params: Promise<{ 
             </div>
           </section>
 
+          {lead && <DiscoverySummary leadId={lead.id} calls={discoveryCalls} />}
+
           <section id="proposals" aria-labelledby="proposals-title" className="scroll-mt-20">
             <div className="flex items-center justify-between gap-2">
               <h2 id="proposals-title" className="text-sm font-semibold text-slate-700">Proposals ({deals.length})</h2>
-              <CreateProposal companyId={company.id} leadId={company.leadId} primaryContactId={primaryContact?.id ?? null} defaultName={company.name} />
+              <CreateProposal companyId={company.id} leadId={company.leadId} primaryContactId={primaryContact?.id ?? null} defaultName={company.name} defaultWorkTypes={lead?.programs ?? []} />
             </div>
             <div className="mt-2 space-y-2">
               {deals.length === 0 && <p className="text-sm text-slate-500">No proposals yet.</p>}

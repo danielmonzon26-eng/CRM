@@ -13,7 +13,7 @@ import {
   type QuickEditChanges,
   type QuickEditRecord,
 } from "@/lib/leads/quick-edit";
-import { searchLeads, type LeadRow } from "@/lib/leads/search";
+import { searchLeads, withBmcScores, type LeadRow } from "@/lib/leads/search";
 import type { LeadEngagement, LeadStatus } from "@/lib/supabase/types";
 import { extractDomain } from "@/lib/text";
 
@@ -25,7 +25,7 @@ export async function exportLeadsBatch(
   filters: LeadFilters,
   options: { statuses: string[] | null; sort: LeadSort; desc: boolean; offset: number }
 ): Promise<{ rows: LeadRow[]; total: number }> {
-  return searchLeads(filters, { ...options, limit: MAX_EXPORT_ROWS });
+  return withBmcScores(await searchLeads(filters, { ...options, limit: MAX_EXPORT_ROWS }));
 }
 
 function revalidateLeadLists() {

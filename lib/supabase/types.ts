@@ -45,14 +45,8 @@ export type BudgetRevenueStatus = "pending" | "approved" | "received" | "decline
 export type MailAccountStatus = "connected" | "needs_reconnect";
 export type EmailDirection = "inbound" | "outbound";
 
-export type DealStage =
-  | "discovery_scheduled"
-  | "discovery_completed"
-  | "qualified_opportunity"
-  | "proposal_sent"
-  | "negotiation_decision"
-  | "closed_won"
-  | "closed_lost";
+export type DealStage = "in_development" | "sent" | "accepted" | "declined";
+export type DealPayment = "paid" | "unpaid";
 
 // supabase-js's generated-types contract expects each table to declare its foreign-key
 // relationships (used for typed nested `select()` joins). None are modeled by hand here.
@@ -169,6 +163,7 @@ export type Database = {
           company_id: string;
           status: LeadStatus;
           engagement: LeadEngagement;
+          bmc_score: number | null;
           score: number;
           score_reasons: unknown[];
           assigned_to: string | null;
@@ -333,6 +328,10 @@ export type Database = {
           lost_reason: string | null;
           closed_at: string | null;
           notes: string | null;
+          work_types: string[];
+          payment: DealPayment | null;
+          sent_on: string | null;
+          accepted_on: string | null;
           created_by: string | null;
           created_at: string;
           updated_at: string;
@@ -358,6 +357,10 @@ export type Database = {
           lost_reason?: string | null;
           closed_at?: string | null;
           notes?: string | null;
+          work_types?: string[];
+          payment?: DealPayment | null;
+          sent_on?: string | null;
+          accepted_on?: string | null;
           created_by?: string | null;
           created_at?: string;
           updated_at?: string;
@@ -383,6 +386,81 @@ export type Database = {
           changed_at?: string;
         };
         Update: Partial<Database["public"]["Tables"]["deal_stage_history"]["Insert"]>;
+        Relationships: [];
+      };
+      discovery_calls: {
+        Row: {
+          id: string;
+          lead_id: string;
+          company_id: string;
+          contact_id: string | null;
+          prospect_name: string | null;
+          call_date: string;
+          include_expansion: boolean;
+          answers: Record<string, string>;
+          block_status: Record<string, string>;
+          score: number;
+          consultant_experience: string | null;
+          consultant_notes: string | null;
+          pricing_discussed: boolean | null;
+          decision_maker_present: boolean | null;
+          flags: string[];
+          recommended_entry: string | null;
+          entry_reason: string | null;
+          created_by: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          lead_id: string;
+          company_id: string;
+          contact_id?: string | null;
+          prospect_name?: string | null;
+          call_date?: string;
+          include_expansion?: boolean;
+          answers?: Record<string, string>;
+          block_status?: Record<string, string>;
+          score?: number;
+          consultant_experience?: string | null;
+          consultant_notes?: string | null;
+          pricing_discussed?: boolean | null;
+          decision_maker_present?: boolean | null;
+          flags?: string[];
+          recommended_entry?: string | null;
+          entry_reason?: string | null;
+          created_by?: string | null;
+        };
+        Update: Partial<Database["public"]["Tables"]["discovery_calls"]["Insert"]>;
+        Relationships: [];
+      };
+      deal_staff: {
+        Row: { deal_id: string; user_id: string; created_at: string };
+        Insert: { deal_id: string; user_id: string; created_at?: string };
+        Update: Partial<Database["public"]["Tables"]["deal_staff"]["Insert"]>;
+        Relationships: [];
+      };
+      deal_files: {
+        Row: {
+          id: string;
+          deal_id: string;
+          file_name: string;
+          storage_path: string;
+          size_bytes: number | null;
+          content_type: string | null;
+          uploaded_by: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          deal_id: string;
+          file_name: string;
+          storage_path: string;
+          size_bytes?: number | null;
+          content_type?: string | null;
+          uploaded_by?: string | null;
+        };
+        Update: Partial<Database["public"]["Tables"]["deal_files"]["Insert"]>;
         Relationships: [];
       };
       profiles: {
