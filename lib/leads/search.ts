@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import { ALL_STATUSES, TABLE_PAGE_SIZE, type LeadFilters, type LeadSort, type LeadViewState } from "@/lib/leads/filters";
+import { ALL_ENGAGEMENTS, ALL_STATUSES, TABLE_PAGE_SIZE, type LeadFilters, type LeadSort, type LeadViewState } from "@/lib/leads/filters";
 import type { LeadEngagement, LeadStatus } from "@/lib/supabase/types";
 
 export type LeadRow = {
@@ -27,6 +27,7 @@ export type LeadRow = {
 };
 
 export type StageSummary = { status: LeadStatus; count: number; openValue: number };
+export type EngagementSummary = { engagement: LeadEngagement; count: number };
 export type LeadFacets = { industries: string[]; communities: string[] };
 
 function filterArgs(filters: LeadFilters) {
@@ -106,6 +107,22 @@ export async function getStageSummaries(filters: LeadFilters): Promise<StageSumm
     count: Number(byStatus.get(status)?.lead_count ?? 0),
     openValue: Number(byStatus.get(status)?.open_value ?? 0),
   }));
+}
+
+/** How many leads have each status under the other filters (the Status filter itself is ignored). */
+export async function getEngagementSummaries(filters: LeadFilters): Promise<EngagementSummary[]> {
+  const supabase = await createClient();
+  const base = { ...filterArgs(filters), p_engagement: null as string | null };
+  const results = await Promise.all(
+    ALL_ENGAGEMENTS.map(async (engagement) => {
+      const { data, error } = await supabase.rpc("crm_lead_stage_counts", { ...base, p_engagement: engagement });
+      if (error) throw error;
+      // Within one status, an active Stage filter narrows the total to that stage.
+      const rows = filters.status ? data.filter((r) => r.status === filters.status) : data;
+      return { engagement, count: rows.reduce((total, r) => total + Number(r.lead_count), 0) };
+    })
+  );
+  return results;
 }
 
 export async function getLeadFacets(): Promise<LeadFacets> {

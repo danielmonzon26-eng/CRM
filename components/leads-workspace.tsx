@@ -17,6 +17,8 @@ import {
 import { bulkChangeLeadProgram, bulkUpdateLeads, exportLeadsBatch } from "@/app/actions/leads";
 import { ProgramChips } from "@/components/lead-badges";
 import { LeadQuickEdit } from "@/components/lead-quick-edit";
+import { LeadsDashboard } from "@/components/leads-dashboard";
+import { EngagementSelect, StatusSelect } from "@/components/status-select";
 import { buttonClass } from "@/components/ui/button";
 import { useFeedback } from "@/components/ui/feedback";
 import { FilterSelect, SearchField } from "@/components/ui/filter-controls";
@@ -28,15 +30,13 @@ import {
   ALL_ENGAGEMENTS,
   ALL_STATUSES,
   ENGAGEMENT_LABELS,
-  ENGAGEMENT_STYLES,
-  STATUS_DOTS,
   STATUS_LABELS,
   TABLE_PAGE_SIZE,
   leadViewToParams,
   type LeadSort,
   type LeadViewState,
 } from "@/lib/leads/filters";
-import type { LeadFacets, LeadRow, StageSummary } from "@/lib/leads/search";
+import type { EngagementSummary, LeadFacets, LeadRow, StageSummary } from "@/lib/leads/search";
 import type { LeadEngagement, LeadStatus } from "@/lib/supabase/types";
 
 const SEARCH_DELAY_MS = 250;
@@ -278,14 +278,11 @@ function LeadsTable({
                 </td>
                 <td className="px-2 py-2.5">{lead.score > 0 ? <FitBadge score={lead.score} /> : <span className="text-slate-500">—</span>}</td>
                 <td className="px-2 py-2.5">{lead.bmcScore != null ? <BmcBadge score={lead.bmcScore} /> : <span className="text-slate-500">—</span>}</td>
-                <td className="px-2 py-2.5">
-                  <span className="inline-flex items-center gap-1.5 whitespace-nowrap text-slate-700">
-                    <span className={`h-2 w-2 rounded-full ${STATUS_DOTS[lead.status]}`} />
-                    {STATUS_LABELS[lead.status]}
-                  </span>
+                <td className="px-2 py-2">
+                  <StatusSelect leadId={lead.id} status={lead.status} inline />
                 </td>
-                <td className="px-2 py-2.5">
-                  <span className={`whitespace-nowrap rounded-full px-2 py-0.5 text-xs font-medium ${ENGAGEMENT_STYLES[lead.engagement]}`}>{ENGAGEMENT_LABELS[lead.engagement]}</span>
+                <td className="px-2 py-2">
+                  <EngagementSelect leadId={lead.id} engagement={lead.engagement} inline />
                 </td>
                 <td className="whitespace-nowrap px-2 py-2.5 text-xs text-slate-500">{lead.createdAt.slice(0, 10)}</td>
                 <td className={`sticky right-0 whitespace-nowrap border-l border-slate-100 px-3 py-2 transition-colors group-hover:bg-slate-50 ${selected.has(lead.id) ? "bg-brand-50" : "bg-white"}`}>
@@ -340,6 +337,7 @@ export function LeadsWorkspace({
   state,
   table,
   stages,
+  engagements,
   facets,
   members,
   events,
@@ -347,6 +345,7 @@ export function LeadsWorkspace({
   state: LeadViewState;
   table: { rows: LeadRow[]; total: number };
   stages: StageSummary[];
+  engagements: EngagementSummary[];
   facets: LeadFacets;
   members: Member[];
   events: { id: string; title: string }[];
@@ -418,6 +417,14 @@ export function LeadsWorkspace({
 
   return (
     <div>
+      <LeadsDashboard
+        stages={stages}
+        engagements={engagements}
+        activeStage={state.status}
+        activeEngagement={state.engagement}
+        onStage={(status) => go({ status })}
+        onEngagement={(engagement) => go({ engagement })}
+      />
       <div className="mb-3 flex flex-wrap items-center gap-2">
         <SearchField
           className="flex-1"
