@@ -45,6 +45,8 @@ export type TaskType = "todo" | "call" | "email" | "meeting";
 
 export type BudgetRevenueKind = "grant" | "sponsorship" | "other";
 export type BudgetRevenueStatus = "pending" | "approved" | "received" | "declined";
+export type MailAccountStatus = "connected" | "needs_reconnect";
+export type EmailDirection = "inbound" | "outbound";
 
 export type DealStage =
   | "discovery_scheduled"
@@ -756,6 +758,116 @@ export type Database = {
           created_at?: string;
         };
         Update: Partial<Database["public"]["Tables"]["event_resources"]["Insert"]>;
+        Relationships: [];
+      };
+      mail_accounts: {
+        Row: {
+          id: string;
+          user_id: string;
+          email: string;
+          display_name: string | null;
+          refresh_token: string;
+          status: MailAccountStatus;
+          inbox_sync_link: string | null;
+          sent_sync_link: string | null;
+          last_synced_at: string | null;
+          sync_started_at: string | null;
+          last_error: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          email: string;
+          display_name?: string | null;
+          refresh_token: string;
+          status?: MailAccountStatus;
+          inbox_sync_link?: string | null;
+          sent_sync_link?: string | null;
+          last_synced_at?: string | null;
+          sync_started_at?: string | null;
+          last_error?: string | null;
+        };
+        Update: Partial<Database["public"]["Tables"]["mail_accounts"]["Insert"]>;
+        Relationships: [];
+      };
+      emails: {
+        Row: {
+          id: string;
+          account_id: string;
+          graph_id: string;
+          conversation_id: string | null;
+          direction: EmailDirection;
+          from_email: string | null;
+          from_name: string | null;
+          to_emails: string[];
+          cc_emails: string[];
+          participants: string[];
+          subject: string | null;
+          preview: string | null;
+          body: string | null;
+          sent_at: string;
+          is_read: boolean;
+          has_attachments: boolean;
+          web_link: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          account_id: string;
+          graph_id: string;
+          conversation_id?: string | null;
+          direction: EmailDirection;
+          from_email?: string | null;
+          from_name?: string | null;
+          to_emails?: string[];
+          cc_emails?: string[];
+          participants?: string[];
+          subject?: string | null;
+          preview?: string | null;
+          body?: string | null;
+          sent_at: string;
+          is_read?: boolean;
+          has_attachments?: boolean;
+          web_link?: string | null;
+        };
+        Update: Partial<Database["public"]["Tables"]["emails"]["Insert"]>;
+        Relationships: [];
+      };
+      meetings: {
+        Row: {
+          id: string;
+          account_id: string;
+          graph_id: string;
+          subject: string | null;
+          starts_at: string;
+          ends_at: string;
+          is_all_day: boolean;
+          location: string | null;
+          online_url: string | null;
+          organizer_email: string | null;
+          participants: string[];
+          web_link: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          account_id: string;
+          graph_id: string;
+          subject?: string | null;
+          starts_at: string;
+          ends_at: string;
+          is_all_day?: boolean;
+          location?: string | null;
+          online_url?: string | null;
+          organizer_email?: string | null;
+          participants?: string[];
+          web_link?: string | null;
+        };
+        Update: Partial<Database["public"]["Tables"]["meetings"]["Insert"]>;
         Relationships: [];
       };
     };

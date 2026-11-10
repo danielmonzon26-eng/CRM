@@ -10,6 +10,7 @@ import { TaskForm } from "@/components/task-form";
 import { DealCard } from "@/components/deal-card";
 import { CreateProposal } from "@/components/create-proposal";
 import { EventRegistrationsSection } from "@/components/event-registrations-section";
+import { RecordCommunication } from "@/components/outlook/record-communication";
 import { getEventRegistrationsForLead } from "@/lib/events/queries";
 import { getInitials } from "@/lib/text";
 
@@ -133,6 +134,14 @@ export default async function CompanyDetailPage({ params }: { params: Promise<{ 
       <section className="mt-8">
         <EventRegistrationsSection registrations={eventRegistrations} />
       </section>
+
+      <div className="mt-8">
+        <RecordCommunication
+          contactEmails={contacts.map((c) => c.email).filter((e): e is string => Boolean(e))}
+          leadId={company.leadId ?? undefined}
+          emailTo={primaryContact?.email ?? contacts.find((c) => c.email)?.email}
+        />
+      </div>
 
       <section className="mt-8">
         <h2 className="text-sm font-semibold text-slate-700">Tasks</h2>

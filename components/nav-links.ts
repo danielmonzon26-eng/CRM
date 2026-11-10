@@ -8,6 +8,7 @@ import {
   Handshake,
   Home,
   ListChecks,
+  Mail,
   ShieldCheck,
   Ticket,
   Users,
@@ -30,6 +31,7 @@ export const CRM_LINKS: NavLink[] = [
   { href: "/leads", label: "Leads", icon: ListChecks },
   { href: "/companies", label: "Companies", icon: Building2 },
   { href: "/contacts", label: "Contacts", icon: Users },
+  { href: "/communication", label: "Communication", icon: Mail },
 ];
 
 export const WORK_TABS: NavLink[] = [

@@ -23,6 +23,7 @@ import { TaskForm } from "@/components/task-form";
 import { DealCard } from "@/components/deal-card";
 import { CreateProposal } from "@/components/create-proposal";
 import { EventRegistrationsSection } from "@/components/event-registrations-section";
+import { RecordCommunication } from "@/components/outlook/record-communication";
 import { getLeadDetail, getTeamMembers } from "@/lib/leads/queries";
 import { getTasksForSubject } from "@/lib/tasks/queries";
 import { getDealsForLead } from "@/lib/deals/queries";
@@ -181,6 +182,12 @@ export default async function LeadDetailPage({ params }: { params: Promise<{ id:
           <section>
             <EventRegistrationsSection registrations={eventRegistrations} />
           </section>
+
+          <RecordCommunication
+            contactEmails={lead.contacts.map((c) => c.email).filter((e): e is string => Boolean(e))}
+            leadId={lead.id}
+            emailTo={primaryContact?.email ?? lead.contacts.find((c) => c.email)?.email}
+          />
 
           <section>
             <h2 className="text-sm font-semibold text-slate-700">Tasks</h2>
