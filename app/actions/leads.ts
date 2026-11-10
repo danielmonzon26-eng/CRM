@@ -250,7 +250,7 @@ export async function updateLeadStatus(leadId: string, status: LeadStatus) {
   revalidatePath(`/leads/${leadId}`);
 }
 
-/** Sets Engaged, Not Engaged, or Do Not Contact for the whole company. */
+/** Sets Engaged, Not Engaged, Not Qualified or Do Not Contact for the whole company. */
 export async function updateLeadEngagement(leadId: string, engagement: LeadEngagement) {
   if (!isLeadEngagement(engagement)) throw new Error("That isn't a valid status.");
   const supabase = await createClient();

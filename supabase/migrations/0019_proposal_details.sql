@@ -59,17 +59,24 @@ alter table public.deals drop constraint if exists deals_payment_check;
 alter table public.deals add constraint deals_payment_check
   check (payment is null or payment in ('paid', 'unpaid'));
 
--- Existing proposals pick up dates and work from what's already known, once.
-update public.deals d set sent_on = coalesce(
-    (select min(h.changed_at)::date from public.deal_stage_history h where h.deal_id = d.id and h.to_stage = 'sent'),
-    d.created_at::date)
-  where d.sent_on is null and d.stage in ('sent', 'accepted', 'declined');
-update public.deals set accepted_on = coalesce(closed_at::date, updated_at::date)
-  where accepted_on is null and stage = 'accepted';
-update public.deals d set work_types = l.programs
-  from public.leads l
-  where l.id = d.lead_id and d.work_types = '{}' and l.programs <> '{}'
-    and l.programs <@ array['elevate_ip', 'education', 'operations_assistance', 'capital']::text[];
+-- Existing proposals pick up dates and work from what's already known, once (see
+-- migration_markers in 0018), so later edits aren't overwritten when migrations re-run.
+do $$
+begin
+  if not exists (select 1 from public.migration_markers where key = '0019_detail_backfill') then
+    update public.deals d set sent_on = coalesce(
+        (select min(h.changed_at)::date from public.deal_stage_history h where h.deal_id = d.id and h.to_stage = 'sent'),
+        d.created_at::date)
+      where d.sent_on is null and d.stage in ('sent', 'accepted', 'declined');
+    update public.deals set accepted_on = coalesce(closed_at::date, updated_at::date)
+      where accepted_on is null and stage = 'accepted';
+    update public.deals d set work_types = l.programs
+      from public.leads l
+      where l.id = d.lead_id and d.work_types = '{}' and l.programs <> '{}'
+        and l.programs <@ array['elevate_ip', 'education', 'operations_assistance', 'capital']::text[];
+    insert into public.migration_markers (key) values ('0019_detail_backfill');
+  end if;
+end $$;
 
 -- Staff working on each proposal.
 create table if not exists public.deal_staff (
@@ -86,10 +93,16 @@ create policy "authenticated all deal_staff" on public.deal_staff
   for all to authenticated using (true) with check (true);
 revoke all on table public.deal_staff from anon;
 
--- The proposal's owner was the only staff field before, so they carry over.
-insert into public.deal_staff (deal_id, user_id)
-  select id, owner from public.deals where owner is not null
-  on conflict do nothing;
+-- The proposal's owner was the only staff field before, so they carry over, once.
+do $$
+begin
+  if not exists (select 1 from public.migration_markers where key = '0019_staff_backfill') then
+    insert into public.deal_staff (deal_id, user_id)
+      select id, owner from public.deals where owner is not null
+      on conflict do nothing;
+    insert into public.migration_markers (key) values ('0019_staff_backfill');
+  end if;
+end $$;
 
 -- Uploaded copies of the proposal, in a private bucket only the team can reach.
 create table if not exists public.deal_files (

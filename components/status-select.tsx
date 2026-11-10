@@ -29,7 +29,7 @@ export function StatusSelect({ leadId, status, id }: { leadId: string; status: L
   );
 }
 
-/** Engaged / Not Engaged / Do Not Contact picker. */
+/** Engaged / Not Engaged / Not Qualified / Do Not Contact picker. */
 export function EngagementSelect({ leadId, engagement, id }: { leadId: string; engagement: LeadEngagement; id?: string }) {
   const [isPending, startTransition] = useTransition();
   return (

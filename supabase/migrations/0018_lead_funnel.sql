@@ -2,16 +2,26 @@
 -- Catapult does. Every lead belongs to a company, and these apply to the whole company.
 --   Stage (leads.status): Engagement or Education -> In Contact -> Discovery Meeting ->
 --     Client Meeting -> Proposal -> Client
---   Status (leads.engagement): Engaged, Not Engaged, Do Not Contact
+--   Status (leads.engagement): Engaged, Not Engaged, Not Qualified, Do Not Contact
 --   Client type: Government, Non Profit, Private
 --   Work we do (leads.programs): Elevate IP, Education, Operations Assistance, Capital
 -- Old values are mapped once; each update only matches old values, so re-running is safe.
 -- The Leads search drops its owner filter and filters on status instead.
 
+-- Every migration re-runs on each merge, so one-time backfills record a marker here and
+-- are skipped once it exists. Mappings of old values don't need one: they only ever
+-- match old values.
+create table if not exists public.migration_markers (
+  key text primary key,
+  applied_at timestamptz not null default now()
+);
+alter table public.migration_markers enable row level security;
+revoke all on table public.migration_markers from anon, authenticated;
+
 alter table public.leads add column if not exists engagement text not null default 'not_engaged';
 alter table public.leads drop constraint if exists leads_engagement_check;
 alter table public.leads add constraint leads_engagement_check
-  check (engagement in ('engaged', 'not_engaged', 'do_not_contact'));
+  check (engagement in ('engaged', 'not_engaged', 'not_qualified', 'do_not_contact'));
 create index if not exists leads_engagement_idx on public.leads (engagement);
 
 -- Stage. Leads that were being worked count as engaged; lost and unqualified ones restart.
@@ -83,7 +93,7 @@ begin
     update public.leads set status = 'proposal'
       where id = new.lead_id and status in ('engagement', 'in_contact', 'discovery_meeting', 'client_meeting');
     update public.leads set engagement = 'engaged'
-      where id = new.lead_id and engagement = 'not_engaged';
+      where id = new.lead_id and engagement in ('not_engaged', 'not_qualified');
   end if;
   return new;
 end;
@@ -95,13 +105,19 @@ create trigger deals_sync_lead_stage
   after insert or update of stage on public.deals
   for each row execute function public.sync_lead_stage_from_deal();
 
--- Leads that already have proposals catch up once.
-update public.leads l set status = 'client'
-  where l.status <> 'client'
-    and exists (select 1 from public.deals d where d.lead_id = l.id and d.stage in ('closed_won', 'accepted'));
-update public.leads l set status = 'proposal'
-  where l.status in ('engagement', 'in_contact', 'discovery_meeting', 'client_meeting')
-    and exists (select 1 from public.deals d where d.lead_id = l.id);
+-- Leads that already have proposals catch up, once (see migration_markers).
+do $$
+begin
+  if not exists (select 1 from public.migration_markers where key = '0018_proposal_stages') then
+    update public.leads l set status = 'client'
+      where l.status <> 'client'
+        and exists (select 1 from public.deals d where d.lead_id = l.id and d.stage in ('closed_won', 'accepted'));
+    update public.leads l set status = 'proposal'
+      where l.status in ('engagement', 'in_contact', 'discovery_meeting', 'client_meeting')
+        and exists (select 1 from public.deals d where d.lead_id = l.id);
+    insert into public.migration_markers (key) values ('0018_proposal_stages');
+  end if;
+end $$;
 
 -- Who counts as a lead: the Leads page lists Engaged companies only. A company becomes
 -- Engaged when someone registers for an event, when it gets a proposal (above), or when
@@ -116,7 +132,7 @@ as $$
 begin
   if new.status is distinct from old.status
      and new.status in ('in_contact', 'discovery_meeting', 'client_meeting', 'proposal', 'client')
-     and new.engagement = 'not_engaged' then
+     and new.engagement in ('not_engaged', 'not_qualified') then
     new.engagement := 'engaged';
   end if;
   return new;
@@ -139,7 +155,7 @@ as $$
 begin
   if new.lead_id is not null and new.status <> 'cancelled' then
     update public.leads set engagement = 'engaged'
-      where id = new.lead_id and engagement = 'not_engaged';
+      where id = new.lead_id and engagement in ('not_engaged', 'not_qualified');
   end if;
   return new;
 end;
@@ -151,11 +167,17 @@ create trigger event_registrations_engage_lead
   after insert or update of lead_id, status on public.event_registrations
   for each row execute function public.engage_lead_on_registration();
 
--- Existing event attendees and companies with proposals become leads once.
-update public.leads l set engagement = 'engaged'
-  where l.engagement = 'not_engaged'
-    and (exists (select 1 from public.event_registrations r where r.lead_id = l.id and r.status <> 'cancelled')
-         or exists (select 1 from public.deals d where d.lead_id = l.id));
+-- Existing event attendees and companies with proposals become leads, once.
+do $$
+begin
+  if not exists (select 1 from public.migration_markers where key = '0018_engaged_backfill') then
+    update public.leads l set engagement = 'engaged'
+      where l.engagement = 'not_engaged'
+        and (exists (select 1 from public.event_registrations r where r.lead_id = l.id and r.status <> 'cancelled')
+             or exists (select 1 from public.deals d where d.lead_id = l.id));
+    insert into public.migration_markers (key) values ('0018_engaged_backfill');
+  end if;
+end $$;
 
 -- Search functions: same argument types as 0015, so 0015's drops also remove these on a
 -- re-run. The owner filter becomes a status filter, and results include status.

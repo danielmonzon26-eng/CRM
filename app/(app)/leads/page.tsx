@@ -19,7 +19,7 @@ export default async function LeadsPage({ searchParams }: { searchParams: Promis
 
   return (
     <Page>
-      <PageHeader title="Leads" subtitle="Engaged companies: event attendees, anyone you're in contact or meeting with, and proposals. Not Engaged companies are under Contacts." />
+      <PageHeader title="Leads" subtitle="Engaged companies: event attendees, anyone you're in contact or meeting with, and proposals. Not Engaged and Not Qualified companies are under Contacts." />
       <LeadsWorkspace
         state={state}
         table={table}

@@ -11,7 +11,7 @@ export function StatusPill({ status }: { status: LeadStatus }) {
   );
 }
 
-/** Engaged, Not Engaged, or Do Not Contact. */
+/** Engaged, Not Engaged, Not Qualified or Do Not Contact. */
 export function EngagementPill({ engagement }: { engagement: LeadEngagement }) {
   return (
     <span className={`inline-flex whitespace-nowrap rounded-full px-2.5 py-0.5 text-xs font-medium ${ENGAGEMENT_STYLES[engagement]}`}>

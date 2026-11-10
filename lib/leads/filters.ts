@@ -33,17 +33,19 @@ export const STATUS_DOTS: Record<LeadStatus, string> = {
 };
 
 /** Stored in leads.engagement and shown as "Status". */
-export const ALL_ENGAGEMENTS: LeadEngagement[] = ["engaged", "not_engaged", "do_not_contact"];
+export const ALL_ENGAGEMENTS: LeadEngagement[] = ["engaged", "not_engaged", "not_qualified", "do_not_contact"];
 
 export const ENGAGEMENT_LABELS: Record<LeadEngagement, string> = {
   engaged: "Engaged",
   not_engaged: "Not Engaged",
+  not_qualified: "Not Qualified",
   do_not_contact: "Do Not Contact",
 };
 
 export const ENGAGEMENT_STYLES: Record<LeadEngagement, string> = {
   engaged: "bg-emerald-50 text-emerald-800",
   not_engaged: "bg-slate-100 text-slate-700",
+  not_qualified: "bg-amber-50 text-amber-800",
   do_not_contact: "bg-rose-50 text-rose-800",
 };
 
