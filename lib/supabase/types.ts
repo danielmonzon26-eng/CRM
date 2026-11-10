@@ -419,6 +419,39 @@ export type Database = {
         Update: Partial<Database["public"]["Tables"]["lead_notes"]["Insert"]>;
         Relationships: [];
       };
+      event_feedback: {
+        Row: {
+          id: string;
+          event_id: string;
+          registration_id: string | null;
+          token: string;
+          full_name: string | null;
+          email: string | null;
+          request_sent_at: string | null;
+          send_error: string | null;
+          submitted_at: string | null;
+          satisfaction: number | null;
+          recommend: number | null;
+          topics: string[];
+          most_valuable: string | null;
+          improve: string | null;
+          follow_up: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          event_id: string;
+          registration_id?: string | null;
+          token?: string;
+          full_name?: string | null;
+          email?: string | null;
+          request_sent_at?: string | null;
+          send_error?: string | null;
+        };
+        Update: Partial<Database["public"]["Tables"]["event_feedback"]["Insert"]>;
+        Relationships: [];
+      };
       discovery_calls: {
         Row: {
           id: string;
@@ -1089,6 +1122,22 @@ export type Database = {
           status: EventStatus;
           spots_remaining: number | null;
         }[];
+      };
+      get_feedback_form: {
+        Args: { p_token: string };
+        Returns: { event_title: string; starts_at: string; first_name: string; submitted: boolean }[];
+      };
+      submit_event_feedback: {
+        Args: {
+          p_token: string;
+          p_satisfaction: number;
+          p_recommend: number;
+          p_topics: string[];
+          p_most_valuable: string | null;
+          p_improve: string | null;
+          p_follow_up: string | null;
+        };
+        Returns: "ok" | "invalid" | "already";
       };
       register_for_event: {
         Args: {

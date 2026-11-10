@@ -5,9 +5,9 @@ type CookieToSet = { name: string; value: string; options: CookieOptions };
 
 // Public paths that don't require a signed-in user: the login flow itself, the cron/health
 // API routes, which authenticate via their own CRON_SECRET bearer token rather than a user
-// session, and event registration pages, which only use the limited database functions in
-// supabase/migrations/0008_events_module.sql.
-const PUBLIC_PATHS = ["/login", "/auth/callback", "/auth/reset-password", "/auth/accept", "/api/cron", "/api/health", "/register"];
+// session, event registration pages, which only use the limited database functions in
+// supabase/migrations/0008_events_module.sql, and event feedback forms (0024_event_feedback.sql).
+const PUBLIC_PATHS = ["/login", "/auth/callback", "/auth/reset-password", "/auth/accept", "/api/cron", "/api/health", "/register", "/feedback"];
 
 function isPublicPath(pathname: string): boolean {
   return PUBLIC_PATHS.some((path) => pathname === path || pathname.startsWith(`${path}/`));

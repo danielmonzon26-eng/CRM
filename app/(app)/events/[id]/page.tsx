@@ -8,6 +8,9 @@ import { getLineDetailForEvent, getUnlinkedEventLines } from "@/lib/budgets/quer
 import { getEventReport } from "@/lib/reports/queries";
 import { getSiteUrl } from "@/lib/site-url";
 import { getTasksForSubject } from "@/lib/tasks/queries";
+import { getEventFeedback } from "@/lib/events/feedback-queries";
+import { isEventOver } from "@/lib/events/format";
+import { EventFeedbackTab } from "@/components/event-feedback-tab";
 import { EventActionsMenu } from "./event-controls";
 import {
   AgendaTab,
@@ -23,6 +26,8 @@ import {
 } from "./workspace-tabs";
 
 export const dynamic = "force-dynamic";
+// Feedback emails go out in batches spaced to Outlook's sending limit.
+export const maxDuration = 60;
 
 const TABS = [
   ["overview", "Overview"],
@@ -33,6 +38,7 @@ const TABS = [
   ["tasks", "Tasks"],
   ["communications", "Communications"],
   ["files", "Files"],
+  ["feedback", "Feedback"],
   ["analytics", "Analytics"],
 ] as const;
 
@@ -45,13 +51,14 @@ export default async function EventWorkspacePage({
 }) {
   const { id } = await params;
   const { tab, notice } = await searchParams;
-  const [detail, tasks, line, unlinkedLines, revenue, report] = await Promise.all([
+  const [detail, tasks, line, unlinkedLines, revenue, report, feedback] = await Promise.all([
     getEventDetail(id),
     getTasksForSubject({ eventId: id }),
     getLineDetailForEvent(id),
     getUnlinkedEventLines(),
     getEventRevenueEntries(id),
     getEventReport(id),
+    getEventFeedback(id),
   ]);
   if (!detail) notFound();
 
@@ -121,12 +128,23 @@ export default async function EventWorkspacePage({
               {label}
               {value === "registrations" && <span className="ml-1.5 text-xs font-normal text-slate-500">{counts.registered.length}</span>}
               {value === "tasks" && counts.tasksOpen > 0 && <span className="ml-1.5 text-xs font-normal text-slate-500">{counts.tasksOpen}</span>}
+              {value === "feedback" && feedback.responses.length > 0 && <span className="ml-1.5 text-xs font-normal text-slate-500">{feedback.responses.length}</span>}
             </Link>
           ))}
         </nav>
 
         {active === "overview" && <OverviewTab detail={detail} tasks={tasks} landingUrl={landingUrl} line={line?.line ?? null} />}
         {active === "registrations" && <RegistrationsTab detail={detail} />}
+        {active === "feedback" && (
+          <EventFeedbackTab
+            eventId={event.id}
+            eventTitle={event.title}
+            eventOver={isEventOver(event.starts_at, event.ends_at)}
+            summary={feedback}
+            registeredCount={counts.registered.length}
+            attendedCount={counts.checkedIn}
+          />
+        )}
         {active === "agenda" && <AgendaTab detail={detail} />}
         {active === "speakers" && <SpeakersTab detail={detail} />}
         {active === "budget" && <BudgetTab detail={detail} line={line} unlinkedLines={unlinkedLines} revenue={revenue} report={report[0] ?? null} />}
