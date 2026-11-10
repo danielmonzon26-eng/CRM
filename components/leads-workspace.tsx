@@ -281,7 +281,7 @@ function LeadsTable({
                     {lead.proposalId && lead.proposalStage ? (
                       <Link href={`/deals/${lead.proposalId}`} className="inline-flex items-center gap-1.5 text-sm font-medium text-slate-800 hover:text-brand-700 hover:underline">
                         <span className={`h-2 w-2 rounded-full ${DEAL_STAGE_META[lead.proposalStage as DealStage].accent}`} />
-                        {DEAL_STAGE_META[lead.proposalStage as DealStage].label}
+                        {DEAL_STAGE_META[lead.proposalStage as DealStage].short}
                       </Link>
                     ) : (
                       <CreateProposal

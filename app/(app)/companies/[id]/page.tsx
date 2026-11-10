@@ -112,7 +112,7 @@ export default async function CompanyDetailPage({ params }: { params: Promise<{ 
           <section id="proposals" aria-labelledby="proposals-title" className="scroll-mt-20">
             <div className="flex items-center justify-between gap-2">
               <h2 id="proposals-title" className="text-sm font-semibold text-slate-700">Proposals ({deals.length})</h2>
-              <CreateProposal companyId={company.id} leadId={company.leadId} primaryContactId={primaryContact?.id ?? null} defaultName={company.name} />
+              <CreateProposal companyId={company.id} leadId={company.leadId} primaryContactId={primaryContact?.id ?? null} defaultName={company.name} defaultWorkTypes={lead?.programs ?? []} />
             </div>
             <div className="mt-2 space-y-2">
               {deals.length === 0 && <p className="text-sm text-slate-500">No proposals yet.</p>}
