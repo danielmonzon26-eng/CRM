@@ -163,6 +163,7 @@ export type Database = {
           company_id: string;
           status: LeadStatus;
           engagement: LeadEngagement;
+          bmc_score: number | null;
           score: number;
           score_reasons: unknown[];
           assigned_to: string | null;
@@ -385,6 +386,52 @@ export type Database = {
           changed_at?: string;
         };
         Update: Partial<Database["public"]["Tables"]["deal_stage_history"]["Insert"]>;
+        Relationships: [];
+      };
+      discovery_calls: {
+        Row: {
+          id: string;
+          lead_id: string;
+          company_id: string;
+          contact_id: string | null;
+          prospect_name: string | null;
+          call_date: string;
+          include_expansion: boolean;
+          answers: Record<string, string>;
+          block_status: Record<string, string>;
+          score: number;
+          consultant_experience: string | null;
+          consultant_notes: string | null;
+          pricing_discussed: boolean | null;
+          decision_maker_present: boolean | null;
+          flags: string[];
+          recommended_entry: string | null;
+          entry_reason: string | null;
+          created_by: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          lead_id: string;
+          company_id: string;
+          contact_id?: string | null;
+          prospect_name?: string | null;
+          call_date?: string;
+          include_expansion?: boolean;
+          answers?: Record<string, string>;
+          block_status?: Record<string, string>;
+          score?: number;
+          consultant_experience?: string | null;
+          consultant_notes?: string | null;
+          pricing_discussed?: boolean | null;
+          decision_maker_present?: boolean | null;
+          flags?: string[];
+          recommended_entry?: string | null;
+          entry_reason?: string | null;
+          created_by?: string | null;
+        };
+        Update: Partial<Database["public"]["Tables"]["discovery_calls"]["Insert"]>;
         Relationships: [];
       };
       deal_staff: {
