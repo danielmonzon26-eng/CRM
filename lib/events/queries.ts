@@ -1,3 +1,4 @@
+import { registrationProgress, type RegistrationProgress } from "@/lib/events/progress";
 import { createClient } from "@/lib/supabase/server";
 import { fetchAllPages } from "@/lib/supabase/paginate";
 import type { AttendanceMode, Database, RegistrationStatus } from "@/lib/supabase/types";
@@ -8,7 +9,7 @@ export type EventRow = Database["public"]["Tables"]["events"]["Row"];
 export type EventRegistrationRow = Database["public"]["Tables"]["event_registrations"]["Row"];
 export type EventResourceRow = Database["public"]["Tables"]["event_resources"]["Row"];
 
-export type EventListItem = EventRow & { registeredCount: number };
+export type EventListItem = EventRow & { registeredCount: number; progress: RegistrationProgress };
 
 export async function getEvents(): Promise<EventListItem[]> {
   const supabase = await createClient();
@@ -21,7 +22,14 @@ export async function getEvents(): Promise<EventListItem[]> {
 
   const counts = new Map<string, number>();
   for (const r of registrations) counts.set(r.event_id, (counts.get(r.event_id) ?? 0) + 1);
-  return events.map((e) => ({ ...e, registeredCount: counts.get(e.id) ?? 0 }));
+  return events.map((e) => {
+    const registeredCount = counts.get(e.id) ?? 0;
+    return {
+      ...e,
+      registeredCount,
+      progress: registrationProgress({ registered: registeredCount, target: e.target_attendees, capacity: e.capacity, createdAt: e.created_at, startsAt: e.starts_at }),
+    };
+  });
 }
 
 export async function getEventsBetween(startIso: string, endIso: string): Promise<EventRow[]> {

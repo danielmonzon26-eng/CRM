@@ -98,7 +98,7 @@ export default async function EventWorkspacePage({
                 <span className="flex items-center gap-1.5">
                   <Users className="h-4 w-4" strokeWidth={2} />
                   {counts.registered.length}
-                  {event.capacity ? ` / ${event.capacity}` : " registered"}
+                  {event.target_attendees ? ` of ${event.target_attendees} target` : event.capacity ? ` / ${event.capacity}` : " registered"}
                 </span>
                 <span className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${STATUS_STYLES[event.status]}`}>{STATUS_LABELS[event.status]}</span>
                 {event.archived_at && <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-700">Archived</span>}

@@ -1,5 +1,7 @@
 import Link from "next/link";
 import type { LucideIcon } from "lucide-react";
+import { RegistrationPanel } from "@/components/registration-progress";
+import { registrationProgress } from "@/lib/events/progress";
 import {
   Building2,
   CheckCircle2,
@@ -91,7 +93,14 @@ export function OverviewTab({
 }) {
   const { event } = detail;
   const counts = getCounts(detail, tasks);
-  const fill = event.capacity ? percent(counts.registered.length, event.capacity) : null;
+  const progress = registrationProgress({
+    registered: counts.registered.length,
+    waitlisted: counts.waitlisted,
+    target: event.target_attendees,
+    capacity: event.capacity,
+    createdAt: event.created_at,
+    startsAt: event.starts_at,
+  });
   const attendance = percent(counts.checkedIn, counts.registered.length);
   const readiness = percent(counts.tasksDone, tasks.length);
   const timeline = buildTimeline(detail, tasks);
@@ -99,13 +108,20 @@ export function OverviewTab({
 
   return (
     <div className="space-y-5">
+      <RegistrationPanel progress={progress} />
       <section aria-label="Key figures" className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <Metric
           icon={Users}
           tone="bg-brand-50 text-brand-600"
-          value={event.capacity ? `${counts.registered.length} / ${event.capacity}` : String(counts.registered.length)}
+          value={event.target_attendees ? `${counts.registered.length} / ${event.target_attendees}` : String(counts.registered.length)}
           label="Registrations"
-          detail={[fill !== null ? `${fill}% of capacity` : "No capacity limit", counts.waitlisted ? `${counts.waitlisted} on waitlist` : ""].filter(Boolean).join(" · ")}
+          detail={[
+            progress.percentOfTarget !== null ? `${progress.percentOfTarget}% of target` : "No target set",
+            event.capacity ? `max ${event.capacity}` : "",
+            counts.waitlisted ? `${counts.waitlisted} on waitlist` : "",
+          ]
+            .filter(Boolean)
+            .join(" · ")}
         />
         <Metric
           icon={ClipboardCheck}

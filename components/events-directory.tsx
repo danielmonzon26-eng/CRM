@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState, useTransition } from "react";
 import Link from "next/link";
+import { RegistrationBar } from "@/components/registration-progress";
 import { useRouter } from "next/navigation";
 import {
   Archive,
@@ -80,17 +81,23 @@ function StatusBadge({ event }: { event: EventListItem }) {
 }
 
 function Registrations({ event }: { event: EventListItem }) {
-  const fill = event.capacity ? Math.min(100, Math.round((event.registeredCount / event.capacity) * 100)) : null;
+  const { progress } = event;
   return (
-    <div className="w-24">
-      <p className="text-sm text-slate-700">
-        {event.registeredCount}
-        {event.capacity ? ` / ${event.capacity}` : ""}
+    <div className="w-36" title={progress.detail}>
+      <p className="flex items-baseline justify-between gap-2 text-sm text-slate-700">
+        <span className="tabular-nums">
+          {event.registeredCount}
+          {event.target_attendees ? <span className="text-slate-500"> / {event.target_attendees}</span> : event.capacity ? <span className="text-slate-500"> / {event.capacity}</span> : null}
+        </span>
+        {progress.percentOfTarget !== null && <span className="text-xs font-semibold tabular-nums text-slate-900">{progress.percentOfTarget}%</span>}
       </p>
-      {fill !== null && (
-        <div role="progressbar" aria-label="Registrations" aria-valuenow={fill} aria-valuemin={0} aria-valuemax={100} className="mt-1 h-1.5 overflow-hidden rounded-full bg-slate-100">
-          <div className="h-full rounded-full bg-accent-500" style={{ width: `${fill}%` }} />
+      {(event.target_attendees || event.capacity) && (
+        <div className="mt-1">
+          <RegistrationBar progress={progress} size="sm" />
         </div>
+      )}
+      {(progress.status === "behind" || progress.status === "reached" || progress.status === "full") && (
+        <span className={`mt-1 inline-block rounded px-1.5 py-0.5 text-[10px] font-semibold ${progress.tone}`}>{progress.label}</span>
       )}
     </div>
   );
@@ -368,9 +375,19 @@ export function EventsDirectory({ events, ownerNames }: { events: EventListItem[
                     <p className="flex items-start gap-1.5"><MapPin className="mt-px h-3.5 w-3.5 shrink-0 text-slate-400" strokeWidth={2} />{location(event)}</p>
                     <p className="flex items-center gap-1.5">
                       <Users className="h-3.5 w-3.5 shrink-0 text-slate-400" strokeWidth={2} />
-                      {event.registeredCount}{event.capacity ? ` of ${event.capacity}` : ""} registered · {formatTicketPrice(event.ticket_type, event.ticket_price, event.currency)}
+                      {event.registeredCount}
+                      {event.target_attendees ? ` of ${event.target_attendees} target` : event.capacity ? ` of ${event.capacity}` : ""} registered · {formatTicketPrice(event.ticket_type, event.ticket_price, event.currency)}
                     </p>
                   </div>
+                  {(event.target_attendees || event.capacity) && (
+                    <div className="mt-3">
+                      <div className="mb-1 flex items-center justify-between text-[11px]">
+                        <span className={`rounded px-1.5 py-0.5 font-semibold ${event.progress.tone}`}>{event.progress.label}</span>
+                        {event.progress.percentOfTarget !== null && <span className="font-semibold tabular-nums text-slate-700">{event.progress.percentOfTarget}% of target</span>}
+                      </div>
+                      <RegistrationBar progress={event.progress} size="sm" />
+                    </div>
+                  )}
                 </div>
               </Link>
               <div className="border-t border-slate-100 px-2 py-1">{actions(event)}</div>

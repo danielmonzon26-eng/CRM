@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { RegistrationBar } from "@/components/registration-progress";
 import type { LucideIcon } from "lucide-react";
 import {
   AlertTriangle,
@@ -113,7 +114,6 @@ function PanelEmpty({ icon: Icon, children }: { icon: LucideIcon; children: Reac
 }
 
 function EventRow({ event }: { event: DashboardEvent }) {
-  const fill = event.capacity ? Math.min(100, Math.round((event.registered / event.capacity) * 100)) : null;
   return (
     <Link href={`/events/${event.id}`} className="flex items-center gap-4 px-5 py-3.5 hover:bg-slate-50">
       <span className="flex h-12 w-12 shrink-0 flex-col items-center justify-center rounded-lg bg-brand-50 text-brand-700">
@@ -127,21 +127,17 @@ function EventRow({ event }: { event: DashboardEvent }) {
           {event.format === "online" ? "Online" : event.venueName}
         </span>
       </span>
-      <span className="hidden w-36 shrink-0 sm:block">
-        <span className="block text-right text-xs font-medium text-slate-700">
-          {event.registered}
-          {event.capacity ? ` / ${event.capacity}` : " registered"}
+      <span className="hidden w-40 shrink-0 sm:block" title={event.progress.detail}>
+        <span className="flex items-baseline justify-between gap-2 text-xs">
+          <span className={`rounded px-1.5 py-0.5 font-semibold ${event.progress.tone}`}>{event.progress.label}</span>
+          <span className="font-medium tabular-nums text-slate-700">
+            {event.registered}
+            {event.progress.target ? ` / ${event.progress.target}` : event.capacity ? ` / ${event.capacity}` : ""}
+          </span>
         </span>
-        {fill !== null && (
-          <span
-            role="progressbar"
-            aria-label="Registrations"
-            aria-valuenow={fill}
-            aria-valuemin={0}
-            aria-valuemax={100}
-            className="mt-1 block h-1.5 overflow-hidden rounded-full bg-slate-100"
-          >
-            <span className="block h-full rounded-full bg-accent-500" style={{ width: `${fill}%` }} />
+        {(event.progress.target || event.capacity) && (
+          <span className="mt-1.5 block">
+            <RegistrationBar progress={event.progress} size="sm" />
           </span>
         )}
       </span>

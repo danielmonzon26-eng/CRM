@@ -529,6 +529,7 @@ export type Database = {
           starts_at: string;
           ends_at: string | null;
           capacity: number | null;
+          target_attendees: number | null;
           program: string | null;
           owner_id: string | null;
           archived_at: string | null;
@@ -565,6 +566,7 @@ export type Database = {
           starts_at: string;
           ends_at?: string | null;
           capacity?: number | null;
+          target_attendees?: number | null;
           program?: string | null;
           owner_id?: string | null;
           archived_at?: string | null;
