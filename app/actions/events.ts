@@ -162,7 +162,13 @@ export async function saveEvent(id: string | null, input: EventInput): Promise<A
     const parsed = parseEventInput(input, current.status === "published");
     if (!parsed.values) return { error: parsed.error };
 
-    const { error } = await supabase.from("events").update(parsed.values).eq("id", id);
+    // A linked budget line owns the event's budget total (its items add up to it), so a
+    // save from the wizard never overwrites it with an older number.
+    const { data: linkedLine } = await supabase.from("budget_lines").select("id").eq("event_id", id).maybeSingle();
+    const { budget_amount: _budgetAmount, ...unlinkedValues } = parsed.values;
+    const values = linkedLine ? unlinkedValues : parsed.values;
+
+    const { error } = await supabase.from("events").update(values).eq("id", id);
     if (error) return { error: error.message };
 
     revalidateEvent(id);
