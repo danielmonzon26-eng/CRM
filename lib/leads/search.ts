@@ -32,8 +32,8 @@ export type LeadFacets = { industries: string[]; communities: string[] };
 function filterArgs(filters: LeadFilters) {
   return {
     p_search: filters.q || null,
-    // The Leads page only lists Engaged companies; the rest are under Contacts and Companies.
-    p_engagement: "engaged",
+    // Leads opens on Engaged companies; the Status filter can show the others or all of them.
+    p_engagement: filters.engagement === "all" ? null : filters.engagement || "engaged",
     p_industry: filters.industry || null,
     p_community: filters.community || null,
     p_min_score: filters.score ? Number(filters.score) : null,
