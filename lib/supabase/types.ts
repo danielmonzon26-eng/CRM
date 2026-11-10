@@ -10,7 +10,7 @@
 export type LeadStatus = "engagement" | "in_contact" | "discovery_meeting" | "client_meeting" | "proposal" | "client";
 
 /** Whether the company is engaged (stored in leads.engagement; shown as "Status"). */
-export type LeadEngagement = "engaged" | "not_engaged" | "do_not_contact";
+export type LeadEngagement = "engaged" | "not_engaged" | "not_qualified" | "do_not_contact";
 
 export type ActivityType =
   | "note"
