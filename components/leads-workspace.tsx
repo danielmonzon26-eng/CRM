@@ -27,7 +27,10 @@ import { downloadCsv } from "@/lib/csv";
 import { industryOptions, parseIndustry } from "@/lib/industries/naics";
 import { CLIENT_TYPES, LEAD_PROGRAMS, clientTypeLabel, programLabel } from "@/lib/leads/classification";
 import {
+  ALL_ENGAGEMENTS,
   ALL_STATUSES,
+  ENGAGEMENT_LABELS,
+  STATUS_DOTS,
   STATUS_LABELS,
   TABLE_PAGE_SIZE,
   leadViewToParams,
@@ -35,20 +38,10 @@ import {
   type LeadViewState,
 } from "@/lib/leads/filters";
 import type { LeadFacets, LeadRow, StageSummary } from "@/lib/leads/search";
-import type { DealStage, LeadStatus } from "@/lib/supabase/types";
+import type { DealStage, LeadEngagement, LeadStatus } from "@/lib/supabase/types";
 
 const SEARCH_DELAY_MS = 250;
 const EXPORT_CAP = 10000;
-
-const STATUS_DOTS: Record<LeadStatus, string> = {
-  new: "bg-sky-600",
-  researching: "bg-indigo-600",
-  contacted: "bg-violet-600",
-  qualified: "bg-amber-600",
-  won: "bg-emerald-600",
-  lost: "bg-rose-600",
-  unqualified: "bg-slate-500",
-};
 
 const SCORE_LABELS: Record<string, string> = { "40": "Fit 40+", "70": "Fit 70+" };
 const NOT_SET_LABEL = "Not set";
@@ -63,6 +56,12 @@ function FitBadge({ score }: { score: number }) {
   if (score <= 0) return null;
   const tone = score >= 70 ? "bg-emerald-50 text-emerald-800" : score >= 40 ? "bg-amber-50 text-amber-800" : "bg-slate-100 text-slate-600";
   return <span title="Fit score out of 100" className={`shrink-0 whitespace-nowrap rounded px-1.5 py-0.5 text-[11px] font-semibold tabular-nums ${tone}`}>Fit {score}</span>;
+}
+
+/** Discovery coverage, coloured by the pilot routing thresholds. */
+function BmcBadge({ score }: { score: number }) {
+  const tone = score >= 75 ? "bg-emerald-50 text-emerald-800" : score >= 50 ? "bg-sky-50 text-sky-800" : score >= 25 ? "bg-amber-50 text-amber-800" : "bg-slate-100 text-slate-600";
+  return <span title="Canvas covered in the latest discovery call" className={`whitespace-nowrap rounded px-1.5 py-0.5 text-[11px] font-semibold tabular-nums ${tone}`}>{Math.round(score)}%</span>;
 }
 
 function SortHeader({
@@ -100,7 +99,6 @@ function LeadsTable({
   state,
   members,
   facets,
-  memberName,
   href,
 }: {
   rows: LeadRow[];
@@ -108,7 +106,6 @@ function LeadsTable({
   state: LeadViewState;
   members: Member[];
   facets: LeadFacets;
-  memberName: (id: string | null) => string | null;
   href: (patch: Partial<LeadViewState>) => string;
 }) {
   const router = useRouter();
@@ -124,7 +121,7 @@ function LeadsTable({
   const end = Math.min(state.page * TABLE_PAGE_SIZE, total);
   const lastPage = Math.max(1, Math.ceil(total / TABLE_PAGE_SIZE));
 
-  function apply(change: { status?: LeadStatus; assigneeId?: string | null; clientType?: string | null }, description: string) {
+  function apply(change: { status?: LeadStatus; engagement?: LeadEngagement; clientType?: string | null }, description: string) {
     startTransition(async () => {
       const result = await bulkUpdateLeads([...selected], change);
       if (result.error) {
@@ -158,29 +155,24 @@ function LeadsTable({
         <div className="animate-pop mb-3 flex flex-wrap items-center gap-3 rounded-lg bg-ink-950 px-4 py-2 text-sm text-white">
           <span className="font-medium">{selected.size} selected</span>
           <select
-            aria-label="Set status on selected leads"
+            aria-label="Set stage on selected leads"
             disabled={isPending}
             value=""
-            onChange={(e) => e.target.value && apply({ status: e.target.value as LeadStatus }, `set to ${STATUS_LABELS[e.target.value as LeadStatus]}`)}
+            onChange={(e) => e.target.value && apply({ status: e.target.value as LeadStatus }, `moved to ${STATUS_LABELS[e.target.value as LeadStatus]}`)}
             className="rounded-md bg-white/10 px-2 py-1 text-sm text-white [&>option]:text-slate-900"
           >
-            <option value="">Set status...</option>
+            <option value="">Set stage...</option>
             {ALL_STATUSES.map((s) => <option key={s} value={s}>{STATUS_LABELS[s]}</option>)}
           </select>
           <select
-            aria-label="Assign selected leads"
+            aria-label="Set status on selected leads"
             disabled={isPending}
             value=""
-            onChange={(e) => {
-              if (!e.target.value) return;
-              const id = e.target.value === "none" ? null : e.target.value;
-              apply({ assigneeId: id }, id ? `assigned to ${members.find((m) => m.id === id)?.name}` : "unassigned");
-            }}
+            onChange={(e) => e.target.value && apply({ engagement: e.target.value as LeadEngagement }, `set to ${ENGAGEMENT_LABELS[e.target.value as LeadEngagement]}`)}
             className="rounded-md bg-white/10 px-2 py-1 text-sm text-white [&>option]:text-slate-900"
           >
-            <option value="">Assign to...</option>
-            <option value="none">Unassigned</option>
-            {members.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
+            <option value="">Set status...</option>
+            {ALL_ENGAGEMENTS.map((s) => <option key={s} value={s}>{ENGAGEMENT_LABELS[s]}</option>)}
           </select>
           <select
             aria-label="Set client type on selected leads"
@@ -198,17 +190,17 @@ function LeadsTable({
             <option value="none">Not set</option>
           </select>
           <select
-            aria-label="Add or remove a program on selected leads"
+            aria-label="Add or remove work on selected leads"
             disabled={isPending}
             value=""
             onChange={(e) => e.target.value && changeProgram(e.target.value)}
             className="rounded-md bg-white/10 px-2 py-1 text-sm text-white [&>option]:text-slate-900"
           >
-            <option value="">Change programs...</option>
-            <optgroup label="Add program">
+            <option value="">Change work...</option>
+            <optgroup label="Add">
               {LEAD_PROGRAMS.map(([value, label]) => <option key={value} value={`+${value}`}>Add {label}</option>)}
             </optgroup>
-            <optgroup label="Remove program">
+            <optgroup label="Remove">
               {LEAD_PROGRAMS.map(([value, label]) => <option key={value} value={`-${value}`}>Remove {label}</option>)}
             </optgroup>
           </select>
@@ -232,11 +224,11 @@ function LeadsTable({
               <th scope="col" className="px-2 py-2.5 font-medium">Name</th>
               <SortHeader label="Company" sort="name" state={state} href={href} />
               <SortHeader label="Client type" sort="client_type" state={state} href={href} />
-              <th scope="col" className="px-2 py-2.5 font-medium">Programs</th>
+              <th scope="col" className="px-2 py-2.5 font-medium">Work</th>
               <th scope="col" className="px-2 py-2.5 font-medium">Industry</th>
               <SortHeader label="Fit" sort="score" state={state} href={href} />
-              <th scope="col" className="px-2 py-2.5 font-medium">Owner</th>
-              <SortHeader label="Status" sort="status" state={state} href={href} />
+              <th scope="col" className="px-2 py-2.5 font-medium" title="Business Model Canvas covered in the latest discovery call">BMC</th>
+              <SortHeader label="Stage" sort="status" state={state} href={href} />
               <SortHeader label="Added" sort="created" state={state} href={href} />
               {/* Stays in view while the rest of the table scrolls sideways. */}
               <th scope="col" className="sticky right-0 border-l border-slate-100 bg-white px-3 py-2.5 font-medium">Proposal</th>
@@ -264,15 +256,18 @@ function LeadsTable({
                 <td className="max-w-52 px-2 py-2.5 text-slate-700">
                   {lead.primaryName ? (
                     <>
-                      <span className="block truncate">{lead.primaryName}{lead.contactCount > 1 ? ` +${lead.contactCount - 1}` : ""}</span>
+                      <Link href={`/leads/${lead.id}`} className="block truncate font-medium text-slate-900 hover:text-brand-700 hover:underline">
+                        {lead.primaryName}
+                        {lead.contactCount > 1 && <span className="font-normal text-slate-500"> +{lead.contactCount - 1}</span>}
+                      </Link>
                       {(lead.primaryTitle || lead.primaryEmail) && <span className="block truncate text-xs text-slate-500">{lead.primaryTitle ?? lead.primaryEmail}</span>}
                     </>
                   ) : (
-                    <span className="text-slate-500">None yet</span>
+                    <Link href={`/leads/${lead.id}`} className="text-slate-500 hover:text-brand-700 hover:underline">None yet</Link>
                   )}
                 </td>
                 <td className="max-w-56 px-2 py-2.5">
-                  <Link href={`/leads/${lead.id}`} className="block truncate font-medium text-slate-900 hover:text-brand-700">{lead.companyName}</Link>
+                  <Link href={`/companies/${lead.companyId}`} className="block truncate font-medium text-slate-900 hover:text-brand-700 hover:underline">{lead.companyName}</Link>
                 </td>
                 <td className="whitespace-nowrap px-2 py-2.5 text-slate-700">{clientTypeLabel(lead.clientType) ?? <span className="text-slate-500">—</span>}</td>
                 <td className="min-w-36 max-w-64 px-2 py-2.5">{lead.programs.length ? <ProgramChips programs={lead.programs} limit={MAX_ROW_PROGRAMS} /> : <span className="text-slate-500">—</span>}</td>
@@ -281,9 +276,9 @@ function LeadsTable({
                   {lead.community && <span className="block truncate text-xs text-slate-500">{lead.community}</span>}
                 </td>
                 <td className="px-2 py-2.5">{lead.score > 0 ? <FitBadge score={lead.score} /> : <span className="text-slate-500">—</span>}</td>
-                <td className="max-w-36 truncate px-2 py-2.5 text-slate-600">{memberName(lead.assignedTo) ?? <span className="text-slate-500">Unassigned</span>}</td>
+                <td className="px-2 py-2.5">{lead.bmcScore != null ? <BmcBadge score={lead.bmcScore} /> : <span className="text-slate-500">—</span>}</td>
                 <td className="px-2 py-2.5">
-                  <span className="inline-flex items-center gap-1.5 text-slate-700">
+                  <span className="inline-flex items-center gap-1.5 whitespace-nowrap text-slate-700">
                     <span className={`h-2 w-2 rounded-full ${STATUS_DOTS[lead.status]}`} />
                     {STATUS_LABELS[lead.status]}
                   </span>
@@ -294,7 +289,7 @@ function LeadsTable({
                     {lead.proposalId && lead.proposalStage ? (
                       <Link href={`/deals/${lead.proposalId}`} className="inline-flex items-center gap-1.5 text-sm font-medium text-slate-800 hover:text-brand-700 hover:underline">
                         <span className={`h-2 w-2 rounded-full ${DEAL_STAGE_META[lead.proposalStage as DealStage].accent}`} />
-                        {DEAL_STAGE_META[lead.proposalStage as DealStage].label}
+                        {DEAL_STAGE_META[lead.proposalStage as DealStage].short}
                       </Link>
                     ) : (
                       <CreateProposal
@@ -389,18 +384,16 @@ export function LeadsWorkspace({
     searchTimer.current = setTimeout(() => go({ q: value.trim() }), SEARCH_DELAY_MS);
   }
 
-  const memberName = (id: string | null) => (id ? members.find((m) => m.id === id)?.name ?? "Unknown" : null);
   const matching = state.status
     ? stages.find((s) => s.status === state.status)?.count ?? 0
     : stages.reduce((total, s) => total + s.count, 0);
 
   const chips: { label: string; clear: Partial<LeadViewState> }[] = [
     ...(state.q ? [{ label: `Search: ${state.q}`, clear: { q: "" } }] : []),
-    ...(state.status ? [{ label: `Status: ${STATUS_LABELS[state.status as LeadStatus]}`, clear: { status: "" } }] : []),
+    ...(state.status ? [{ label: `Stage: ${STATUS_LABELS[state.status as LeadStatus]}`, clear: { status: "" } }] : []),
     ...(state.clientType ? [{ label: `Client type: ${state.clientType === "none" ? NOT_SET_LABEL : clientTypeLabel(state.clientType)}`, clear: { clientType: "" } }] : []),
-    ...(state.program ? [{ label: `Program: ${state.program === "none" ? "None selected" : programLabel(state.program)}`, clear: { program: "" } }] : []),
+    ...(state.program ? [{ label: `Work: ${state.program === "none" ? "None selected" : programLabel(state.program)}`, clear: { program: "" } }] : []),
     ...(state.proposal ? [{ label: PROPOSAL_LABELS[state.proposal], clear: { proposal: "" } }] : []),
-    ...(state.owner ? [{ label: `Owner: ${state.owner === "unassigned" ? "Unassigned" : memberName(state.owner)}`, clear: { owner: "" } }] : []),
     ...(state.industry ? [{ label: `Industry: ${parseIndustry(state.industry)?.subsector ?? state.industry}`, clear: { industry: "" } }] : []),
     ...(state.community ? [{ label: `Community: ${state.community}`, clear: { community: "" } }] : []),
     ...(state.score ? [{ label: SCORE_LABELS[state.score], clear: { score: "" } }] : []),
@@ -408,7 +401,7 @@ export function LeadsWorkspace({
     ...(state.event ? [{ label: `Event: ${events.find((e) => e.id === state.event)?.title ?? "Selected"}`, clear: { event: "" } }] : []),
   ];
 
-  const clearAll = () => go({ q: "", status: "", owner: "", industry: "", community: "", score: "", contact: "", event: "", clientType: "", program: "", proposal: "" });
+  const clearAll = () => go({ q: "", status: "", industry: "", community: "", score: "", contact: "", event: "", clientType: "", program: "", proposal: "" });
 
   async function exportAll() {
     setIsExporting(true);
@@ -424,8 +417,8 @@ export function LeadsWorkspace({
       } while (rows.length < Math.min(total, EXPORT_CAP));
 
       downloadCsv("leads.csv", [
-        ["Name", "Title", "Email", "Contacts", "Company", "Client type", "Programs", "Industry", "Community", "Fit score", "Owner", "Status", "Proposal stage", "Added"],
-        ...rows.map((r) => [r.primaryName, r.primaryTitle, r.primaryEmail, r.contactCount, r.companyName, clientTypeLabel(r.clientType), r.programs.map(programLabel).join("; "), r.industry, r.community, r.score, memberName(r.assignedTo), STATUS_LABELS[r.status], r.proposalStage ? DEAL_STAGE_META[r.proposalStage as DealStage].label : "", r.createdAt.slice(0, 10)]),
+        ["Name", "Title", "Email", "Contacts", "Company", "Client type", "Work", "Industry", "Community", "Fit score", "BMC %", "Stage", "Proposal stage", "Added"],
+        ...rows.map((r) => [r.primaryName, r.primaryTitle, r.primaryEmail, r.contactCount, r.companyName, clientTypeLabel(r.clientType), r.programs.map(programLabel).join("; "), r.industry, r.community, r.score, r.bmcScore == null ? "" : Math.round(r.bmcScore), STATUS_LABELS[r.status], r.proposalStage ? DEAL_STAGE_META[r.proposalStage as DealStage].label : "", r.createdAt.slice(0, 10)]),
       ]);
       toast(total > EXPORT_CAP ? `Exported the first ${EXPORT_CAP.toLocaleString()} leads` : `Exported ${rows.length.toLocaleString()} leads`);
     } catch {
@@ -452,11 +445,10 @@ export function LeadsWorkspace({
       </div>
 
       <div className="mb-4 flex flex-wrap items-center gap-2">
-        <FilterSelect label="Status" value={state.status} onChange={(status) => go({ status })} options={ALL_STATUSES.map((s) => ({ value: s as string, label: STATUS_LABELS[s], count: stages.find((x) => x.status === s)?.count ?? 0 }))} />
+        <FilterSelect label="Stage" value={state.status} onChange={(status) => go({ status })} options={ALL_STATUSES.map((s) => ({ value: s as string, label: STATUS_LABELS[s], count: stages.find((x) => x.status === s)?.count ?? 0 }))} />
         <FilterSelect label="Client type" value={state.clientType} onChange={(clientType) => go({ clientType })} options={[...CLIENT_TYPES.map(([value, label]) => ({ value: value as string, label })), { value: "none", label: NOT_SET_LABEL }]} />
-        <FilterSelect label="Program" value={state.program} onChange={(program) => go({ program })} options={[...LEAD_PROGRAMS.map(([value, label]) => ({ value: value as string, label })), { value: "none", label: "None selected" }]} />
+        <FilterSelect label="Work" value={state.program} onChange={(program) => go({ program })} options={[...LEAD_PROGRAMS.map(([value, label]) => ({ value: value as string, label })), { value: "none", label: "None selected" }]} />
         <FilterSelect label="Proposal" value={state.proposal} allLabel="Any" onChange={(proposal) => go({ proposal })} options={[{ value: "has", label: "Has a proposal" }, { value: "none", label: "No proposal" }]} />
-        <FilterSelect label="Owner" value={state.owner} allLabel="Anyone" onChange={(owner) => go({ owner })} options={[{ value: "unassigned", label: "Unassigned" }, ...members.map((m) => ({ value: m.id, label: m.name }))]} />
         <FilterSelect label="Industry" value={state.industry} onChange={(industry) => go({ industry })} options={industryOptions(facets.industries)} />
         <FilterSelect label="Community" value={state.community} onChange={(community) => go({ community })} options={facets.communities.map((c) => ({ value: c, label: c }))} />
         <FilterSelect label="Fit" value={state.score} allLabel="Any" onChange={(score) => go({ score })} options={[{ value: "40", label: "Fit 40+" }, { value: "70", label: "Fit 70+" }]} />
@@ -503,7 +495,7 @@ export function LeadsWorkspace({
             action={chips.length > 0 ? <button type="button" onClick={() => { setSearch(""); clearAll(); }} className={buttonClass("secondary")}>Clear filters</button> : undefined}
           />
         ) : (
-          <LeadsTable rows={table.rows} total={table.total} state={state} members={members} facets={facets} memberName={memberName} href={href} />
+          <LeadsTable rows={table.rows} total={table.total} state={state} members={members} facets={facets} href={href} />
         )}
       </div>
     </div>

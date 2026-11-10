@@ -6,7 +6,7 @@ import { isEventOver } from "@/lib/events/format";
 import type { ActivityType, EventFormat, EventStatus, TaskType } from "@/lib/supabase/types";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
-const ACTIVE_LEAD_STATUSES = ["new", "researching", "contacted", "qualified"] as const;
+const ACTIVE_LEAD_STATUSES = ["engagement", "in_contact", "discovery_meeting", "client_meeting"] as const;
 
 export type DashboardEvent = {
   id: string;
@@ -145,6 +145,7 @@ export async function getDashboardData(): Promise<DashboardData> {
       .from("leads")
       .select("id, company_id, score, status")
       .in("status", [...ACTIVE_LEAD_STATUSES])
+      .eq("engagement", "engaged")
       .is("assigned_to", null)
       .order("score", { ascending: false })
       .order("created_at", { ascending: false })
@@ -153,6 +154,7 @@ export async function getDashboardData(): Promise<DashboardData> {
       .from("leads")
       .select("id", { count: "exact", head: true })
       .in("status", [...ACTIVE_LEAD_STATUSES])
+      .eq("engagement", "engaged")
       .is("assigned_to", null),
   ]);
   const queryError = contactsError ?? overdueError ?? tasksError ?? activitiesError ?? leadsError ?? unassignedError;

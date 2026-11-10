@@ -1,18 +1,15 @@
 export const CLIENT_TYPES = [
   ["government", "Government"],
-  ["private_business", "Private Business"],
-  ["small_business", "Small Business"],
-  ["medium_business", "Medium Business"],
-  ["start_up", "Start Up"],
+  ["non_profit", "Non Profit"],
+  ["private", "Private"],
 ] as const;
 
+/** The work Catapult does, chosen per lead (stored in leads.programs). */
 export const LEAD_PROGRAMS = [
-  ["events_education", "Events & Education"],
-  ["catapult_ready", "Catapult Ready Program"],
-  ["capital_raise", "Capital Raise"],
-  ["company_exit", "Company Exit"],
-  ["ip_programs", "IP Programs"],
-  ["revenue_growth", "Revenue Growth"],
+  ["elevate_ip", "Elevate IP"],
+  ["education", "Education"],
+  ["operations_assistance", "Operations Assistance"],
+  ["capital", "Capital"],
 ] as const;
 
 export type ClientType = (typeof CLIENT_TYPES)[number][0];

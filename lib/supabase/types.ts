@@ -6,14 +6,11 @@
  *   npx supabase gen types typescript --project-id kteeooyybpwnnowkuwra > lib/supabase/types.ts
  */
 
-export type LeadStatus =
-  | "new"
-  | "researching"
-  | "contacted"
-  | "qualified"
-  | "unqualified"
-  | "won"
-  | "lost";
+/** A lead's stage in the funnel (stored in leads.status). */
+export type LeadStatus = "engagement" | "in_contact" | "discovery_meeting" | "client_meeting" | "proposal" | "client";
+
+/** Whether the company is engaged (stored in leads.engagement; shown as "Status"). */
+export type LeadEngagement = "engaged" | "not_engaged" | "do_not_contact";
 
 export type ActivityType =
   | "note"
@@ -45,15 +42,11 @@ export type TaskType = "todo" | "call" | "email" | "meeting";
 
 export type BudgetRevenueKind = "grant" | "sponsorship" | "other";
 export type BudgetRevenueStatus = "pending" | "approved" | "received" | "declined";
+export type MailAccountStatus = "connected" | "needs_reconnect";
+export type EmailDirection = "inbound" | "outbound";
 
-export type DealStage =
-  | "discovery_scheduled"
-  | "discovery_completed"
-  | "qualified_opportunity"
-  | "proposal_sent"
-  | "negotiation_decision"
-  | "closed_won"
-  | "closed_lost";
+export type DealStage = "in_development" | "sent" | "accepted" | "declined";
+export type DealPayment = "paid" | "unpaid";
 
 // supabase-js's generated-types contract expects each table to declare its foreign-key
 // relationships (used for typed nested `select()` joins). None are modeled by hand here.
@@ -169,6 +162,8 @@ export type Database = {
           id: string;
           company_id: string;
           status: LeadStatus;
+          engagement: LeadEngagement;
+          bmc_score: number | null;
           score: number;
           score_reasons: unknown[];
           assigned_to: string | null;
@@ -185,6 +180,7 @@ export type Database = {
           client_type?: string | null;
           programs?: string[];
           status?: LeadStatus;
+          engagement?: LeadEngagement;
           score?: number;
           score_reasons?: unknown[];
           assigned_to?: string | null;
@@ -332,6 +328,10 @@ export type Database = {
           lost_reason: string | null;
           closed_at: string | null;
           notes: string | null;
+          work_types: string[];
+          payment: DealPayment | null;
+          sent_on: string | null;
+          accepted_on: string | null;
           created_by: string | null;
           created_at: string;
           updated_at: string;
@@ -357,6 +357,10 @@ export type Database = {
           lost_reason?: string | null;
           closed_at?: string | null;
           notes?: string | null;
+          work_types?: string[];
+          payment?: DealPayment | null;
+          sent_on?: string | null;
+          accepted_on?: string | null;
           created_by?: string | null;
           created_at?: string;
           updated_at?: string;
@@ -382,6 +386,81 @@ export type Database = {
           changed_at?: string;
         };
         Update: Partial<Database["public"]["Tables"]["deal_stage_history"]["Insert"]>;
+        Relationships: [];
+      };
+      discovery_calls: {
+        Row: {
+          id: string;
+          lead_id: string;
+          company_id: string;
+          contact_id: string | null;
+          prospect_name: string | null;
+          call_date: string;
+          include_expansion: boolean;
+          answers: Record<string, string>;
+          block_status: Record<string, string>;
+          score: number;
+          consultant_experience: string | null;
+          consultant_notes: string | null;
+          pricing_discussed: boolean | null;
+          decision_maker_present: boolean | null;
+          flags: string[];
+          recommended_entry: string | null;
+          entry_reason: string | null;
+          created_by: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          lead_id: string;
+          company_id: string;
+          contact_id?: string | null;
+          prospect_name?: string | null;
+          call_date?: string;
+          include_expansion?: boolean;
+          answers?: Record<string, string>;
+          block_status?: Record<string, string>;
+          score?: number;
+          consultant_experience?: string | null;
+          consultant_notes?: string | null;
+          pricing_discussed?: boolean | null;
+          decision_maker_present?: boolean | null;
+          flags?: string[];
+          recommended_entry?: string | null;
+          entry_reason?: string | null;
+          created_by?: string | null;
+        };
+        Update: Partial<Database["public"]["Tables"]["discovery_calls"]["Insert"]>;
+        Relationships: [];
+      };
+      deal_staff: {
+        Row: { deal_id: string; user_id: string; created_at: string };
+        Insert: { deal_id: string; user_id: string; created_at?: string };
+        Update: Partial<Database["public"]["Tables"]["deal_staff"]["Insert"]>;
+        Relationships: [];
+      };
+      deal_files: {
+        Row: {
+          id: string;
+          deal_id: string;
+          file_name: string;
+          storage_path: string;
+          size_bytes: number | null;
+          content_type: string | null;
+          uploaded_by: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          deal_id: string;
+          file_name: string;
+          storage_path: string;
+          size_bytes?: number | null;
+          content_type?: string | null;
+          uploaded_by?: string | null;
+        };
+        Update: Partial<Database["public"]["Tables"]["deal_files"]["Insert"]>;
         Relationships: [];
       };
       profiles: {
@@ -758,6 +837,116 @@ export type Database = {
         Update: Partial<Database["public"]["Tables"]["event_resources"]["Insert"]>;
         Relationships: [];
       };
+      mail_accounts: {
+        Row: {
+          id: string;
+          user_id: string;
+          email: string;
+          display_name: string | null;
+          refresh_token: string;
+          status: MailAccountStatus;
+          inbox_sync_link: string | null;
+          sent_sync_link: string | null;
+          last_synced_at: string | null;
+          sync_started_at: string | null;
+          last_error: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          email: string;
+          display_name?: string | null;
+          refresh_token: string;
+          status?: MailAccountStatus;
+          inbox_sync_link?: string | null;
+          sent_sync_link?: string | null;
+          last_synced_at?: string | null;
+          sync_started_at?: string | null;
+          last_error?: string | null;
+        };
+        Update: Partial<Database["public"]["Tables"]["mail_accounts"]["Insert"]>;
+        Relationships: [];
+      };
+      emails: {
+        Row: {
+          id: string;
+          account_id: string;
+          graph_id: string;
+          conversation_id: string | null;
+          direction: EmailDirection;
+          from_email: string | null;
+          from_name: string | null;
+          to_emails: string[];
+          cc_emails: string[];
+          participants: string[];
+          subject: string | null;
+          preview: string | null;
+          body: string | null;
+          sent_at: string;
+          is_read: boolean;
+          has_attachments: boolean;
+          web_link: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          account_id: string;
+          graph_id: string;
+          conversation_id?: string | null;
+          direction: EmailDirection;
+          from_email?: string | null;
+          from_name?: string | null;
+          to_emails?: string[];
+          cc_emails?: string[];
+          participants?: string[];
+          subject?: string | null;
+          preview?: string | null;
+          body?: string | null;
+          sent_at: string;
+          is_read?: boolean;
+          has_attachments?: boolean;
+          web_link?: string | null;
+        };
+        Update: Partial<Database["public"]["Tables"]["emails"]["Insert"]>;
+        Relationships: [];
+      };
+      meetings: {
+        Row: {
+          id: string;
+          account_id: string;
+          graph_id: string;
+          subject: string | null;
+          starts_at: string;
+          ends_at: string;
+          is_all_day: boolean;
+          location: string | null;
+          online_url: string | null;
+          organizer_email: string | null;
+          participants: string[];
+          web_link: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          account_id: string;
+          graph_id: string;
+          subject?: string | null;
+          starts_at: string;
+          ends_at: string;
+          is_all_day?: boolean;
+          location?: string | null;
+          online_url?: string | null;
+          organizer_email?: string | null;
+          participants?: string[];
+          web_link?: string | null;
+        };
+        Update: Partial<Database["public"]["Tables"]["meetings"]["Insert"]>;
+        Relationships: [];
+      };
     };
     Views: Record<string, never>;
     Functions: {
@@ -769,7 +958,7 @@ export type Database = {
         Args: {
           p_search?: string | null;
           p_statuses?: string[] | null;
-          p_owner?: string | null;
+          p_engagement?: string | null;
           p_industry?: string | null;
           p_community?: string | null;
           p_min_score?: number | null;
@@ -786,6 +975,7 @@ export type Database = {
         Returns: {
           id: string;
           status: string;
+          engagement: string;
           score: number;
           assigned_to: string | null;
           created_at: string;
@@ -808,7 +998,7 @@ export type Database = {
       crm_lead_stage_counts: {
         Args: {
           p_search?: string | null;
-          p_owner?: string | null;
+          p_engagement?: string | null;
           p_industry?: string | null;
           p_community?: string | null;
           p_min_score?: number | null;

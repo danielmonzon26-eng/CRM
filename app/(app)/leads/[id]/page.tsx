@@ -5,28 +5,36 @@ import {
   ArrowUpRight,
   Building2,
   CalendarDays,
+  CheckCircle2,
+  CheckSquare2,
   Handshake,
   Mail,
-  Phone,
   PhoneCall,
   RefreshCw,
   Sparkles,
   StickyNote,
   TrendingUp,
-  CheckCircle2,
+  Users,
 } from "lucide-react";
-import { LeadClassification } from "@/components/lead-classification";
-import { StatusSelect } from "@/components/status-select";
-import { AssigneeSelect } from "@/components/assignee-select";
-import { TaskList } from "@/components/task-list";
-import { TaskForm } from "@/components/task-form";
-import { DealCard } from "@/components/deal-card";
+import { ContactCards } from "@/components/contact-cards";
 import { CreateProposal } from "@/components/create-proposal";
+import { DealCard } from "@/components/deal-card";
+import { DiscoverySummary } from "@/components/discovery-summary";
 import { EventRegistrationsSection } from "@/components/event-registrations-section";
-import { getLeadDetail, getTeamMembers } from "@/lib/leads/queries";
-import { getTasksForSubject } from "@/lib/tasks/queries";
+import { LeadProperties } from "@/components/lead-properties";
+import { RecordCommunication } from "@/components/outlook/record-communication";
+import { EngagementPill, StatusPill } from "@/components/status-pill";
+import { TaskForm } from "@/components/task-form";
+import { TaskList } from "@/components/task-list";
+import { buttonClass } from "@/components/ui/button";
+import { getCurrentUser } from "@/lib/auth/session";
+import { toContactCard } from "@/lib/contacts/queries";
 import { getDealsForLead } from "@/lib/deals/queries";
+import { getDiscoveryCalls } from "@/lib/discovery/queries";
 import { getEventRegistrationsForLead } from "@/lib/events/queries";
+import { getLeadDetail } from "@/lib/leads/queries";
+import { canUserSend } from "@/lib/outlook/queries";
+import { getTasksForSubject } from "@/lib/tasks/queries";
 import { getInitials } from "@/lib/text";
 import { NoteForm } from "./note-form";
 import { RevenueForm } from "./revenue-form";
@@ -40,150 +48,120 @@ const ACTIVITY_META: Record<string, { label: string; icon: typeof StickyNote }> 
   call_logged: { label: "Call", icon: PhoneCall },
   sync_matched: { label: "Data sync", icon: RefreshCw },
   task_completed: { label: "Task completed", icon: CheckCircle2 },
-  deal_created: { label: "Deal created", icon: Handshake },
-  deal_stage_change: { label: "Deal stage change", icon: TrendingUp },
+  deal_created: { label: "Proposal created", icon: Handshake },
+  deal_stage_change: { label: "Proposal stage change", icon: TrendingUp },
   event_registration: { label: "Event registration", icon: CalendarDays },
 };
 
+const activityTime = new Intl.DateTimeFormat("en-CA", { dateStyle: "medium", timeStyle: "short", timeZone: "America/Edmonton" });
+
 export default async function LeadDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const [lead, members, tasks, deals, eventRegistrations] = await Promise.all([
+  const [lead, user, tasks, deals, eventRegistrations, discoveryCalls] = await Promise.all([
     getLeadDetail(id),
-    getTeamMembers(),
+    getCurrentUser(),
     getTasksForSubject({ leadId: id }),
     getDealsForLead(id),
     getEventRegistrationsForLead(id),
+    getDiscoveryCalls(id),
   ]);
   if (!lead) notFound();
 
-  const primaryContact = lead.contacts.find((c) => c.is_primary) ?? lead.contacts[0] ?? null;
+  const canSend = user ? await canUserSend(user.id) : false;
+  const contacts = lead.contacts.map((c) => toContactCard({ ...c, lead_id: lead.id }));
+  const primaryContact = contacts.find((c) => c.isPrimary) ?? contacts[0] ?? null;
+  const blockedReason = lead.engagement === "do_not_contact" ? `${lead.company.name} is marked Do Not Contact.` : undefined;
+  const openTasks = tasks.filter((t) => !t.completedAt).length;
+  const attended = eventRegistrations.filter((r) => r.checkedInAt).length;
+  const title = primaryContact ? primaryContact.name : lead.company.name;
 
   return (
-    <main className="mx-auto max-w-[1600px] px-4 py-6 sm:px-6 lg:px-8">
+    <main className="mx-auto max-w-[1400px] px-4 py-6 sm:px-6 lg:px-8">
       <Link href="/leads" className="inline-flex items-center gap-1 text-sm text-slate-500 hover:text-slate-900">
         <ArrowLeft className="h-3.5 w-3.5" strokeWidth={2} />
         Back to leads
       </Link>
 
-      <div className="mt-4 flex flex-wrap items-start justify-between gap-4">
-        <div className="flex items-start gap-3">
-          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-sm font-semibold text-slate-500">
-            {getInitials(lead.company.name) || <Building2 className="h-5 w-5" />}
+      <header className="mt-4 flex flex-wrap items-start justify-between gap-4">
+        <div className="flex min-w-0 items-start gap-3">
+          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-brand-50 text-sm font-semibold text-brand-700">
+            {getInitials(title) || <Building2 className="h-5 w-5" />}
           </div>
-          <div>
-            <h1 className="text-[28px] font-semibold leading-tight tracking-tight text-slate-900">{lead.company.name}</h1>
+          <div className="min-w-0">
+            <h1 className="break-words text-[28px] font-semibold leading-tight tracking-tight text-slate-900">{title}</h1>
             <p className="text-sm text-slate-500">
-              {lead.company.address_line ?? "No address on file"} · {lead.company.community ?? "Calgary"}
+              {primaryContact && (
+                <>
+                  {primaryContact.title ? `${primaryContact.title} at ` : ""}
+                  <Link href={`/companies/${lead.company.id}`} className="font-medium text-slate-700 hover:text-brand-700 hover:underline">
+                    {lead.company.name}
+                  </Link>
+                  {" · "}
+                </>
+              )}
+              {lead.company.community ?? lead.company.address_line ?? "Calgary"}
             </p>
-            {lead.company.website && (
-              <a
-                href={lead.company.website}
-                target="_blank"
-                rel="noreferrer"
-                className="text-sm text-brand-600 hover:underline"
-              >
-                {lead.company.website}
-              </a>
-            )}
+            <div className="mt-1.5 flex flex-wrap items-center gap-2">
+              <EngagementPill engagement={lead.engagement} />
+              <StatusPill status={lead.status} />
+              {lead.company.website && (
+                <a href={lead.company.website} target="_blank" rel="noreferrer" className="text-sm text-brand-700 hover:underline">
+                  {lead.company.website.replace(/^https?:\/\//, "")}
+                </a>
+              )}
+            </div>
           </div>
         </div>
-        <Link
-          href={`/companies/${lead.company.id}`}
-          className="flex items-center gap-1.5 rounded-md border border-slate-200 px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-50"
-        >
-          Company record
-          <ArrowUpRight className="h-3.5 w-3.5" strokeWidth={2} />
+        <Link href={`/companies/${lead.company.id}`} className={buttonClass("secondary")}>
+          Company page
+          <ArrowUpRight className="h-4 w-4" strokeWidth={2} />
         </Link>
-      </div>
+      </header>
 
-      <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-[1fr_300px]">
-        <div className="min-w-0 space-y-6">
-          <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-card">
-            <h2 className="text-sm font-semibold text-slate-700">Lead score: {lead.score}/100</h2>
-            {lead.scoreReasons.length > 0 ? (
-              <ul className="mt-2 space-y-1 text-sm text-slate-600">
-                {lead.scoreReasons.map((r, i) => (
-                  <li key={i}>
-                    +{r.points} — {r.reason}
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p className="mt-2 text-sm text-slate-400">No score breakdown available.</p>
-            )}
-          </section>
+      <dl className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <Stat icon={Users} label="Contacts" value={contacts.length} href="#contacts" />
+        <Stat icon={Handshake} label="Proposals" value={deals.length} href="#proposals" />
+        <Stat icon={CalendarDays} label="Events attended" value={attended} detail={eventRegistrations.length > attended ? `${eventRegistrations.length} registered` : undefined} href="#events" />
+        <Stat icon={CheckSquare2} label="Open tasks" value={openTasks} href="#tasks" />
+      </dl>
 
-          <section>
-            <h2 className="text-sm font-semibold text-slate-700">Contacts</h2>
-            <div className="mt-2 space-y-2">
-              {lead.contacts.length === 0 && (
-                <p className="text-sm text-slate-400">No contacts found yet — enrichment may not have run.</p>
-              )}
-              {lead.contacts.map((c) => (
-                <div key={c.id} className="flex items-start gap-3 rounded-lg border border-slate-200 bg-white p-3 shadow-card">
-                  <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brand-100 text-xs font-semibold text-brand-700">
-                    {getInitials(c.full_name)}
-                  </span>
-                  <div className="min-w-0 flex-1">
-                    <p className="flex items-center gap-2 font-medium text-slate-900">
-                      {c.full_name}
-                      {c.is_primary && (
-                        <span className="rounded-full bg-slate-900 px-2 py-0.5 text-[10px] text-white">Primary</span>
-                      )}
-                    </p>
-                    <p className="text-xs text-slate-500">{c.title ?? "Unknown title"}</p>
-                    <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-600">
-                      {c.email && (
-                        <span className="flex items-center gap-1">
-                          <Mail className="h-3 w-3 text-slate-400" strokeWidth={2} />
-                          {c.email}
-                          {c.email_confidence != null ? ` (${c.email_confidence}% confidence)` : ""}
-                        </span>
-                      )}
-                      {c.phone && (
-                        <span className="flex items-center gap-1">
-                          <Phone className="h-3 w-3 text-slate-400" strokeWidth={2} />
-                          {c.phone}
-                        </span>
-                      )}
-                      {c.linkedin_url && (
-                        <a href={c.linkedin_url} target="_blank" rel="noreferrer" className="text-brand-600 hover:underline">
-                          LinkedIn
-                        </a>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              ))}
+      <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-[1fr_320px]">
+        <div className="min-w-0 space-y-8">
+          <section id="contacts" aria-labelledby="contacts-title" className="scroll-mt-20">
+            <h2 id="contacts-title" className="text-sm font-semibold text-slate-700">Contacts at {lead.company.name} ({contacts.length})</h2>
+            <div className="mt-2">
+              <ContactCards contacts={contacts} canSend={canSend} blockedReason={blockedReason} emptyText="No contacts found yet." />
             </div>
           </section>
 
-          <section>
-            <div className="flex items-center justify-between">
-              <h2 className="text-sm font-semibold text-slate-700">Proposals</h2>
-              {deals.length === 0 && (
-                <CreateProposal
-                  companyId={lead.company.id}
-                  leadId={lead.id}
-                  primaryContactId={primaryContact?.id ?? null}
-                  defaultName={lead.company.name}
-                />
-              )}
+          <DiscoverySummary leadId={lead.id} calls={discoveryCalls} />
+
+          <section id="proposals" aria-labelledby="proposals-title" className="scroll-mt-20">
+            <div className="flex items-center justify-between gap-2">
+              <h2 id="proposals-title" className="text-sm font-semibold text-slate-700">Proposals ({deals.length})</h2>
+              <CreateProposal companyId={lead.company.id} leadId={lead.id} primaryContactId={primaryContact?.id ?? null} defaultName={lead.company.name} defaultWorkTypes={lead.programs} />
             </div>
             <div className="mt-2 space-y-2">
-              {deals.length === 0 && <p className="text-sm text-slate-400">No proposal yet for this lead.</p>}
+              {deals.length === 0 && <p className="text-sm text-slate-500">No proposal yet for this lead.</p>}
               {deals.map((d) => (
                 <DealCard key={d.id} deal={d} />
               ))}
             </div>
           </section>
 
-          <section>
+          <section id="events" className="scroll-mt-20">
             <EventRegistrationsSection registrations={eventRegistrations} />
           </section>
 
-          <section>
-            <h2 className="text-sm font-semibold text-slate-700">Tasks</h2>
+          <RecordCommunication
+            contactEmails={contacts.map((c) => c.email).filter((e): e is string => Boolean(e))}
+            leadId={lead.id}
+            emailTo={primaryContact?.email ?? contacts.find((c) => c.email)?.email}
+            blockedReason={blockedReason}
+          />
+
+          <section id="tasks" aria-labelledby="tasks-title" className="scroll-mt-20">
+            <h2 id="tasks-title" className="text-sm font-semibold text-slate-700">Tasks</h2>
             <div className="mt-2">
               <TaskForm leadId={lead.id} />
             </div>
@@ -192,13 +170,13 @@ export default async function LeadDetailPage({ params }: { params: Promise<{ id:
             </div>
           </section>
 
-          <section>
-            <h2 className="text-sm font-semibold text-slate-700">Activity</h2>
+          <section aria-labelledby="activity-title">
+            <h2 id="activity-title" className="text-sm font-semibold text-slate-700">Activity</h2>
             <div className="mt-2">
               <NoteForm leadId={lead.id} />
             </div>
             <ul className="mt-4 space-y-4 border-l border-slate-200 pl-4">
-              {lead.activities.length === 0 && <p className="text-sm text-slate-400">No activity yet.</p>}
+              {lead.activities.length === 0 && <p className="text-sm text-slate-500">No activity yet.</p>}
               {lead.activities.map((a) => {
                 const meta = ACTIVITY_META[a.type] ?? { label: "Note", icon: StickyNote };
                 const Icon = meta.icon;
@@ -209,7 +187,7 @@ export default async function LeadDetailPage({ params }: { params: Promise<{ id:
                     </span>
                     <div className="flex flex-wrap items-center gap-2">
                       <span className="font-medium text-slate-700">{meta.label}</span>
-                      <span className="text-xs text-slate-400">{new Date(a.created_at).toLocaleString()}</span>
+                      <span className="text-xs text-slate-500">{activityTime.format(new Date(a.created_at))}</span>
                     </div>
                     {a.body && <p className="mt-0.5 text-slate-600">{a.body}</p>}
                   </li>
@@ -220,27 +198,72 @@ export default async function LeadDetailPage({ params }: { params: Promise<{ id:
         </div>
 
         <aside className="space-y-4 lg:sticky lg:top-20 lg:self-start">
+          <LeadProperties leadId={lead.id} status={lead.status} engagement={lead.engagement} clientType={lead.clientType} programs={lead.programs} />
+
           <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-card">
-            <h2 className="text-xs font-semibold uppercase tracking-wide text-slate-400">Lead properties</h2>
-            <div className="mt-3 space-y-3">
-              <LeadClassification leadId={lead.id} clientType={lead.clientType} programs={lead.programs} />
-              <div>
-                <label className="text-xs font-medium text-slate-500">Status</label>
-                <div className="mt-1">
-                  <StatusSelect leadId={lead.id} status={lead.status} />
-                </div>
-              </div>
-              <div>
-                <label className="text-xs font-medium text-slate-500">Assigned to</label>
-                <div className="mt-1">
-                  <AssigneeSelect leadId={lead.id} assignedTo={lead.assignedTo} members={members} />
-                </div>
-              </div>
+            <h2 className="text-xs font-semibold uppercase tracking-wide text-slate-500">Company</h2>
+            <div className="mt-3">
               <RevenueForm leadId={lead.id} companyId={lead.company.id} value={lead.company.estimated_annual_revenue} />
             </div>
+            <dl className="mt-3 space-y-2.5 text-sm">
+              <div>
+                <dt className="text-xs text-slate-500">Industry</dt>
+                <dd className="break-words text-slate-900">{lead.company.industry ?? "—"}</dd>
+              </div>
+              <div>
+                <dt className="text-xs text-slate-500">Phone</dt>
+                <dd className="text-slate-900">{lead.company.phone ?? "—"}</dd>
+              </div>
+              <div>
+                <dt className="text-xs text-slate-500">Address</dt>
+                <dd className="break-words text-slate-900">{lead.company.address_line ?? "—"}</dd>
+              </div>
+            </dl>
+          </div>
+
+          <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-card">
+            <h2 className="text-xs font-semibold uppercase tracking-wide text-slate-500">Fit score {lead.score}/100</h2>
+            {lead.scoreReasons.length > 0 ? (
+              <ul className="mt-2 space-y-1 text-sm text-slate-600">
+                {lead.scoreReasons.map((r, i) => (
+                  <li key={i}>
+                    +{r.points} {r.reason}
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="mt-2 text-sm text-slate-500">No score breakdown yet.</p>
+            )}
           </div>
         </aside>
       </div>
     </main>
+  );
+}
+
+function Stat({
+  icon: Icon,
+  label,
+  value,
+  detail,
+  href,
+}: {
+  icon: typeof Users;
+  label: string;
+  value: number;
+  detail?: string;
+  href: string;
+}) {
+  return (
+    <a href={href} className="rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-card transition-colors hover:border-brand-200">
+      <dt className="flex items-center gap-1.5 text-xs font-medium text-slate-500">
+        <Icon aria-hidden="true" className="h-3.5 w-3.5" strokeWidth={2} />
+        {label}
+      </dt>
+      <dd className="mt-1 text-xl font-semibold tabular-nums text-slate-900">
+        {value.toLocaleString()}
+        {detail && <span className="ml-1.5 text-xs font-normal text-slate-500">{detail}</span>}
+      </dd>
+    </a>
   );
 }

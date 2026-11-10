@@ -2,33 +2,24 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { CalendarDays, FileText, GripVertical, MoreHorizontal, SearchX } from "lucide-react";
+import { CalendarDays, FileText, GripVertical, MoreHorizontal, Paperclip, SearchX } from "lucide-react";
 import { updateDealStage } from "@/app/actions/deals";
-import { OwnerAvatar, ProgramChips } from "@/components/lead-badges";
+import { ProgramChips } from "@/components/lead-badges";
+import { PaymentBadge, StaffAvatars } from "@/components/proposal-fields";
 import { buttonClass } from "@/components/ui/button";
 import { useFeedback } from "@/components/ui/feedback";
 import { FilterSelect, SearchField } from "@/components/ui/filter-controls";
 import { EmptyState } from "@/components/ui/page";
 import { formatMoney } from "@/lib/budgets/money";
 import type { ProposalRow } from "@/lib/deals/queries";
-import { DEAL_STAGES, DEAL_STAGE_META, OPEN_DEAL_STAGES } from "@/lib/deals/stages";
+import { DEAL_STAGES, DEAL_STAGE_META, OPEN_DEAL_STAGES, PAYMENT_LABELS } from "@/lib/deals/stages";
 import { CLIENT_TYPES, LEAD_PROGRAMS, clientTypeLabel } from "@/lib/leads/classification";
 import type { DealStage } from "@/lib/supabase/types";
 
 const MAX_CARD_PROGRAMS = 2;
 
-const STAGE_HEADERS: Record<DealStage, string> = {
-  discovery_scheduled: "bg-slate-100 border-slate-200",
-  discovery_completed: "bg-sky-50 border-sky-100",
-  qualified_opportunity: "bg-indigo-50 border-indigo-100",
-  proposal_sent: "bg-amber-50 border-amber-100",
-  negotiation_decision: "bg-purple-50 border-purple-100",
-  closed_won: "bg-emerald-50 border-emerald-100",
-  closed_lost: "bg-rose-50 border-rose-100",
-};
-
 type Sort = "closing" | "largest" | "newest";
-export type ProposalBoardFilters = { q: string; owner: string; clientType: string; program: string };
+export type ProposalBoardFilters = { q: string; staff: string; clientType: string; work: string; payment: string };
 
 const SORTERS: Record<Sort, (a: ProposalRow, b: ProposalRow) => number> = {
   closing: (a, b) => a.expectedCloseDate.localeCompare(b.expectedCloseDate),
@@ -42,14 +33,14 @@ function formatDay(day: string) {
 
 function ProposalCard({
   proposal,
-  ownerName,
+  staffNames,
   today,
   onDragStart,
   onDragEnd,
   onMove,
 }: {
   proposal: ProposalRow;
-  ownerName: string | null;
+  staffNames: string[];
   today: string;
   onDragStart: (proposal: ProposalRow) => void;
   onDragEnd: () => void;
@@ -83,16 +74,30 @@ function ProposalCard({
       <p className="mt-2 text-base font-semibold tabular-nums tracking-tight text-slate-900">{formatMoney(proposal.amount)}</p>
       <p className={`mt-1 flex items-center gap-1.5 text-xs ${overdue ? "font-medium text-rose-700" : "text-slate-600"}`}>
         <CalendarDays className="h-3 w-3 shrink-0" strokeWidth={2} />
-        {overdue ? "Past close date: " : "Closes "}{formatDay(proposal.expectedCloseDate)}
+        {proposal.stage === "accepted"
+          ? `Accepted ${proposal.acceptedOn ? formatDay(proposal.acceptedOn) : ""}`
+          : proposal.stage === "declined"
+            ? `Declined ${proposal.closedAt ? formatDay(proposal.closedAt.slice(0, 10)) : ""}`
+            : proposal.stage === "sent" && proposal.sentOn
+              ? `Sent ${formatDay(proposal.sentOn)}${overdue ? " · decision overdue" : ""}`
+              : `${overdue ? "Decision overdue: " : "Decision by "}${formatDay(proposal.expectedCloseDate)}`}
       </p>
       {proposal.nextStep && <p className="mt-1 truncate text-xs text-slate-600">Next: {proposal.nextStep}</p>}
-      {proposal.programs.length > 0 && (
+      {proposal.workTypes.length > 0 && (
         <div className="mt-2">
-          <ProgramChips programs={proposal.programs} limit={MAX_CARD_PROGRAMS} />
+          <ProgramChips programs={proposal.workTypes} limit={MAX_CARD_PROGRAMS} />
         </div>
       )}
       <div className="relative z-10 mt-2.5 flex items-center justify-end gap-1.5">
-        <OwnerAvatar name={ownerName} />
+        <PaymentBadge payment={proposal.payment} />
+        {proposal.fileCount > 0 && (
+          <span title={`${proposal.fileCount} file${proposal.fileCount === 1 ? "" : "s"}`} className="flex items-center gap-0.5 text-[11px] text-slate-500">
+            <Paperclip aria-hidden="true" className="h-3 w-3" strokeWidth={2} />
+            {proposal.fileCount}
+          </span>
+        )}
+        <span className="ml-auto" />
+        <StaffAvatars names={staffNames} />
         {/* Dragging needs a mouse, so moving also works from the keyboard and on touch. */}
         <label className="relative flex h-6 w-6 cursor-pointer items-center justify-center rounded text-slate-500 hover:bg-slate-100 focus-within:bg-slate-100">
           <MoreHorizontal className="h-4 w-4" strokeWidth={2} />
@@ -117,7 +122,7 @@ export function ProposalsBoard({
   initialFilters: ProposalBoardFilters;
   today: string;
 }) {
-  const { toast, promptText } = useFeedback();
+  const { toast } = useFeedback();
   const [local, setLocal] = useState(proposals);
   const [filters, setFilters] = useState(initialFilters);
   const [sort, setSort] = useState<Sort>("closing");
@@ -136,16 +141,17 @@ export function ProposalsBoard({
     window.history.replaceState(null, "", query ? `?${query}` : window.location.pathname);
   }
 
-  const memberName = (id: string | null) => (id ? members.find((m) => m.id === id)?.name ?? "Unknown" : null);
+  const staffNames = (ids: string[]) => ids.map((id) => members.find((m) => m.id === id)?.name ?? "Unknown");
 
   const visible = useMemo(() => {
     const term = filters.q.trim().toLowerCase();
     return local
       .filter((p) => {
         if (term && ![p.name, p.companyName, p.primaryContactName].some((text) => text?.toLowerCase().includes(term))) return false;
-        if (filters.owner && (filters.owner === "unassigned" ? p.owner !== null : p.owner !== filters.owner)) return false;
+        if (filters.staff && (filters.staff === "none" ? p.staffIds.length > 0 : !p.staffIds.includes(filters.staff))) return false;
         if (filters.clientType && p.clientType !== filters.clientType) return false;
-        if (filters.program && !p.programs.includes(filters.program)) return false;
+        if (filters.work && !p.workTypes.includes(filters.work)) return false;
+        if (filters.payment && (filters.payment === "none" ? p.payment !== null : p.payment !== filters.payment)) return false;
         return true;
       })
       .sort(SORTERS[sort]);
@@ -153,16 +159,11 @@ export function ProposalsBoard({
 
   async function move(proposal: ProposalRow, to: DealStage) {
     if (proposal.stage === to) return;
-    let reason: string | null = null;
-    if (to === "closed_lost") {
-      reason = await promptText({ title: `Why was ${proposal.name} lost?`, label: "Reason", confirmLabel: "Mark as lost" });
-      if (!reason) return;
-    }
     const before = local;
     // Moves immediately, and puts the card back if saving fails.
     setLocal((current) => current.map((p) => (p.id === proposal.id ? { ...p, stage: to } : p)));
     try {
-      await updateDealStage(proposal.id, to, reason);
+      await updateDealStage(proposal.id, to);
       toast(`${proposal.name} moved to ${DEAL_STAGE_META[to].label}`);
     } catch {
       setLocal(before);
@@ -181,15 +182,16 @@ export function ProposalsBoard({
     );
   }
 
-  const hasFilters = Boolean(filters.q || filters.owner || filters.clientType || filters.program);
+  const hasFilters = Boolean(filters.q || filters.staff || filters.clientType || filters.work || filters.payment);
 
   return (
     <div>
       <SearchField className="mb-3" label="Search proposals" placeholder="Search by proposal, company, or contact..." value={filters.q} onChange={(q) => setFilter({ q })} />
       <div className="mb-4 flex flex-wrap items-center gap-2">
         <FilterSelect label="Client type" value={filters.clientType} onChange={(clientType) => setFilter({ clientType })} options={CLIENT_TYPES.map(([value, label]) => ({ value: value as string, label }))} />
-        <FilterSelect label="Program" value={filters.program} onChange={(program) => setFilter({ program })} options={LEAD_PROGRAMS.map(([value, label]) => ({ value: value as string, label }))} />
-        <FilterSelect label="Owner" value={filters.owner} allLabel="Anyone" onChange={(owner) => setFilter({ owner })} options={[{ value: "unassigned", label: "Unassigned" }, ...members.map((m) => ({ value: m.id, label: m.name }))]} />
+        <FilterSelect label="Work" value={filters.work} onChange={(work) => setFilter({ work })} options={LEAD_PROGRAMS.map(([value, label]) => ({ value: value as string, label }))} />
+        <FilterSelect label="Staff" value={filters.staff} allLabel="Anyone" onChange={(staff) => setFilter({ staff })} options={[{ value: "none", label: "No staff yet" }, ...members.map((m) => ({ value: m.id, label: m.name }))]} />
+        <FilterSelect label="Paid" value={filters.payment} allLabel="Any" onChange={(payment) => setFilter({ payment })} options={[{ value: "paid", label: PAYMENT_LABELS.paid }, { value: "unpaid", label: PAYMENT_LABELS.unpaid }, { value: "none", label: "Not set" }]} />
         <FilterSelect label="Sort" required value={sort} onChange={(value) => setSort(value as Sort)} options={[{ value: "closing", label: "Closing soonest" }, { value: "largest", label: "Largest" }, { value: "newest", label: "Newest" }]} />
       </div>
 
@@ -198,11 +200,11 @@ export function ProposalsBoard({
           icon={SearchX}
           title="No proposals match"
           description="Try a different search or remove a filter."
-          action={hasFilters ? <button type="button" onClick={() => setFilter({ q: "", owner: "", clientType: "", program: "" })} className={buttonClass("secondary")}>Clear filters</button> : undefined}
+          action={hasFilters ? <button type="button" onClick={() => setFilter({ q: "", staff: "", clientType: "", work: "", payment: "" })} className={buttonClass("secondary")}>Clear filters</button> : undefined}
         />
       ) : (
         <div className="relative -mx-4 overflow-x-auto px-4 pb-3 sm:mx-0 sm:px-0">
-          <div className="grid auto-cols-[minmax(250px,1fr)] grid-flow-col gap-3">
+          <div className="grid auto-cols-[minmax(250px,1fr)] grid-flow-col gap-3 lg:grid-flow-row lg:grid-cols-4">
             {DEAL_STAGES.map((stage) => {
               const cards = visible.filter((p) => p.stage === stage);
               const value = cards.reduce((total, p) => total + p.amount, 0);
@@ -228,7 +230,7 @@ export function ProposalsBoard({
                   }}
                   className={`flex min-w-0 flex-col rounded-xl border bg-slate-50/70 transition-colors ${isTarget ? "border-brand-400 bg-brand-50/60" : "border-slate-200"}`}
                 >
-                  <header className={`rounded-t-xl border-b px-3 py-2.5 ${STAGE_HEADERS[stage]}`}>
+                  <header className={`rounded-t-xl border-b px-3 py-2.5 ${DEAL_STAGE_META[stage].header}`}>
                     <div className="flex items-center justify-between gap-2">
                       <h2 className="flex items-center gap-1.5 text-sm font-semibold text-slate-900">
                         <span className={`h-2 w-2 rounded-full ${DEAL_STAGE_META[stage].accent}`} />
@@ -243,7 +245,7 @@ export function ProposalsBoard({
                       <ProposalCard
                         key={proposal.id}
                         proposal={proposal}
-                        ownerName={memberName(proposal.owner)}
+                        staffNames={staffNames(proposal.staffIds)}
                         today={today}
                         onDragStart={setDragging}
                         onDragEnd={() => {

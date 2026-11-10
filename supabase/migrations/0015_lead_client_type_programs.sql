@@ -7,14 +7,16 @@ alter table public.leads
   add column if not exists client_type text,
   add column if not exists programs text[] not null default '{}';
 
+-- These checks also accept the values 0018 maps leads to, since every migration re-runs
+-- and these run first; 0018 then narrows them to the new values only.
 alter table public.leads drop constraint if exists leads_client_type_check;
 alter table public.leads add constraint leads_client_type_check check (
-  client_type is null or client_type in ('government', 'private_business', 'small_business', 'medium_business', 'start_up')
+  client_type is null or client_type in ('government', 'private_business', 'small_business', 'medium_business', 'start_up', 'non_profit', 'private')
 );
 
 alter table public.leads drop constraint if exists leads_programs_check;
 alter table public.leads add constraint leads_programs_check check (
-  programs <@ array['events_education', 'catapult_ready', 'capital_raise', 'company_exit', 'ip_programs', 'revenue_growth']::text[]
+  programs <@ array['events_education', 'catapult_ready', 'capital_raise', 'company_exit', 'ip_programs', 'revenue_growth', 'elevate_ip', 'education', 'operations_assistance', 'capital']::text[]
 );
 
 create index if not exists leads_client_type_idx on public.leads (client_type);

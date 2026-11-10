@@ -7,8 +7,8 @@ export function StatsBar({ forecast }: { forecast: PipelineForecast }) {
     ["Open proposals", forecast.openCount.toLocaleString()],
     ["Open value", formatMoney(forecast.openValue)],
     ["Weighted value", formatMoney(Math.round(forecast.weightedValue))],
-    ["Won", `${forecast.closedWonCount.toLocaleString()} · ${formatMoney(forecast.closedWonValue)}`],
-    ["Lost", forecast.closedLostCount.toLocaleString()],
+    ["Accepted", `${forecast.closedWonCount.toLocaleString()} · ${formatMoney(forecast.closedWonValue)}`],
+    ["Declined", forecast.closedLostCount.toLocaleString()],
   ];
 
   return (

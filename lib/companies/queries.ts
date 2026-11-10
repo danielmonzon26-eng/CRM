@@ -1,6 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { fetchAllPages } from "@/lib/supabase/paginate";
-import type { LeadStatus } from "@/lib/supabase/types";
+import type { LeadEngagement, LeadStatus } from "@/lib/supabase/types";
 
 export type CompanyListRow = {
   id: string;
@@ -10,6 +10,7 @@ export type CompanyListRow = {
   estimatedAnnualRevenue: number | null;
   leadId: string | null;
   status: LeadStatus | null;
+  engagement: LeadEngagement | null;
   score: number | null;
   contactCount: number;
   clientType: string | null;
@@ -27,7 +28,7 @@ export async function getCompaniesList(): Promise<CompanyListRow[]> {
   if (companies.length === 0) return [];
 
   const leads = await fetchAllPages((from, to) =>
-    supabase.from("leads").select("id, company_id, status, score, client_type, programs").range(from, to)
+    supabase.from("leads").select("id, company_id, status, engagement, score, client_type, programs").range(from, to)
   );
   const leadByCompany = new Map(leads.map((l) => [l.company_id, l]));
 
@@ -51,6 +52,7 @@ export async function getCompaniesList(): Promise<CompanyListRow[]> {
       estimatedAnnualRevenue: c.estimated_annual_revenue,
       leadId: lead?.id ?? null,
       status: lead?.status ?? null,
+      engagement: lead?.engagement ?? null,
       score: lead?.score ?? null,
       contactCount: lead ? contactCounts.get(lead.id) ?? 0 : 0,
       clientType: lead?.client_type ?? null,
@@ -79,6 +81,7 @@ export type CompanyDetail = {
   estimated_annual_revenue: number | null;
   created_at: string;
   leadId: string | null;
+  lead: { id: string; status: LeadStatus; engagement: LeadEngagement; clientType: string | null; programs: string[] } | null;
 };
 
 export async function getCompanyDetail(companyId: string): Promise<CompanyDetail | null> {
@@ -88,7 +91,17 @@ export async function getCompanyDetail(companyId: string): Promise<CompanyDetail
   if (error) throw error;
   if (!company) return null;
 
-  const { data: lead } = await supabase.from("leads").select("id").eq("company_id", companyId).maybeSingle();
+  const { data: lead } = await supabase
+    .from("leads")
+    .select("id, status, engagement, client_type, programs")
+    .eq("company_id", companyId)
+    .maybeSingle();
 
-  return { ...company, leadId: lead?.id ?? null };
+  return {
+    ...company,
+    leadId: lead?.id ?? null,
+    lead: lead
+      ? { id: lead.id, status: lead.status, engagement: lead.engagement, clientType: lead.client_type, programs: lead.programs }
+      : null,
+  };
 }

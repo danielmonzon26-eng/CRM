@@ -4,7 +4,7 @@ import { fetchAllPages } from "@/lib/supabase/paginate";
 import { createClient } from "@/lib/supabase/server";
 import type { EventFormat, EventStatus } from "@/lib/supabase/types";
 
-const OPEN_STAGES_EXCLUDED = new Set(["closed_won", "closed_lost"]);
+const OPEN_STAGES_EXCLUDED = new Set(["accepted", "declined"]);
 // A contact and registration created together share a transaction timestamp.
 const SAME_MOMENT_MS = 1000;
 
@@ -145,7 +145,7 @@ export async function getEventReport(eventId?: string): Promise<EventReportRow[]
         other,
         total,
         openPipeline: sumMoney(influenced.filter((d) => !OPEN_STAGES_EXCLUDED.has(d.stage)).map((d) => d.amount)),
-        closedWon: sumMoney(influenced.filter((d) => d.stage === "closed_won").map((d) => d.amount)),
+        closedWon: sumMoney(influenced.filter((d) => d.stage === "accepted").map((d) => d.amount)),
       },
       costs: {
         budget,

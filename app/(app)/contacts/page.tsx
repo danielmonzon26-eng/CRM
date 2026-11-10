@@ -1,14 +1,24 @@
 import Link from "next/link";
 import { Search } from "lucide-react";
 import { getContactsList } from "@/lib/contacts/queries";
-import { StatusPill } from "@/components/status-pill";
+import { EngagementPill, StatusPill } from "@/components/status-pill";
+import { ALL_ENGAGEMENTS, ENGAGEMENT_LABELS, isLeadEngagement } from "@/lib/leads/filters";
 import { getInitials } from "@/lib/text";
 
 export const dynamic = "force-dynamic";
 
-export default async function ContactsPage({ searchParams }: { searchParams: Promise<{ q?: string }> }) {
-  const { q } = await searchParams;
-  const contacts = await getContactsList(q);
+export default async function ContactsPage({ searchParams }: { searchParams: Promise<{ q?: string; status?: string }> }) {
+  const { q, status } = await searchParams;
+  const activeStatus = isLeadEngagement(status) ? status : null;
+  const everyone = await getContactsList(q);
+  const contacts = activeStatus ? everyone.filter((c) => c.engagement === activeStatus) : everyone;
+  const tabHref = (value: string | null) => {
+    const params = new URLSearchParams();
+    if (q) params.set("q", q);
+    if (value) params.set("status", value);
+    const query = params.toString();
+    return query ? `/contacts?${query}` : "/contacts";
+  };
 
   return (
     <main className="mx-auto max-w-[1600px] px-4 py-6 sm:px-6 lg:px-8">
@@ -16,10 +26,11 @@ export default async function ContactsPage({ searchParams }: { searchParams: Pro
         <div>
           <h1 className="text-[28px] font-semibold leading-tight tracking-tight text-slate-900">Contacts</h1>
           <p className="text-sm text-slate-500">
-            {contacts.length.toLocaleString()} contact{contacts.length === 1 ? "" : "s"}
+            Everyone at every company. Engaged companies also appear under Leads.
           </p>
         </div>
         <form action="/contacts" className="relative w-full max-w-xs">
+          {activeStatus && <input type="hidden" name="status" value={activeStatus} />}
           <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" strokeWidth={2} />
           <input
             type="search"
@@ -32,8 +43,25 @@ export default async function ContactsPage({ searchParams }: { searchParams: Pro
         </form>
       </header>
 
-      <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-card">
-        <table className="w-full text-left text-sm">
+      <nav aria-label="Filter by status" className="mb-4 flex flex-wrap gap-1 border-b border-slate-200">
+        {[null, ...ALL_ENGAGEMENTS].map((value) => {
+          const count = value ? everyone.filter((c) => c.engagement === value).length : everyone.length;
+          const active = activeStatus === value;
+          return (
+            <Link
+              key={value ?? "all"}
+              href={tabHref(value)}
+              aria-current={active ? "page" : undefined}
+              className={`-mb-px border-b-2 px-3 py-2 text-sm font-medium ${active ? "border-brand-600 text-brand-700" : "border-transparent text-slate-500 hover:text-slate-700"}`}
+            >
+              {value ? ENGAGEMENT_LABELS[value] : "All"} <span className="text-xs font-normal text-slate-400">{count.toLocaleString()}</span>
+            </Link>
+          );
+        })}
+      </nav>
+
+      <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-card">
+        <table className="w-full min-w-[960px] text-left text-sm">
           <thead className="border-b border-slate-200 bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
             <tr>
               <th className="px-4 py-2.5 font-medium">Name</th>
@@ -41,7 +69,8 @@ export default async function ContactsPage({ searchParams }: { searchParams: Pro
               <th className="px-4 py-2.5 font-medium">Company</th>
               <th className="px-4 py-2.5 font-medium">Email</th>
               <th className="px-4 py-2.5 font-medium">Phone</th>
-              <th className="px-4 py-2.5 font-medium">Proposal status</th>
+              <th className="px-4 py-2.5 font-medium">Status</th>
+              <th className="px-4 py-2.5 font-medium">Stage</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
@@ -69,13 +98,16 @@ export default async function ContactsPage({ searchParams }: { searchParams: Pro
                 <td className="px-4 py-2.5 text-slate-600">{c.email ?? "—"}</td>
                 <td className="px-4 py-2.5 text-slate-600">{c.phone ?? "—"}</td>
                 <td className="px-4 py-2.5">
+                  <EngagementPill engagement={c.engagement} />
+                </td>
+                <td className="px-4 py-2.5">
                   <StatusPill status={c.status} />
                 </td>
               </tr>
             ))}
             {contacts.length === 0 && (
               <tr>
-                <td colSpan={6} className="px-4 py-10 text-center text-sm text-slate-400">
+                <td colSpan={7} className="px-4 py-10 text-center text-sm text-slate-400">
                   No contacts found.
                 </td>
               </tr>

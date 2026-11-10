@@ -1,72 +1,50 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { updateDealStage } from "@/app/actions/deals";
+import { useFeedback } from "@/components/ui/feedback";
 import { DEAL_STAGES, DEAL_STAGE_META } from "@/lib/deals/stages";
 import type { DealStage } from "@/lib/supabase/types";
 
+/** The four proposal stages as one row of buttons, so the current one is obvious. */
 export function DealStageSelect({ dealId, stage }: { dealId: string; stage: DealStage }) {
+  const router = useRouter();
+  const { toast } = useFeedback();
   const [isPending, startTransition] = useTransition();
-  const [confirmingLoss, setConfirmingLoss] = useState(false);
-  const [reason, setReason] = useState("");
-
-  if (confirmingLoss) {
-    return (
-      <div className="flex flex-col gap-1.5 rounded-md border border-rose-200 bg-rose-50 p-2">
-        <label className="text-[11px] font-medium text-rose-700">Reason for losing this proposal</label>
-        <input
-          autoFocus
-          value={reason}
-          onChange={(e) => setReason(e.target.value)}
-          placeholder="e.g. Went with a competitor, budget cut…"
-          className="rounded-md border border-rose-200 bg-white px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-rose-300"
-        />
-        <div className="flex gap-1.5">
-          <button
-            type="button"
-            disabled={!reason.trim() || isPending}
-            onClick={() =>
-              startTransition(async () => {
-                await updateDealStage(dealId, "closed_lost", reason);
-                setConfirmingLoss(false);
-              })
-            }
-            className="flex-1 rounded-md bg-rose-600 px-2 py-1 text-xs font-medium text-white hover:bg-rose-700 disabled:opacity-50"
-          >
-            Confirm lost
-          </button>
-          <button
-            type="button"
-            onClick={() => setConfirmingLoss(false)}
-            className="rounded-md border border-slate-200 px-2 py-1 text-xs text-slate-600 hover:bg-white"
-          >
-            Cancel
-          </button>
-        </div>
-      </div>
-    );
-  }
 
   return (
-    <select
-      value={stage}
-      disabled={isPending}
-      onChange={(e) => {
-        const next = e.target.value as DealStage;
-        if (next === "closed_lost") {
-          setConfirmingLoss(true);
-          return;
-        }
-        startTransition(() => updateDealStage(dealId, next));
-      }}
-      className="w-full rounded-md border border-slate-200 bg-slate-50 px-2 py-1 text-xs font-medium text-slate-700 focus:border-brand-400 focus:outline-none focus:ring-1 focus:ring-brand-200 disabled:opacity-50"
-      onClick={(e) => e.stopPropagation()}
-    >
-      {DEAL_STAGES.map((s) => (
-        <option key={s} value={s}>
-          {DEAL_STAGE_META[s].label}
-        </option>
-      ))}
-    </select>
+    <div role="radiogroup" aria-label="Proposal stage" className="grid grid-cols-2 gap-1.5 sm:grid-cols-4">
+      {DEAL_STAGES.map((s) => {
+        const active = s === stage;
+        return (
+          <button
+            key={s}
+            type="button"
+            role="radio"
+            aria-checked={active}
+            disabled={isPending}
+            onClick={() => {
+              if (active) return;
+              startTransition(async () => {
+                try {
+                  await updateDealStage(dealId, s);
+                  toast(`Moved to ${DEAL_STAGE_META[s].label}`);
+                  router.refresh();
+                } catch {
+                  toast("The stage didn't change. Please try again.", "error");
+                }
+              });
+            }}
+            className={`flex items-center justify-center gap-1.5 rounded-lg border px-2 py-2 text-sm font-medium transition-colors disabled:opacity-60 ${
+              active ? `border-current ${DEAL_STAGE_META[s].pill}` : "border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:text-slate-900"
+            }`}
+          >
+            <span aria-hidden="true" className={`h-2 w-2 rounded-full ${DEAL_STAGE_META[s].accent}`} />
+            {DEAL_STAGE_META[s].short}
+          </button>
+        );
+      })}
+    </div>
   );
 }

@@ -12,14 +12,15 @@ export default async function ProposalsPage({ searchParams }: { searchParams: Pr
   const [forecast, proposals, members] = await Promise.all([getPipelineForecast(), getProposalBoard(), getTeamMembers()]);
   const filters: ProposalBoardFilters = {
     q: params.q ?? "",
-    owner: params.owner ?? "",
+    staff: params.staff ?? "",
     clientType: params.clientType ?? "",
-    program: params.program ?? "",
+    work: params.work ?? "",
+    payment: params.payment ?? "",
   };
 
   return (
     <Page>
-      <PageHeader title="Proposals" subtitle="Work every proposal from first meeting to close." />
+      <PageHeader title="Proposals" subtitle="Every proposal from first draft to accepted or declined." />
       <StatsBar forecast={forecast} />
       <ProposalsBoard
         proposals={proposals}
