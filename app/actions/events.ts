@@ -66,7 +66,14 @@ function parseEventInput(input: EventInput, requireComplete: boolean) {
 
   const capacity = parseNumber(input.capacity);
   if (capacity !== null && (!Number.isInteger(capacity) || capacity < 1)) {
-    return { error: "Capacity must be a whole number of at least 1, or left blank." };
+    return { error: "Max attendees must be a whole number of at least 1, or left blank." };
+  }
+  const targetAttendees = parseNumber(input.targetAttendees ?? "");
+  if (targetAttendees !== null && (!Number.isInteger(targetAttendees) || targetAttendees < 1)) {
+    return { error: "The target must be a whole number of at least 1, or left blank." };
+  }
+  if (targetAttendees !== null && capacity !== null && targetAttendees > capacity) {
+    return { error: "The target can't be more than the max attendees." };
   }
 
   const ticketPrice = input.ticketType === "paid" ? parseNumber(input.ticketPrice) : null;
@@ -96,6 +103,7 @@ function parseEventInput(input: EventInput, requireComplete: boolean) {
       agenda: input.agenda.filter((a) => a.title.trim()),
       speakers: input.speakers.filter((s) => s.name.trim()),
       capacity,
+      target_attendees: targetAttendees,
       ticket_type: input.ticketType,
       ticket_price: ticketPrice,
       collect_company: input.collectCompany,
@@ -130,6 +138,7 @@ function rowToInput(row: EventRow): EventInput {
     ticketType: row.ticket_type,
     ticketPrice: row.ticket_price?.toString() ?? "",
     capacity: row.capacity?.toString() ?? "",
+    targetAttendees: row.target_attendees?.toString() ?? "",
     collectCompany: row.collect_company,
     collectPhone: row.collect_phone,
     waitlistEnabled: row.waitlist_enabled,

@@ -39,6 +39,7 @@ function toInput(event?: EventRow): EventInput {
     ticketType: event?.ticket_type ?? "free",
     ticketPrice: event?.ticket_price?.toString() ?? "",
     capacity: event?.capacity?.toString() ?? "",
+    targetAttendees: event?.target_attendees?.toString() ?? "",
     collectCompany: event?.collect_company ?? true,
     collectPhone: event?.collect_phone ?? true,
     waitlistEnabled: event?.waitlist_enabled ?? false,
@@ -372,8 +373,14 @@ export function EventWizard({
                   </div>
                 )}
                 <div>
-                  <label className={LABEL} htmlFor="capacity">Capacity</label>
+                  <label className={LABEL} htmlFor="targetAttendees">Target attendees</label>
+                  <input id="targetAttendees" type="number" min={1} step={1} placeholder="No target" value={values.targetAttendees} onChange={(e) => set("targetAttendees", e.target.value)} className={INPUT} />
+                  <p className="mt-1 text-xs text-slate-500">The number you&apos;re aiming for. Shows how promotion is going.</p>
+                </div>
+                <div>
+                  <label className={LABEL} htmlFor="capacity">Max attendees</label>
                   <input id="capacity" type="number" min={1} step={1} placeholder="Unlimited" value={values.capacity} onChange={(e) => set("capacity", e.target.value)} className={INPUT} />
+                  <p className="mt-1 text-xs text-slate-500">Registration closes here, or people join the waitlist.</p>
                 </div>
               </div>
               {values.ticketType === "paid" && (
@@ -601,7 +608,8 @@ function SummaryList({
     ["Format", FORMAT_LABELS[values.format]],
     ...(values.format !== "online" ? ([["Venue", values.venueName || "Not set"]] as [string, string][]) : []),
     ["Tickets", values.ticketType === "paid" ? `Paid${values.ticketPrice ? `, $${values.ticketPrice}` : ""}` : "Free"],
-    ["Capacity", values.capacity || "Unlimited"],
+    ["Target attendees", values.targetAttendees || "No target"],
+    ["Max attendees", values.capacity || "Unlimited"],
     ["Budget", values.budgetAmount ? `$${Number(values.budgetAmount).toLocaleString()}` : "Not set"],
   ];
   return (

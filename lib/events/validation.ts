@@ -18,6 +18,7 @@ export type EventInput = {
   ticketType: EventTicketType;
   ticketPrice: string;
   capacity: string;
+  targetAttendees: string;
   collectCompany: boolean;
   collectPhone: boolean;
   waitlistEnabled: boolean;

@@ -3,6 +3,7 @@ import { fetchAllPages } from "@/lib/supabase/paginate";
 import { getBudgetSnapshot, type BudgetSnapshot } from "@/lib/budgets/queries";
 import { getPipelineForecast } from "@/lib/deals/queries";
 import { isEventOver } from "@/lib/events/format";
+import { registrationProgress, type RegistrationProgress } from "@/lib/events/progress";
 import type { ActivityType, EventFormat, EventStatus, TaskType } from "@/lib/supabase/types";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -19,6 +20,7 @@ export type DashboardEvent = {
   status: EventStatus;
   capacity: number | null;
   registered: number;
+  progress: RegistrationProgress;
 };
 
 export type DashboardTask = {
@@ -109,7 +111,7 @@ export async function getDashboardData(): Promise<DashboardData> {
     fetchAllPages((from, to) =>
       supabase
         .from("events")
-        .select("id, title, program, starts_at, ends_at, format, venue_name, status, capacity")
+        .select("id, title, program, starts_at, ends_at, format, venue_name, status, capacity, target_attendees, created_at")
         .neq("status", "cancelled")
         .is("archived_at", null)
         .order("starts_at")
@@ -229,6 +231,13 @@ export async function getDashboardData(): Promise<DashboardData> {
       status: e.status,
       capacity: e.capacity,
       registered: registeredByEvent.get(e.id) ?? 0,
+      progress: registrationProgress({
+        registered: registeredByEvent.get(e.id) ?? 0,
+        target: e.target_attendees,
+        capacity: e.capacity,
+        createdAt: e.created_at,
+        startsAt: e.starts_at,
+      }),
     })),
     tasksDue: tasks.map((t) => ({
       id: t.id,
