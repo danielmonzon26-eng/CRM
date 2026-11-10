@@ -47,6 +47,7 @@ export type EmailDirection = "inbound" | "outbound";
 
 export type DealStage = "in_development" | "sent" | "accepted" | "declined";
 export type DealPayment = "paid" | "unpaid";
+export type NoteKind = "note" | "call" | "meeting" | "email";
 
 // supabase-js's generated-types contract expects each table to declare its foreign-key
 // relationships (used for typed nested `select()` joins). None are modeled by hand here.
@@ -386,6 +387,36 @@ export type Database = {
           changed_at?: string;
         };
         Update: Partial<Database["public"]["Tables"]["deal_stage_history"]["Insert"]>;
+        Relationships: [];
+      };
+      lead_notes: {
+        Row: {
+          id: string;
+          lead_id: string;
+          company_id: string;
+          contact_id: string | null;
+          kind: NoteKind;
+          body: string;
+          occurred_at: string;
+          pinned: boolean;
+          created_by: string | null;
+          updated_by: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          lead_id: string;
+          company_id: string;
+          contact_id?: string | null;
+          kind?: NoteKind;
+          body: string;
+          occurred_at?: string;
+          pinned?: boolean;
+          created_by?: string | null;
+          updated_by?: string | null;
+        };
+        Update: Partial<Database["public"]["Tables"]["lead_notes"]["Insert"]>;
         Relationships: [];
       };
       discovery_calls: {
