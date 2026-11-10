@@ -55,7 +55,7 @@ export function LeadClassification({
         </select>
       </div>
       <fieldset disabled={isPending}>
-        <legend className="text-xs font-medium text-slate-500">Programs of interest</legend>
+        <legend className="text-xs font-medium text-slate-500">Work we do</legend>
         <div className="mt-1.5 space-y-1.5">
           {LEAD_PROGRAMS.map(([value, label]) => (
             <label key={value} className="flex items-center gap-2 text-sm text-slate-700">

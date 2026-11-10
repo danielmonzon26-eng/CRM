@@ -10,10 +10,10 @@ import { useFeedback } from "@/components/ui/feedback";
 import { Skeleton } from "@/components/ui/skeleton";
 import { NAICS_SECTORS, industryLabelForCode, parseIndustry } from "@/lib/industries/naics";
 import { CLIENT_TYPES, LEAD_PROGRAMS } from "@/lib/leads/classification";
-import { ALL_STATUSES, STATUS_LABELS } from "@/lib/leads/filters";
+import { ALL_ENGAGEMENTS, ALL_STATUSES, ENGAGEMENT_LABELS, STATUS_LABELS } from "@/lib/leads/filters";
 import { getQuickEditChanges, type QuickEditChanges, type QuickEditRecord, type QuickEditValues } from "@/lib/leads/quick-edit";
 import type { LeadFacets } from "@/lib/leads/search";
-import type { LeadStatus } from "@/lib/supabase/types";
+import type { LeadEngagement, LeadStatus } from "@/lib/supabase/types";
 
 const FIELD = "mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-normal text-slate-900 focus:border-brand-400 focus:outline-none focus:ring-2 focus:ring-brand-100";
 const LABEL = "block text-sm font-medium text-slate-700";
@@ -25,13 +25,11 @@ type Member = { id: string; name: string };
 function QuickEditFields({
   record,
   values,
-  members,
   facets,
   onChange,
 }: {
   record: QuickEditRecord;
   values: QuickEditValues;
-  members: Member[];
   facets: LeadFacets;
   onChange: (patch: Partial<QuickEditValues>) => void;
 }) {
@@ -47,16 +45,15 @@ function QuickEditFields({
         <h3 className={SECTION_TITLE}>Lead</h3>
         <div className="mt-2 grid gap-3 sm:grid-cols-3">
           <label className={LABEL}>
-            Status
+            Stage
             <select value={values.status} onChange={(e) => onChange({ status: e.target.value as LeadStatus })} className={FIELD}>
               {ALL_STATUSES.map((s) => <option key={s} value={s}>{STATUS_LABELS[s]}</option>)}
             </select>
           </label>
           <label className={LABEL}>
-            Owner
-            <select value={values.assignedTo} onChange={(e) => onChange({ assignedTo: e.target.value })} className={FIELD}>
-              <option value="">Unassigned</option>
-              {members.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
+            Status
+            <select value={values.engagement} onChange={(e) => onChange({ engagement: e.target.value as LeadEngagement })} className={FIELD}>
+              {ALL_ENGAGEMENTS.map((s) => <option key={s} value={s}>{ENGAGEMENT_LABELS[s]}</option>)}
             </select>
           </label>
           <label className={LABEL}>
@@ -68,7 +65,7 @@ function QuickEditFields({
           </label>
         </div>
         <fieldset className="mt-3">
-          <legend className={LABEL}>Programs</legend>
+          <legend className={LABEL}>Work we do</legend>
           <div className="mt-1.5 grid gap-x-3 gap-y-1.5 sm:grid-cols-2">
             {LEAD_PROGRAMS.map(([value, label]) => (
               <label key={value} className="flex items-center gap-2 text-sm text-slate-700">
@@ -259,7 +256,6 @@ export function LeadQuickEditDialog({
             <QuickEditFields
               record={record}
               values={values}
-              members={members}
               facets={facets}
               onChange={(patch) => {
                 setConfirmingDiscard(false);

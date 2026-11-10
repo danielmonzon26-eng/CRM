@@ -89,6 +89,14 @@ function toAccount(row: {
   };
 }
 
+/** Whether this user can send from the CRM: Outlook is set up and their mailbox is connected. */
+export async function canUserSend(userId: string): Promise<boolean> {
+  const { isOutlookConfigured } = await import("./graph");
+  if (!isOutlookConfigured()) return false;
+  const accounts = await getMailAccounts();
+  return accounts.some((a) => a.userId === userId && a.status === "connected");
+}
+
 export async function getMailAccounts(): Promise<MailAccount[]> {
   const supabase = await createClient();
   const { data } = await supabase.from("mail_accounts").select(ACCOUNT_COLUMNS).order("email");

@@ -53,6 +53,34 @@ function parseAddresses(value: string): string[] | null {
   return list.every((a) => EMAIL_PATTERN.test(a)) ? [...new Set(list)] : null;
 }
 
+/** The name of a Do Not Contact company among the recipients or the lead, if any. */
+async function doNotContactCompany(
+  admin: ReturnType<typeof createAdminClient>,
+  addresses: string[],
+  leadId?: string
+): Promise<string | null> {
+  const leadIds = new Set<string>(leadId ? [leadId] : []);
+  if (addresses.length > 0) {
+    const { data: contacts } = await admin
+      .from("contacts")
+      .select("lead_id, email")
+      .or(addresses.map((a) => `email.ilike.${a.replace(/[,()%_\\]/g, "")}`).join(","));
+    for (const c of contacts ?? []) if (c.email && addresses.includes(c.email.trim().toLowerCase())) leadIds.add(c.lead_id);
+  }
+  if (leadIds.size === 0) return null;
+
+  const { data: leads } = await admin
+    .from("leads")
+    .select("company_id")
+    .in("id", [...leadIds])
+    .eq("engagement", "do_not_contact")
+    .limit(1);
+  const companyId = leads?.[0]?.company_id;
+  if (!companyId) return null;
+  const { data: company } = await admin.from("companies").select("name").eq("id", companyId).maybeSingle();
+  return company?.name ?? "This company";
+}
+
 export type SendEmailInput = {
   to: string;
   cc?: string;
@@ -82,6 +110,11 @@ export async function sendOutlookEmail(input: SendEmailInput): Promise<ActionRes
   if (subject.length > 255 || body.length > 50_000) return { error: "That message is too long." };
 
   const admin = createAdminClient();
+
+  // Do Not Contact covers the whole company: its lead and every contact on it.
+  const blocked = await doNotContactCompany(admin, [...to, ...cc], input.leadId);
+  if (blocked) return { error: `${blocked} is marked Do Not Contact.` };
+
   const { data: account } = await admin.from("mail_accounts").select("*").eq("user_id", user.id).maybeSingle();
   if (!account) return { error: "Connect your Outlook first, on the Communication page." };
   if (account.status !== "connected") return { error: "Your Outlook needs to be connected again, on the Communication page." };

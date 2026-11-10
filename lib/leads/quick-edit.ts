@@ -1,11 +1,11 @@
 import { isClientType, isLeadProgram } from "@/lib/leads/classification";
-import { ALL_STATUSES } from "@/lib/leads/filters";
-import type { LeadStatus } from "@/lib/supabase/types";
+import { ALL_STATUSES, isLeadEngagement } from "@/lib/leads/filters";
+import type { LeadEngagement, LeadStatus } from "@/lib/supabase/types";
 
 /** What the quick edit form holds. An empty string means the field is blank. */
 export type QuickEditValues = {
   status: LeadStatus;
-  assignedTo: string;
+  engagement: LeadEngagement;
   clientType: string;
   programs: string[];
   companyName: string;
@@ -73,9 +73,10 @@ function cleanWebsite(value: string): string | null {
 }
 
 export function checkQuickEditChanges(changes: QuickEditChanges, hasContact: boolean): { error: string } | { changes: QuickEditChanges } {
-  if (changes.status && !ALL_STATUSES.includes(changes.status)) return { error: "That isn't a valid status." };
+  if (changes.status && !ALL_STATUSES.includes(changes.status)) return { error: "That isn't a valid stage." };
+  if (changes.engagement && !isLeadEngagement(changes.engagement)) return { error: "That isn't a valid status." };
   if (changes.clientType && !isClientType(changes.clientType)) return { error: "That isn't a valid client type." };
-  if (changes.programs && !changes.programs.every(isLeadProgram)) return { error: "That isn't a valid program." };
+  if (changes.programs && !changes.programs.every(isLeadProgram)) return { error: "That isn't a valid type of work." };
   if (changes.companyName === "") return { error: "Add a company name." };
   if (changes.contactEmail && !EMAIL_PATTERN.test(changes.contactEmail)) return { error: "Check the contact's email address." };
 

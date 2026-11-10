@@ -9,7 +9,8 @@ export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
 const DEFAULT_BATCH_SIZE = 20;
-const TERMINAL_STATUSES = new Set(["won", "lost", "unqualified"]);
+// Clients are already won; nothing to find for them.
+const TERMINAL_STATUSES = new Set(["client"]);
 
 function isAuthorized(request: NextRequest): boolean {
   const secret = process.env.CRON_SECRET;

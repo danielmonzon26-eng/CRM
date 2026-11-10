@@ -18,10 +18,12 @@ export function EmailList({
   canSend,
   showMailbox = false,
   leadId,
+  blockedReason,
   emptyText = "No email yet.",
 }: {
   emails: EmailItem[];
   canSend: boolean;
+  blockedReason?: string;
   showMailbox?: boolean;
   leadId?: string;
   emptyText?: string;
@@ -112,6 +114,7 @@ export function EmailList({
                   {email.isMine ? (
                     <ComposeEmailButton
                       canSend={canSend}
+                      blockedReason={blockedReason}
                       size="sm"
                       label="Reply"
                       defaults={{ to: replyTo ?? "", leadId: leadId ?? email.contacts[0]?.leadId, replyTo: { id: email.id, subject: email.subject } }}
@@ -120,6 +123,7 @@ export function EmailList({
                     replyTo && (
                       <ComposeEmailButton
                         canSend={canSend}
+                        blockedReason={blockedReason}
                         size="sm"
                         label="Email them"
                         defaults={{ to: replyTo, subject: `RE: ${email.subject}`, leadId: leadId ?? email.contacts[0]?.leadId }}

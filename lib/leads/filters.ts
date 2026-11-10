@@ -1,25 +1,61 @@
 import { isClientType, isLeadProgram } from "@/lib/leads/classification";
-import type { LeadStatus } from "@/lib/supabase/types";
+import type { LeadEngagement, LeadStatus } from "@/lib/supabase/types";
 
-export const ALL_STATUSES: LeadStatus[] = ["new", "researching", "contacted", "qualified", "won", "lost", "unqualified"];
+/** Funnel stages, in order. Stored in leads.status and shown as "Stage". */
+export const ALL_STATUSES: LeadStatus[] = ["engagement", "in_contact", "discovery_meeting", "client_meeting", "proposal", "client"];
 export const TABLE_PAGE_SIZE = 25;
 
 export const STATUS_LABELS: Record<LeadStatus, string> = {
-  new: "New",
-  researching: "Researching",
-  contacted: "Contacted",
-  qualified: "Qualified",
-  won: "Won",
-  lost: "Lost",
-  unqualified: "Unqualified",
+  engagement: "Engagement or Education",
+  in_contact: "In Contact",
+  discovery_meeting: "Discovery Meeting",
+  client_meeting: "Client Meeting",
+  proposal: "Proposal",
+  client: "Client",
 };
+
+export const STATUS_STYLES: Record<LeadStatus, string> = {
+  engagement: "bg-sky-50 text-sky-800",
+  in_contact: "bg-indigo-50 text-indigo-800",
+  discovery_meeting: "bg-amber-50 text-amber-800",
+  client_meeting: "bg-orange-50 text-orange-800",
+  proposal: "bg-violet-50 text-violet-800",
+  client: "bg-emerald-50 text-emerald-800",
+};
+
+export const STATUS_DOTS: Record<LeadStatus, string> = {
+  engagement: "bg-sky-500",
+  in_contact: "bg-indigo-500",
+  discovery_meeting: "bg-amber-500",
+  client_meeting: "bg-orange-500",
+  proposal: "bg-violet-500",
+  client: "bg-emerald-600",
+};
+
+/** Stored in leads.engagement and shown as "Status". */
+export const ALL_ENGAGEMENTS: LeadEngagement[] = ["engaged", "not_engaged", "do_not_contact"];
+
+export const ENGAGEMENT_LABELS: Record<LeadEngagement, string> = {
+  engaged: "Engaged",
+  not_engaged: "Not Engaged",
+  do_not_contact: "Do Not Contact",
+};
+
+export const ENGAGEMENT_STYLES: Record<LeadEngagement, string> = {
+  engaged: "bg-emerald-50 text-emerald-800",
+  not_engaged: "bg-slate-100 text-slate-700",
+  do_not_contact: "bg-rose-50 text-rose-800",
+};
+
+export function isLeadEngagement(value: unknown): value is LeadEngagement {
+  return ALL_ENGAGEMENTS.includes(value as LeadEngagement);
+}
 
 export type LeadSort = "score" | "name" | "created" | "status" | "client_type";
 
 /** Everything that narrows the list. Kept in the URL, so a view can be shared or bookmarked. */
 export type LeadFilters = {
   q: string;
-  owner: string;
   industry: string;
   community: string;
   score: string;
@@ -40,7 +76,6 @@ export function parseLeadView(params: Record<string, string | undefined>): LeadV
   const sort = SORTS.find((s) => s === params.sort) ?? "score";
   return {
     q: (params.q ?? "").slice(0, 200),
-    owner: params.owner === "unassigned" || UUID.test(params.owner ?? "") ? params.owner! : "",
     industry: params.industry ?? "",
     community: params.community ?? "",
     score: params.score === "40" || params.score === "70" ? params.score : "",
@@ -58,7 +93,7 @@ export function parseLeadView(params: Record<string, string | undefined>): LeadV
 
 export function leadViewToParams(state: LeadViewState): URLSearchParams {
   const sp = new URLSearchParams();
-  (["q", "owner", "industry", "community", "score", "contact", "event", "status", "clientType", "program", "proposal"] as const).forEach((key) => {
+  (["q", "industry", "community", "score", "contact", "event", "status", "clientType", "program", "proposal"] as const).forEach((key) => {
     if (state[key]) sp.set(key, state[key]);
   });
   if (state.sort !== "score") sp.set("sort", state.sort);

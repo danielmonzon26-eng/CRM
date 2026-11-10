@@ -6,14 +6,11 @@
  *   npx supabase gen types typescript --project-id kteeooyybpwnnowkuwra > lib/supabase/types.ts
  */
 
-export type LeadStatus =
-  | "new"
-  | "researching"
-  | "contacted"
-  | "qualified"
-  | "unqualified"
-  | "won"
-  | "lost";
+/** A lead's stage in the funnel (stored in leads.status). */
+export type LeadStatus = "engagement" | "in_contact" | "discovery_meeting" | "client_meeting" | "proposal" | "client";
+
+/** Whether the company is engaged (stored in leads.engagement; shown as "Status"). */
+export type LeadEngagement = "engaged" | "not_engaged" | "do_not_contact";
 
 export type ActivityType =
   | "note"
@@ -171,6 +168,7 @@ export type Database = {
           id: string;
           company_id: string;
           status: LeadStatus;
+          engagement: LeadEngagement;
           score: number;
           score_reasons: unknown[];
           assigned_to: string | null;
@@ -187,6 +185,7 @@ export type Database = {
           client_type?: string | null;
           programs?: string[];
           status?: LeadStatus;
+          engagement?: LeadEngagement;
           score?: number;
           score_reasons?: unknown[];
           assigned_to?: string | null;
@@ -881,7 +880,7 @@ export type Database = {
         Args: {
           p_search?: string | null;
           p_statuses?: string[] | null;
-          p_owner?: string | null;
+          p_engagement?: string | null;
           p_industry?: string | null;
           p_community?: string | null;
           p_min_score?: number | null;
@@ -898,6 +897,7 @@ export type Database = {
         Returns: {
           id: string;
           status: string;
+          engagement: string;
           score: number;
           assigned_to: string | null;
           created_at: string;
@@ -920,7 +920,7 @@ export type Database = {
       crm_lead_stage_counts: {
         Args: {
           p_search?: string | null;
-          p_owner?: string | null;
+          p_engagement?: string | null;
           p_industry?: string | null;
           p_community?: string | null;
           p_min_score?: number | null;

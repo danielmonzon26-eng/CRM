@@ -4,7 +4,8 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { ArrowDown, ArrowUp, ArrowUpDown, Building2, ChevronLeft, ChevronRight, SearchX, X } from "lucide-react";
 import { CompanyExport } from "@/components/company-export";
-import { StatusPill } from "@/components/status-pill";
+import { MakeLeadButton } from "@/components/make-lead-button";
+import { EngagementPill, StatusPill } from "@/components/status-pill";
 import { buttonClass } from "@/components/ui/button";
 import { FilterSelect, SearchField } from "@/components/ui/filter-controls";
 import { EmptyState, PageHeader } from "@/components/ui/page";
@@ -107,9 +108,9 @@ export function CompaniesWorkspace({ companies, initial }: { companies: CompanyL
 
   const chips: { label: string; clear: Partial<CompanyView> }[] = [
     ...(view.q ? [{ label: `Search: ${view.q}`, clear: { q: "" } }] : []),
-    ...(view.status ? [{ label: `Status: ${view.status === "none" ? "No lead" : STATUS_LABELS[view.status as LeadStatus]}`, clear: { status: "" } }] : []),
+    ...(view.status ? [{ label: `Stage: ${view.status === "none" ? "No lead" : STATUS_LABELS[view.status as LeadStatus]}`, clear: { status: "" } }] : []),
     ...(view.clientType ? [{ label: `Client type: ${view.clientType === "none" ? "Not set" : clientTypeLabel(view.clientType)}`, clear: { clientType: "" } }] : []),
-    ...(view.program ? [{ label: `Program: ${view.program === "none" ? "None selected" : programLabel(view.program)}`, clear: { program: "" } }] : []),
+    ...(view.program ? [{ label: `Work: ${view.program === "none" ? "None selected" : programLabel(view.program)}`, clear: { program: "" } }] : []),
     ...(view.industry ? [{ label: `Industry: ${view.industry === "none" ? "Not set" : view.industry.replace("sector:", "")}`, clear: { industry: "" } }] : []),
     ...(view.community ? [{ label: `Community: ${view.community === "none" ? "Not set" : view.community}`, clear: { community: "" } }] : []),
     ...(view.contact ? [{ label: CONTACT_LABELS[view.contact], clear: { contact: "" } }] : []),
@@ -146,9 +147,9 @@ export function CompaniesWorkspace({ companies, initial }: { companies: CompanyL
       />
 
       <div className="mb-4 flex flex-wrap items-center gap-2">
-        <FilterSelect label="Status" value={view.status} onChange={(status) => update({ status })} options={[...ALL_STATUSES.map((s) => ({ value: s as string, label: STATUS_LABELS[s] })), { value: "none", label: "No lead" }]} />
+        <FilterSelect label="Stage" value={view.status} onChange={(status) => update({ status })} options={[...ALL_STATUSES.map((s) => ({ value: s as string, label: STATUS_LABELS[s] })), { value: "none", label: "No lead" }]} />
         <FilterSelect label="Client type" value={view.clientType} onChange={(clientType) => update({ clientType })} options={[...CLIENT_TYPES.map(([value, label]) => ({ value: value as string, label })), { value: "none", label: "Not set" }]} />
-        <FilterSelect label="Program" value={view.program} onChange={(program) => update({ program })} options={[...LEAD_PROGRAMS.map(([value, label]) => ({ value: value as string, label })), { value: "none", label: "None selected" }]} />
+        <FilterSelect label="Work" value={view.program} onChange={(program) => update({ program })} options={[...LEAD_PROGRAMS.map(([value, label]) => ({ value: value as string, label })), { value: "none", label: "None selected" }]} />
         <FilterSelect label="Industry" value={view.industry} onChange={(industry) => update({ industry })} options={[{ value: "none", label: "Not set" }, ...industryOptions(industries, { wholeSectors: true })]} />
         <FilterSelect label="Community" value={view.community} onChange={(community) => update({ community })} options={[...communities.map((c) => ({ value: c, label: c })), { value: "none", label: "Not set" }]} />
         <FilterSelect label="Contacts" value={view.contact} allLabel="Any" onChange={(contact) => update({ contact })} options={[{ value: "has", label: "Has contacts" }, { value: "none", label: "No contacts" }]} />
@@ -194,7 +195,7 @@ export function CompaniesWorkspace({ companies, initial }: { companies: CompanyL
                   <SortHeader label="Industry" sort="industry" />
                   <SortHeader label="Est. revenue" sort="revenue" />
                   <SortHeader label="Contacts" sort="contacts" />
-                  <SortHeader label="Status" sort="status" />
+                  <SortHeader label="Stage" sort="status" />
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -212,7 +213,15 @@ export function CompaniesWorkspace({ companies, initial }: { companies: CompanyL
                     <td className="max-w-80 px-4 py-2.5 text-slate-600"><IndustryCell industry={c.industry} /></td>
                     <td className="px-4 py-2.5 text-slate-600">{c.estimatedAnnualRevenue != null ? `$${c.estimatedAnnualRevenue.toLocaleString()}` : "—"}</td>
                     <td className="px-4 py-2.5 text-slate-600">{c.contactCount}</td>
-                    <td className="px-4 py-2.5">{c.status ? <StatusPill status={c.status} /> : <span className="text-slate-500">No lead</span>}</td>
+                    <td className="px-4 py-2">
+                      {c.engagement === "engaged" && c.status ? (
+                        <StatusPill status={c.status} />
+                      ) : c.engagement === "do_not_contact" ? (
+                        <EngagementPill engagement="do_not_contact" />
+                      ) : (
+                        <MakeLeadButton companyId={c.id} companyName={c.name} size="sm" variant="secondary" stayOnPage />
+                      )}
+                    </td>
                   </tr>
                 ))}
               </tbody>
