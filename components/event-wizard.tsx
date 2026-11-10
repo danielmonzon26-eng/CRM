@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { AlertCircle, ArrowLeft, ArrowRight, Check, CheckCircle2, ExternalLink, Plus, Trash2 } from "lucide-react";
 import { saveEvent, saveEventTemplate, setEventStatus } from "@/app/actions/events";
 import { DocumentUpload, VideoForm } from "@/app/(app)/events/[id]/event-controls";
+import { EventBudgetStep } from "@/components/event-budget-step";
 import { buttonClass } from "@/components/ui/button";
 import { FORMAT_LABELS, formatEventWhen, fromDateTimeInput, toDateTimeInput } from "@/lib/events/format";
 import type { EventRow, EventTemplate } from "@/lib/events/queries";
@@ -83,6 +84,16 @@ export function EventWizard({
   const [templateName, setTemplateName] = useState("");
   const [templateNote, setTemplateNote] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+  const [budgetLinked, setBudgetLinked] = useState(false);
+
+  // A linked budget line owns the total: its items add up to it, here and on the Budgets page.
+  const onBudgetTotal = useCallback((total: number | null) => {
+    setBudgetLinked(total !== null);
+    if (total !== null) {
+      const amount = String(total);
+      setValues((current) => (current.budgetAmount === amount ? current : { ...current, budgetAmount: amount }));
+    }
+  }, []);
 
   const status = event?.status ?? "draft";
   const autosaves = status === "draft";
@@ -235,7 +246,7 @@ export function EventWizard({
         <div className="min-w-0 space-y-5">
           {step === 0 && (
             <section className={CARD}>
-              <h2 className="text-lg font-semibold text-slate-900">Event details</h2>
+              <StepHeading title="Event details" question="What is the event, and who's running it?" />
               <div>
                 <label className={LABEL} htmlFor="title">Event name <span className="text-brand-600">*</span></label>
                 <input id="title" value={values.title} onChange={(e) => set("title", e.target.value)} className={INPUT} />
@@ -298,7 +309,7 @@ export function EventWizard({
 
           {step === 1 && (
             <section className={CARD}>
-              <h2 className="text-lg font-semibold text-slate-900">Schedule</h2>
+              <StepHeading title="Schedule" question="When and where is it?" />
               <div className="grid gap-4 sm:grid-cols-2">
                 <div>
                   <label className={LABEL} htmlFor="startsAt">Starts <span className="text-brand-600">*</span></label>
@@ -357,7 +368,7 @@ export function EventWizard({
 
           {step === 2 && (
             <section className={CARD}>
-              <h2 className="text-lg font-semibold text-slate-900">Registration</h2>
+              <StepHeading title="Registration" question="Who can come, how many do you want, and what does it cost to attend?" />
               <div className="grid gap-4 sm:grid-cols-3">
                 <div>
                   <label className={LABEL} htmlFor="ticketType">Ticket type</label>
@@ -426,31 +437,31 @@ export function EventWizard({
 
           {step === 3 && (
             <section className={CARD}>
-              <h2 className="text-lg font-semibold text-slate-900">Budget</h2>
+              <StepHeading title="Budget" question="What will it cost, and which budget pays for it?" />
+              <EventBudgetStep eventId={eventId} onTotal={onBudgetTotal} />
               <div className="grid gap-4 sm:grid-cols-2">
-                <div>
-                  <label className={LABEL} htmlFor="budgetAmount">Budget allocation (CAD)</label>
-                  <input id="budgetAmount" type="number" min={0} step="0.01" value={values.budgetAmount} onChange={(e) => set("budgetAmount", e.target.value)} className={INPUT} />
-                </div>
+                {!budgetLinked && (
+                  <div>
+                    <label className={LABEL} htmlFor="budgetAmount">Planned total without a budget line (CAD)</label>
+                    <input id="budgetAmount" type="number" min={0} step="0.01" value={values.budgetAmount} onChange={(e) => set("budgetAmount", e.target.value)} className={INPUT} />
+                  </div>
+                )}
                 <div>
                   <label className={LABEL} htmlFor="fundingSource">Funding source</label>
-                  <input id="fundingSource" value={values.fundingSource} onChange={(e) => set("fundingSource", e.target.value)} className={INPUT} />
+                  <input id="fundingSource" placeholder="e.g. Sponsorship or a grant" value={values.fundingSource} onChange={(e) => set("fundingSource", e.target.value)} className={INPUT} />
                 </div>
               </div>
               <div>
                 <label className={LABEL} htmlFor="budgetNotes">Budget notes</label>
-                <textarea id="budgetNotes" rows={4} value={values.budgetNotes} onChange={(e) => set("budgetNotes", e.target.value)} className={INPUT} />
+                <textarea id="budgetNotes" rows={3} value={values.budgetNotes} onChange={(e) => set("budgetNotes", e.target.value)} className={INPUT} />
               </div>
-              <p className="text-xs text-slate-500">
-                If this event is linked to a line on the Budgets page, that line's amount and expenses are used in reports instead.
-              </p>
             </section>
           )}
 
           {step === 4 && (
             <>
               <section className={CARD}>
-                <h2 className="text-lg font-semibold text-slate-900">Review</h2>
+                <StepHeading title="Review" question="Does everything look right? Publish when you're ready." />
                 {missing.length > 0 ? (
                   <div className="rounded-lg bg-amber-50 p-3 text-sm text-amber-900">
                     <p className="flex items-center gap-2 font-medium">
@@ -579,6 +590,15 @@ export function EventWizard({
           </div>
         </aside>
       </div>
+    </div>
+  );
+}
+
+function StepHeading({ title, question }: { title: string; question: string }) {
+  return (
+    <div>
+      <h2 className="text-lg font-semibold text-slate-900">{title}</h2>
+      <p className="mt-0.5 text-sm text-slate-500">{question}</p>
     </div>
   );
 }
