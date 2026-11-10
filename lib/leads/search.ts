@@ -22,6 +22,8 @@ export type LeadRow = {
   contactCount: number;
   proposalId: string | null;
   proposalStage: string | null;
+  /** Completion % of the latest discovery call, if there's been one. */
+  bmcScore: number | null;
 };
 
 export type StageSummary = { status: LeadStatus; count: number; openValue: number };
@@ -80,8 +82,18 @@ export async function searchLeads(
       contactCount: r.contact_count,
       proposalId: r.proposal_id,
       proposalStage: r.proposal_stage,
+      bmcScore: null,
     })),
   };
+}
+
+/** Fills in each row's latest discovery score (one small query per page). */
+export async function withBmcScores(result: { rows: LeadRow[]; total: number }) {
+  if (result.rows.length === 0) return result;
+  const supabase = await createClient();
+  const { data } = await supabase.from("leads").select("id, bmc_score").in("id", result.rows.map((r) => r.id));
+  const scoreById = new Map((data ?? []).map((l) => [l.id, l.bmc_score == null ? null : Number(l.bmc_score)]));
+  return { ...result, rows: result.rows.map((r) => ({ ...r, bmcScore: scoreById.get(r.id) ?? null })) };
 }
 
 export async function getStageSummaries(filters: LeadFilters): Promise<StageSummary[]> {
@@ -104,11 +116,11 @@ export async function getLeadFacets(): Promise<LeadFacets> {
 }
 
 export async function getLeadTablePage(state: LeadViewState) {
-  return searchLeads(state, {
+  return withBmcScores(await searchLeads(state, {
     statuses: state.status ? [state.status] : null,
     sort: state.sort,
     desc: state.desc,
     limit: TABLE_PAGE_SIZE,
     offset: (state.page - 1) * TABLE_PAGE_SIZE,
-  });
+  }));
 }
