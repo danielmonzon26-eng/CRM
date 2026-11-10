@@ -91,7 +91,7 @@ export default async function CompanyDetailPage({ params }: { params: Promise<{ 
               <ArrowUpRight className="h-4 w-4" strokeWidth={2} />
             </Link>
           )}
-          {(!lead || lead.engagement === "not_engaged" || lead.engagement === "not_qualified") && <MakeLeadButton companyId={company.id} companyName={company.name} stayOnPage={Boolean(lead)} />}
+          {(!lead || lead.engagement === "not_engaged") && <MakeLeadButton companyId={company.id} companyName={company.name} stayOnPage={Boolean(lead)} />}
         </div>
       </header>
 

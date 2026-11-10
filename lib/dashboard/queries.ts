@@ -7,7 +7,7 @@ import { registrationProgress, type RegistrationProgress } from "@/lib/events/pr
 import type { ActivityType, EventFormat, EventStatus, TaskType } from "@/lib/supabase/types";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
-const ACTIVE_LEAD_STATUSES = ["engagement", "in_contact", "discovery_meeting", "client_meeting"] as const;
+const ACTIVE_LEAD_STATUSES = ["engagement", "in_contact", "discovery_meeting", "pitch_meeting"] as const;
 
 export type DashboardEvent = {
   id: string;

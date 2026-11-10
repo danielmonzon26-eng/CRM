@@ -19,7 +19,7 @@ function isAuthorized(request: NextRequest): boolean {
  *    status — a rep's manual pipeline progress is never reset by re-scoring...
  *  - ...EXCEPT when a company is now hard-disqualified (sub-$2M revenue recorded on
  *    it, see scoring.ts) and its existing lead is still marked Engaged and isn't a client —
- *    those get their status set to Not Qualified, logged as an activity. Clients and
+ *    those get their status set to Not Engaged, logged as an activity. Clients and
  *    Do Not Contact leads are never changed.
  *
  * Safe to run repeatedly (e.g. after ingestion, or after editing TARGET_INDUSTRIES).
@@ -79,11 +79,11 @@ export async function GET(request: NextRequest) {
       const shouldAutoUnqualify =
         disqualified && existingLead.engagement === "engaged" && existingLead.status !== "client";
 
-      const updates: { score: number; score_reasons: typeof reasons; engagement?: "not_qualified" } = {
+      const updates: { score: number; score_reasons: typeof reasons; engagement?: "not_engaged" } = {
         score,
         score_reasons: reasons,
       };
-      if (shouldAutoUnqualify) updates.engagement = "not_qualified";
+      if (shouldAutoUnqualify) updates.engagement = "not_engaged";
 
       const { error: updateError } = await supabase.from("leads").update(updates).eq("id", existingLead.id);
       if (updateError) throw updateError;
@@ -92,7 +92,7 @@ export async function GET(request: NextRequest) {
         await supabase.from("activities").insert({
           lead_id: existingLead.id,
           type: "status_change",
-          body: "Status set to Not Qualified: estimated annual revenue is below the $2M+ target",
+          body: "Status set to Not Engaged: estimated annual revenue is below the $2M+ target",
           metadata: { reasons },
         });
         autoDisqualified++;
