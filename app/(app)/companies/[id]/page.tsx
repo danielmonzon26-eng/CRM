@@ -7,8 +7,10 @@ import { getTasksForSubject } from "@/lib/tasks/queries";
 import { getDealsForCompany } from "@/lib/deals/queries";
 import { getDiscoveryCalls } from "@/lib/discovery/queries";
 import { getEventRegistrationsForLead } from "@/lib/events/queries";
+import { getActivityTimeline } from "@/lib/activity/timeline";
 import { getCurrentUser } from "@/lib/auth/session";
 import { canUserSend } from "@/lib/outlook/queries";
+import { ActivityCentre } from "@/components/activity-centre";
 import { ContactCards } from "@/components/contact-cards";
 import { CreateProposal } from "@/components/create-proposal";
 import { DealCard } from "@/components/deal-card";
@@ -39,7 +41,10 @@ export default async function CompanyDetailPage({ params }: { params: Promise<{ 
     lead ? getEventRegistrationsForLead(lead.id) : [],
     lead ? getDiscoveryCalls(lead.id) : [],
   ]);
-  const canSend = user ? await canUserSend(user.id) : false;
+  const [canSend, timeline] = await Promise.all([
+    user ? canUserSend(user.id) : false,
+    lead ? getActivityTimeline(lead.id, contacts.map((c) => c.email).filter((e): e is string => Boolean(e))) : null,
+  ]);
   const primaryContact = contacts.find((c) => c.isPrimary) ?? contacts[0] ?? null;
   const blockedReason = lead?.engagement === "do_not_contact" ? `${company.name} is marked Do Not Contact.` : undefined;
   const openTasks = tasks.filter((t) => !t.completedAt).length;
@@ -147,6 +152,8 @@ export default async function CompanyDetailPage({ params }: { params: Promise<{ 
               <TaskList tasks={tasks} />
             </div>
           </section>
+
+          {lead && timeline && <ActivityCentre leadId={lead.id} notes={timeline.notes} items={timeline.items} />}
         </div>
 
         <aside className="space-y-4 lg:sticky lg:top-20 lg:self-start">

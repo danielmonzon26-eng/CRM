@@ -5,17 +5,11 @@ import {
   ArrowUpRight,
   Building2,
   CalendarDays,
-  CheckCircle2,
   CheckSquare2,
   Handshake,
-  Mail,
-  PhoneCall,
-  RefreshCw,
-  Sparkles,
-  StickyNote,
-  TrendingUp,
   Users,
 } from "lucide-react";
+import { ActivityCentre } from "@/components/activity-centre";
 import { ContactCards } from "@/components/contact-cards";
 import { CreateProposal } from "@/components/create-proposal";
 import { DealCard } from "@/components/deal-card";
@@ -27,6 +21,7 @@ import { EngagementPill, StatusPill } from "@/components/status-pill";
 import { TaskForm } from "@/components/task-form";
 import { TaskList } from "@/components/task-list";
 import { buttonClass } from "@/components/ui/button";
+import { getActivityTimeline } from "@/lib/activity/timeline";
 import { getCurrentUser } from "@/lib/auth/session";
 import { toContactCard } from "@/lib/contacts/queries";
 import { getDealsForLead } from "@/lib/deals/queries";
@@ -36,24 +31,9 @@ import { getLeadDetail } from "@/lib/leads/queries";
 import { canUserSend } from "@/lib/outlook/queries";
 import { getTasksForSubject } from "@/lib/tasks/queries";
 import { getInitials } from "@/lib/text";
-import { NoteForm } from "./note-form";
 import { RevenueForm } from "./revenue-form";
 
 export const dynamic = "force-dynamic";
-
-const ACTIVITY_META: Record<string, { label: string; icon: typeof StickyNote }> = {
-  status_change: { label: "Status change", icon: RefreshCw },
-  enrichment_run: { label: "Enrichment", icon: Sparkles },
-  email_sent: { label: "Email sent", icon: Mail },
-  call_logged: { label: "Call", icon: PhoneCall },
-  sync_matched: { label: "Data sync", icon: RefreshCw },
-  task_completed: { label: "Task completed", icon: CheckCircle2 },
-  deal_created: { label: "Proposal created", icon: Handshake },
-  deal_stage_change: { label: "Proposal stage change", icon: TrendingUp },
-  event_registration: { label: "Event registration", icon: CalendarDays },
-};
-
-const activityTime = new Intl.DateTimeFormat("en-CA", { dateStyle: "medium", timeStyle: "short", timeZone: "America/Edmonton" });
 
 export default async function LeadDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -67,8 +47,11 @@ export default async function LeadDetailPage({ params }: { params: Promise<{ id:
   ]);
   if (!lead) notFound();
 
-  const canSend = user ? await canUserSend(user.id) : false;
   const contacts = lead.contacts.map((c) => toContactCard({ ...c, lead_id: lead.id }));
+  const [canSend, timeline] = await Promise.all([
+    user ? canUserSend(user.id) : false,
+    getActivityTimeline(lead.id, contacts.map((c) => c.email).filter((e): e is string => Boolean(e))),
+  ]);
   const primaryContact = contacts.find((c) => c.isPrimary) ?? contacts[0] ?? null;
   const blockedReason = lead.engagement === "do_not_contact" ? `${lead.company.name} is marked Do Not Contact.` : undefined;
   const openTasks = tasks.filter((t) => !t.completedAt).length;
@@ -170,31 +153,7 @@ export default async function LeadDetailPage({ params }: { params: Promise<{ id:
             </div>
           </section>
 
-          <section aria-labelledby="activity-title">
-            <h2 id="activity-title" className="text-sm font-semibold text-slate-700">Activity</h2>
-            <div className="mt-2">
-              <NoteForm leadId={lead.id} />
-            </div>
-            <ul className="mt-4 space-y-4 border-l border-slate-200 pl-4">
-              {lead.activities.length === 0 && <p className="text-sm text-slate-500">No activity yet.</p>}
-              {lead.activities.map((a) => {
-                const meta = ACTIVITY_META[a.type] ?? { label: "Note", icon: StickyNote };
-                const Icon = meta.icon;
-                return (
-                  <li key={a.id} className="relative text-sm">
-                    <span className="absolute -left-[21px] flex h-5 w-5 items-center justify-center rounded-full bg-white ring-2 ring-slate-100">
-                      <Icon className="h-3 w-3 text-slate-400" strokeWidth={2} />
-                    </span>
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className="font-medium text-slate-700">{meta.label}</span>
-                      <span className="text-xs text-slate-500">{activityTime.format(new Date(a.created_at))}</span>
-                    </div>
-                    {a.body && <p className="mt-0.5 text-slate-600">{a.body}</p>}
-                  </li>
-                );
-              })}
-            </ul>
-          </section>
+          <ActivityCentre leadId={lead.id} notes={timeline.notes} items={timeline.items} />
         </div>
 
         <aside className="space-y-4 lg:sticky lg:top-20 lg:self-start">

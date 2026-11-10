@@ -275,26 +275,6 @@ export async function updateLeadEngagement(leadId: string, engagement: LeadEngag
   revalidatePath(`/leads/${leadId}`);
 }
 
-export async function addLeadNote(leadId: string, body: string) {
-  const trimmed = body.trim();
-  if (!trimmed) return;
-
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  const { error } = await supabase.from("activities").insert({
-    lead_id: leadId,
-    actor_id: user?.id ?? null,
-    type: "note",
-    body: trimmed,
-  });
-  if (error) throw error;
-
-  revalidatePath(`/leads/${leadId}`);
-}
-
 export async function updateCompanyRevenue(leadId: string, companyId: string, value: number | null) {
   const supabase = await createClient();
   const {
