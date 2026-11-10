@@ -15,14 +15,12 @@ import {
   X,
 } from "lucide-react";
 import { bulkChangeLeadProgram, bulkUpdateLeads, exportLeadsBatch } from "@/app/actions/leads";
-import { CreateProposal } from "@/components/create-proposal";
 import { ProgramChips } from "@/components/lead-badges";
 import { LeadQuickEdit } from "@/components/lead-quick-edit";
 import { buttonClass } from "@/components/ui/button";
 import { useFeedback } from "@/components/ui/feedback";
 import { FilterSelect, SearchField } from "@/components/ui/filter-controls";
 import { EmptyState } from "@/components/ui/page";
-import { DEAL_STAGE_META } from "@/lib/deals/stages";
 import { downloadCsv } from "@/lib/csv";
 import { industryOptions, parseIndustry } from "@/lib/industries/naics";
 import { CLIENT_TYPES, LEAD_PROGRAMS, clientTypeLabel, programLabel } from "@/lib/leads/classification";
@@ -30,6 +28,7 @@ import {
   ALL_ENGAGEMENTS,
   ALL_STATUSES,
   ENGAGEMENT_LABELS,
+  ENGAGEMENT_STYLES,
   STATUS_DOTS,
   STATUS_LABELS,
   TABLE_PAGE_SIZE,
@@ -38,7 +37,7 @@ import {
   type LeadViewState,
 } from "@/lib/leads/filters";
 import type { LeadFacets, LeadRow, StageSummary } from "@/lib/leads/search";
-import type { DealStage, LeadEngagement, LeadStatus } from "@/lib/supabase/types";
+import type { LeadEngagement, LeadStatus } from "@/lib/supabase/types";
 
 const SEARCH_DELAY_MS = 250;
 const EXPORT_CAP = 10000;
@@ -47,7 +46,6 @@ const SCORE_LABELS: Record<string, string> = { "40": "Fit 40+", "70": "Fit 70+" 
 const NOT_SET_LABEL = "Not set";
 const MAX_ROW_PROGRAMS = 2;
 const CONTACT_LABELS: Record<string, string> = { has_contact: "Has a contact", has_email: "Has an email", none: "No contact" };
-const PROPOSAL_LABELS: Record<string, string> = { has: "Has a proposal", none: "No proposal" };
 
 type Member = { id: string; name: string };
 
@@ -229,9 +227,12 @@ function LeadsTable({
               <SortHeader label="Fit" sort="score" state={state} href={href} />
               <th scope="col" className="px-2 py-2.5 font-medium" title="Business Model Canvas covered in the latest discovery call">BMC</th>
               <SortHeader label="Stage" sort="status" state={state} href={href} />
+              <th scope="col" className="px-2 py-2.5 font-medium">Status</th>
               <SortHeader label="Added" sort="created" state={state} href={href} />
               {/* Stays in view while the rest of the table scrolls sideways. */}
-              <th scope="col" className="sticky right-0 border-l border-slate-100 bg-white px-3 py-2.5 font-medium">Proposal</th>
+              <th scope="col" className="sticky right-0 border-l border-slate-100 bg-white px-2 py-2.5">
+                <span className="sr-only">Edit</span>
+              </th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
@@ -283,24 +284,12 @@ function LeadsTable({
                     {STATUS_LABELS[lead.status]}
                   </span>
                 </td>
+                <td className="px-2 py-2.5">
+                  <span className={`whitespace-nowrap rounded-full px-2 py-0.5 text-xs font-medium ${ENGAGEMENT_STYLES[lead.engagement]}`}>{ENGAGEMENT_LABELS[lead.engagement]}</span>
+                </td>
                 <td className="whitespace-nowrap px-2 py-2.5 text-xs text-slate-500">{lead.createdAt.slice(0, 10)}</td>
                 <td className={`sticky right-0 whitespace-nowrap border-l border-slate-100 px-3 py-2 transition-colors group-hover:bg-slate-50 ${selected.has(lead.id) ? "bg-brand-50" : "bg-white"}`}>
-                  <div className="flex items-center justify-between gap-1">
-                    {lead.proposalId && lead.proposalStage ? (
-                      <Link href={`/deals/${lead.proposalId}`} className="inline-flex items-center gap-1.5 text-sm font-medium text-slate-800 hover:text-brand-700 hover:underline">
-                        <span className={`h-2 w-2 rounded-full ${DEAL_STAGE_META[lead.proposalStage as DealStage].accent}`} />
-                        {DEAL_STAGE_META[lead.proposalStage as DealStage].short}
-                      </Link>
-                    ) : (
-                      <CreateProposal
-                        compact
-                        stayOnPage
-                        companyId={lead.companyId}
-                        leadId={lead.id}
-                        primaryContactId={lead.primaryContactId}
-                        defaultName={lead.companyName}
-                      />
-                    )}
+                  <div className="flex items-center justify-end">
                     <button
                       type="button"
                       title="Quick edit"
@@ -393,7 +382,7 @@ export function LeadsWorkspace({
     ...(state.status ? [{ label: `Stage: ${STATUS_LABELS[state.status as LeadStatus]}`, clear: { status: "" } }] : []),
     ...(state.clientType ? [{ label: `Client type: ${state.clientType === "none" ? NOT_SET_LABEL : clientTypeLabel(state.clientType)}`, clear: { clientType: "" } }] : []),
     ...(state.program ? [{ label: `Work: ${state.program === "none" ? "None selected" : programLabel(state.program)}`, clear: { program: "" } }] : []),
-    ...(state.proposal ? [{ label: PROPOSAL_LABELS[state.proposal], clear: { proposal: "" } }] : []),
+    ...(state.engagement ? [{ label: `Status: ${state.engagement === "all" ? "All" : ENGAGEMENT_LABELS[state.engagement as LeadEngagement]}`, clear: { engagement: "" } }] : []),
     ...(state.industry ? [{ label: `Industry: ${parseIndustry(state.industry)?.subsector ?? state.industry}`, clear: { industry: "" } }] : []),
     ...(state.community ? [{ label: `Community: ${state.community}`, clear: { community: "" } }] : []),
     ...(state.score ? [{ label: SCORE_LABELS[state.score], clear: { score: "" } }] : []),
@@ -401,7 +390,7 @@ export function LeadsWorkspace({
     ...(state.event ? [{ label: `Event: ${events.find((e) => e.id === state.event)?.title ?? "Selected"}`, clear: { event: "" } }] : []),
   ];
 
-  const clearAll = () => go({ q: "", status: "", industry: "", community: "", score: "", contact: "", event: "", clientType: "", program: "", proposal: "" });
+  const clearAll = () => go({ q: "", status: "", industry: "", community: "", score: "", contact: "", event: "", clientType: "", program: "", proposal: "", engagement: "" });
 
   async function exportAll() {
     setIsExporting(true);
@@ -417,8 +406,8 @@ export function LeadsWorkspace({
       } while (rows.length < Math.min(total, EXPORT_CAP));
 
       downloadCsv("leads.csv", [
-        ["Name", "Title", "Email", "Contacts", "Company", "Client type", "Work", "Industry", "Community", "Fit score", "BMC %", "Stage", "Proposal stage", "Added"],
-        ...rows.map((r) => [r.primaryName, r.primaryTitle, r.primaryEmail, r.contactCount, r.companyName, clientTypeLabel(r.clientType), r.programs.map(programLabel).join("; "), r.industry, r.community, r.score, r.bmcScore == null ? "" : Math.round(r.bmcScore), STATUS_LABELS[r.status], r.proposalStage ? DEAL_STAGE_META[r.proposalStage as DealStage].label : "", r.createdAt.slice(0, 10)]),
+        ["Name", "Title", "Email", "Contacts", "Company", "Client type", "Work", "Industry", "Community", "Fit score", "BMC %", "Stage", "Status", "Added"],
+        ...rows.map((r) => [r.primaryName, r.primaryTitle, r.primaryEmail, r.contactCount, r.companyName, clientTypeLabel(r.clientType), r.programs.map(programLabel).join("; "), r.industry, r.community, r.score, r.bmcScore == null ? "" : Math.round(r.bmcScore), STATUS_LABELS[r.status], ENGAGEMENT_LABELS[r.engagement], r.createdAt.slice(0, 10)]),
       ]);
       toast(total > EXPORT_CAP ? `Exported the first ${EXPORT_CAP.toLocaleString()} leads` : `Exported ${rows.length.toLocaleString()} leads`);
     } catch {
@@ -448,7 +437,7 @@ export function LeadsWorkspace({
         <FilterSelect label="Stage" value={state.status} onChange={(status) => go({ status })} options={ALL_STATUSES.map((s) => ({ value: s as string, label: STATUS_LABELS[s], count: stages.find((x) => x.status === s)?.count ?? 0 }))} />
         <FilterSelect label="Client type" value={state.clientType} onChange={(clientType) => go({ clientType })} options={[...CLIENT_TYPES.map(([value, label]) => ({ value: value as string, label })), { value: "none", label: NOT_SET_LABEL }]} />
         <FilterSelect label="Work" value={state.program} onChange={(program) => go({ program })} options={[...LEAD_PROGRAMS.map(([value, label]) => ({ value: value as string, label })), { value: "none", label: "None selected" }]} />
-        <FilterSelect label="Proposal" value={state.proposal} allLabel="Any" onChange={(proposal) => go({ proposal })} options={[{ value: "has", label: "Has a proposal" }, { value: "none", label: "No proposal" }]} />
+        <FilterSelect label="Status" value={state.engagement} allLabel="Engaged" onChange={(engagement) => go({ engagement })} options={[...ALL_ENGAGEMENTS.filter((e) => e !== "engaged").map((e) => ({ value: e as string, label: ENGAGEMENT_LABELS[e] })), { value: "all", label: "All statuses" }]} />
         <FilterSelect label="Industry" value={state.industry} onChange={(industry) => go({ industry })} options={industryOptions(facets.industries)} />
         <FilterSelect label="Community" value={state.community} onChange={(community) => go({ community })} options={facets.communities.map((c) => ({ value: c, label: c }))} />
         <FilterSelect label="Fit" value={state.score} allLabel="Any" onChange={(score) => go({ score })} options={[{ value: "40", label: "Fit 40+" }, { value: "70", label: "Fit 70+" }]} />

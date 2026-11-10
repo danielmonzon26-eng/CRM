@@ -65,6 +65,8 @@ export type LeadFilters = {
   clientType: string;
   program: string;
   proposal: string;
+  /** Empty means Engaged (the default view); "all" means every status. */
+  engagement: string;
 };
 
 export type LeadViewState = LeadFilters & { sort: LeadSort; desc: boolean; page: number };
@@ -85,6 +87,7 @@ export function parseLeadView(params: Record<string, string | undefined>): LeadV
     clientType: params.clientType === "none" || isClientType(params.clientType) ? params.clientType! : "",
     program: params.program === "none" || isLeadProgram(params.program) ? params.program! : "",
     proposal: params.proposal === "has" || params.proposal === "none" ? params.proposal : "",
+    engagement: params.engagement === "all" || (isLeadEngagement(params.engagement) && params.engagement !== "engaged") ? params.engagement! : "",
     sort,
     desc: params.dir ? params.dir === "desc" : sort === "score" || sort === "created",
     page: Math.max(1, Number(params.page) || 1),
@@ -93,7 +96,7 @@ export function parseLeadView(params: Record<string, string | undefined>): LeadV
 
 export function leadViewToParams(state: LeadViewState): URLSearchParams {
   const sp = new URLSearchParams();
-  (["q", "industry", "community", "score", "contact", "event", "status", "clientType", "program", "proposal"] as const).forEach((key) => {
+  (["q", "industry", "community", "score", "contact", "event", "status", "clientType", "program", "proposal", "engagement"] as const).forEach((key) => {
     if (state[key]) sp.set(key, state[key]);
   });
   if (state.sort !== "score") sp.set("sort", state.sort);
