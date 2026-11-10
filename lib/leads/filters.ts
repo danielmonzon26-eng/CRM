@@ -2,14 +2,14 @@ import { isClientType, isLeadProgram } from "@/lib/leads/classification";
 import type { LeadEngagement, LeadStatus } from "@/lib/supabase/types";
 
 /** Funnel stages, in order. Stored in leads.status and shown as "Stage". */
-export const ALL_STATUSES: LeadStatus[] = ["engagement", "in_contact", "discovery_meeting", "client_meeting", "proposal", "client"];
+export const ALL_STATUSES: LeadStatus[] = ["engagement", "in_contact", "discovery_meeting", "pitch_meeting", "proposal", "client"];
 export const TABLE_PAGE_SIZE = 25;
 
 export const STATUS_LABELS: Record<LeadStatus, string> = {
   engagement: "Engagement or Education",
   in_contact: "In Contact",
   discovery_meeting: "Discovery Meeting",
-  client_meeting: "Client Meeting",
+  pitch_meeting: "Pitch Meeting",
   proposal: "Proposal",
   client: "Client",
 };
@@ -18,7 +18,7 @@ export const STATUS_STYLES: Record<LeadStatus, string> = {
   engagement: "bg-sky-50 text-sky-800",
   in_contact: "bg-indigo-50 text-indigo-800",
   discovery_meeting: "bg-amber-50 text-amber-800",
-  client_meeting: "bg-orange-50 text-orange-800",
+  pitch_meeting: "bg-orange-50 text-orange-800",
   proposal: "bg-violet-50 text-violet-800",
   client: "bg-emerald-50 text-emerald-800",
 };
@@ -27,25 +27,23 @@ export const STATUS_DOTS: Record<LeadStatus, string> = {
   engagement: "bg-sky-500",
   in_contact: "bg-indigo-500",
   discovery_meeting: "bg-amber-500",
-  client_meeting: "bg-orange-500",
+  pitch_meeting: "bg-orange-500",
   proposal: "bg-violet-500",
   client: "bg-emerald-600",
 };
 
 /** Stored in leads.engagement and shown as "Status". */
-export const ALL_ENGAGEMENTS: LeadEngagement[] = ["engaged", "not_engaged", "not_qualified", "do_not_contact"];
+export const ALL_ENGAGEMENTS: LeadEngagement[] = ["engaged", "not_engaged", "do_not_contact"];
 
 export const ENGAGEMENT_LABELS: Record<LeadEngagement, string> = {
   engaged: "Engaged",
   not_engaged: "Not Engaged",
-  not_qualified: "Not Qualified",
   do_not_contact: "Do Not Contact",
 };
 
 export const ENGAGEMENT_STYLES: Record<LeadEngagement, string> = {
   engaged: "bg-emerald-50 text-emerald-800",
   not_engaged: "bg-slate-100 text-slate-700",
-  not_qualified: "bg-amber-50 text-amber-800",
   do_not_contact: "bg-rose-50 text-rose-800",
 };
 

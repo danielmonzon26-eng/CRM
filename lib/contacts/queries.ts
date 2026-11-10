@@ -15,6 +15,7 @@ export type ContactListRow = {
   companyName: string;
   status: LeadStatus;
   engagement: LeadEngagement;
+  clientType: string | null;
 };
 
 export async function getContactsList(search?: string): Promise<ContactListRow[]> {
@@ -33,7 +34,7 @@ export async function getContactsList(search?: string): Promise<ContactListRow[]
   if (contacts.length === 0) return [];
 
   const leads = await fetchAllPages((from, to) =>
-    supabase.from("leads").select("id, company_id, status, engagement").range(from, to)
+    supabase.from("leads").select("id, company_id, status, engagement, client_type").range(from, to)
   );
   const leadById = new Map(leads.map((l) => [l.id, l]));
 
@@ -56,6 +57,7 @@ export async function getContactsList(search?: string): Promise<ContactListRow[]
         companyName: companyById.get(lead.company_id) ?? "Unknown company",
         status: lead.status,
         engagement: lead.engagement,
+        clientType: lead.client_type,
       };
     })
     .filter((c): c is ContactListRow => c !== null);

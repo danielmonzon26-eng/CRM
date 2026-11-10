@@ -36,7 +36,7 @@ update public.leads set status = case status
   where status in ('new', 'researching', 'contacted', 'qualified', 'won', 'lost', 'unqualified');
 alter table public.leads alter column status set default 'engagement';
 alter table public.leads add constraint leads_status_check
-  check (status in ('engagement', 'in_contact', 'discovery_meeting', 'client_meeting', 'proposal', 'client'));
+  check (status in ('engagement', 'in_contact', 'discovery_meeting', 'client_meeting', 'pitch_meeting', 'proposal', 'client'));
 
 -- Client type.
 alter table public.leads drop constraint if exists leads_client_type_check;
@@ -91,7 +91,7 @@ begin
       where id = new.lead_id and status <> 'client';
   elsif tg_op = 'INSERT' then
     update public.leads set status = 'proposal'
-      where id = new.lead_id and status in ('engagement', 'in_contact', 'discovery_meeting', 'client_meeting');
+      where id = new.lead_id and status in ('engagement', 'in_contact', 'discovery_meeting', 'client_meeting', 'pitch_meeting');
     update public.leads set engagement = 'engaged'
       where id = new.lead_id and engagement in ('not_engaged', 'not_qualified');
   end if;
@@ -113,7 +113,7 @@ begin
       where l.status <> 'client'
         and exists (select 1 from public.deals d where d.lead_id = l.id and d.stage in ('closed_won', 'accepted'));
     update public.leads l set status = 'proposal'
-      where l.status in ('engagement', 'in_contact', 'discovery_meeting', 'client_meeting')
+      where l.status in ('engagement', 'in_contact', 'discovery_meeting', 'client_meeting', 'pitch_meeting')
         and exists (select 1 from public.deals d where d.lead_id = l.id);
     insert into public.migration_markers (key) values ('0018_proposal_stages');
   end if;
@@ -131,7 +131,7 @@ set search_path = ''
 as $$
 begin
   if new.status is distinct from old.status
-     and new.status in ('in_contact', 'discovery_meeting', 'client_meeting', 'proposal', 'client')
+     and new.status in ('in_contact', 'discovery_meeting', 'client_meeting', 'pitch_meeting', 'proposal', 'client')
      and new.engagement in ('not_engaged', 'not_qualified') then
     new.engagement := 'engaged';
   end if;

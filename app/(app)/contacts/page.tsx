@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Search } from "lucide-react";
 import { getContactsList } from "@/lib/contacts/queries";
 import { EngagementPill, StatusPill } from "@/components/status-pill";
+import { clientTypeLabel } from "@/lib/leads/classification";
 import { ALL_ENGAGEMENTS, ENGAGEMENT_LABELS, isLeadEngagement } from "@/lib/leads/filters";
 import { getInitials } from "@/lib/text";
 
@@ -61,7 +62,7 @@ export default async function ContactsPage({ searchParams }: { searchParams: Pro
       </nav>
 
       <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-card">
-        <table className="w-full min-w-[960px] text-left text-sm">
+        <table className="w-full min-w-[1080px] text-left text-sm">
           <thead className="border-b border-slate-200 bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
             <tr>
               <th className="px-4 py-2.5 font-medium">Name</th>
@@ -69,6 +70,7 @@ export default async function ContactsPage({ searchParams }: { searchParams: Pro
               <th className="px-4 py-2.5 font-medium">Company</th>
               <th className="px-4 py-2.5 font-medium">Email</th>
               <th className="px-4 py-2.5 font-medium">Phone</th>
+              <th className="px-4 py-2.5 font-medium">Client type</th>
               <th className="px-4 py-2.5 font-medium">Status</th>
               <th className="px-4 py-2.5 font-medium">Stage</th>
             </tr>
@@ -97,6 +99,7 @@ export default async function ContactsPage({ searchParams }: { searchParams: Pro
                 </td>
                 <td className="px-4 py-2.5 text-slate-600">{c.email ?? "—"}</td>
                 <td className="px-4 py-2.5 text-slate-600">{c.phone ?? "—"}</td>
+                <td className="whitespace-nowrap px-4 py-2.5 text-slate-600">{clientTypeLabel(c.clientType) ?? "—"}</td>
                 <td className="px-4 py-2.5">
                   <EngagementPill engagement={c.engagement} />
                 </td>
@@ -107,7 +110,7 @@ export default async function ContactsPage({ searchParams }: { searchParams: Pro
             ))}
             {contacts.length === 0 && (
               <tr>
-                <td colSpan={7} className="px-4 py-10 text-center text-sm text-slate-400">
+                <td colSpan={8} className="px-4 py-10 text-center text-sm text-slate-400">
                   No contacts found.
                 </td>
               </tr>

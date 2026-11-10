@@ -195,6 +195,8 @@ export function CompaniesWorkspace({ companies, initial }: { companies: CompanyL
                   <SortHeader label="Industry" sort="industry" />
                   <SortHeader label="Est. revenue" sort="revenue" />
                   <SortHeader label="Contacts" sort="contacts" />
+                  <th scope="col" className="px-4 py-2 font-medium">Client type</th>
+                  <th scope="col" className="px-4 py-2 font-medium">Status</th>
                   <SortHeader label="Stage" sort="status" />
                 </tr>
               </thead>
@@ -213,11 +215,13 @@ export function CompaniesWorkspace({ companies, initial }: { companies: CompanyL
                     <td className="max-w-80 px-4 py-2.5 text-slate-600"><IndustryCell industry={c.industry} /></td>
                     <td className="px-4 py-2.5 text-slate-600">{c.estimatedAnnualRevenue != null ? `$${c.estimatedAnnualRevenue.toLocaleString()}` : "—"}</td>
                     <td className="px-4 py-2.5 text-slate-600">{c.contactCount}</td>
+                    <td className="whitespace-nowrap px-4 py-2.5 text-slate-600">{clientTypeLabel(c.clientType) ?? "—"}</td>
+                    <td className="px-4 py-2">{c.engagement ? <EngagementPill engagement={c.engagement} /> : <span className="text-slate-500">—</span>}</td>
                     <td className="px-4 py-2">
                       {c.engagement === "engaged" && c.status ? (
                         <StatusPill status={c.status} />
                       ) : c.engagement === "do_not_contact" ? (
-                        <EngagementPill engagement="do_not_contact" />
+                        <span className="text-slate-500">—</span>
                       ) : (
                         <MakeLeadButton companyId={c.id} companyName={c.name} size="sm" variant="secondary" stayOnPage />
                       )}
