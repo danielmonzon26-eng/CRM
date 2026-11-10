@@ -12,9 +12,12 @@ export async function RecordCommunication({
   contactEmails,
   leadId,
   emailTo,
+  blockedReason,
 }: {
   contactEmails: string[];
   leadId?: string;
+  /** Disables sending, e.g. when the company is Do Not Contact. */
+  blockedReason?: string;
   /** Prefilled recipient for the compose button, usually the primary contact. */
   emailTo?: string | null;
 }) {
@@ -34,7 +37,7 @@ export async function RecordCommunication({
       {accounts.length > 0 && <MailAutoSync />}
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h2 className="text-sm font-semibold text-slate-700">Email & meetings</h2>
-        <ComposeEmailButton canSend={canSend} size="sm" label="New email" defaults={{ to: emailTo ?? "", leadId }} />
+        <ComposeEmailButton canSend={canSend} blockedReason={blockedReason} size="sm" label="New email" defaults={{ to: emailTo ?? "", leadId }} />
       </div>
 
       {!mine && (
@@ -50,7 +53,7 @@ export async function RecordCommunication({
         <p className="mt-2 text-sm text-slate-500">Add an email address to a contact to see their emails and meetings here.</p>
       ) : (
         <div className="mt-2 space-y-4">
-          <EmailList emails={emails} canSend={canSend} leadId={leadId} showMailbox={accounts.length > 1} emptyText="No email with these contacts yet." />
+          <EmailList emails={emails} canSend={canSend} blockedReason={blockedReason} leadId={leadId} showMailbox={accounts.length > 1} emptyText="No email with these contacts yet." />
           {meetings.length > 0 && (
             <div>
               <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-500">Meetings</h3>

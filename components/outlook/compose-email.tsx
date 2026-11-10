@@ -25,12 +25,15 @@ export type ComposeDefaults = {
 export function ComposeEmailButton({
   defaults,
   canSend,
+  blockedReason,
   label = "Email",
   size = "md",
   variant = "secondary",
 }: {
   defaults: ComposeDefaults;
   canSend: boolean;
+  /** Disables sending with this explanation, e.g. for a Do Not Contact company. */
+  blockedReason?: string;
   label?: string;
   size?: "sm" | "md";
   variant?: "primary" | "secondary" | "ghost";
@@ -41,8 +44,8 @@ export function ComposeEmailButton({
     <>
       <button
         type="button"
-        disabled={!canSend}
-        title={canSend ? undefined : "Connect your Outlook on the Communication page to send email."}
+        disabled={!canSend || Boolean(blockedReason)}
+        title={blockedReason ?? (canSend ? undefined : "Connect your Outlook on the Communication page to send email.")}
         onClick={() => setOpen(true)}
         className={buttonClass(variant, size)}
       >

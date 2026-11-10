@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { parseIndustry } from "@/lib/industries/naics";
 import { clientTypeLabel, isClientType, isLeadProgram, programLabel } from "@/lib/leads/classification";
-import { ALL_STATUSES, type LeadFilters, type LeadSort } from "@/lib/leads/filters";
+import { ALL_STATUSES, ENGAGEMENT_LABELS, STATUS_LABELS, isLeadEngagement, type LeadFilters, type LeadSort } from "@/lib/leads/filters";
 import { getLeadQuickEdit } from "@/lib/leads/queries";
 import {
   COMPANY_FIELD_LABELS,
@@ -14,7 +14,7 @@ import {
   type QuickEditRecord,
 } from "@/lib/leads/quick-edit";
 import { searchLeads, type LeadRow } from "@/lib/leads/search";
-import type { LeadStatus } from "@/lib/supabase/types";
+import type { LeadEngagement, LeadStatus } from "@/lib/supabase/types";
 import { extractDomain } from "@/lib/text";
 
 const MAX_EXPORT_ROWS = 500;
@@ -63,7 +63,7 @@ export async function saveLeadQuickEdit(
 
   const leadUpdate = {
     ...(changes.status ? { status: changes.status } : {}),
-    ...(changes.assignedTo !== undefined ? { assigned_to: changes.assignedTo || null } : {}),
+    ...(changes.engagement ? { engagement: changes.engagement } : {}),
     ...(changes.clientType !== undefined ? { client_type: changes.clientType || null } : {}),
     ...(changes.programs ? { programs: changes.programs } : {}),
   };
@@ -71,15 +71,10 @@ export async function saveLeadQuickEdit(
     const { error } = await supabase.from("leads").update(leadUpdate).eq("id", leadId).select("id").single();
     if (error) return { error: error.message };
 
-    if (changes.status) activity.push({ type: "status_change", body: `Status changed to "${changes.status}"` });
-    if (changes.assignedTo !== undefined) {
-      const { data: assignee } = changes.assignedTo
-        ? await supabase.from("profiles").select("email, full_name").eq("id", changes.assignedTo).maybeSingle()
-        : { data: null };
-      activity.push({ type: "status_change", body: assignee ? `Assigned to ${assignee.full_name ?? assignee.email ?? "a team member"}` : "Unassigned" });
-    }
+    if (changes.status) activity.push({ type: "status_change", body: `Stage changed to ${STATUS_LABELS[changes.status]}` });
+    if (changes.engagement) activity.push({ type: "status_change", body: `Status changed to ${ENGAGEMENT_LABELS[changes.engagement]}` });
     if (changes.clientType !== undefined) activity.push({ type: "note", body: `Client type set to ${clientTypeLabel(changes.clientType) ?? "not set"}` });
-    if (changes.programs) activity.push({ type: "note", body: `Programs set to ${changes.programs.length ? changes.programs.map(programLabel).join(", ") : "none"}` });
+    if (changes.programs) activity.push({ type: "note", body: `Work set to ${changes.programs.length ? changes.programs.map(programLabel).join(", ") : "none"}` });
   }
 
   const companyFields = changedLabels(changes, COMPANY_FIELD_LABELS);
@@ -172,7 +167,7 @@ export async function updateLeadClassification(
   const body =
     change.clientType !== undefined
       ? `Client type set to ${clientTypeLabel(change.clientType) ?? "not set"}`
-      : `Programs set to ${change.programs?.length ? change.programs.map(programLabel).join(", ") : "none"}`;
+      : `Work set to ${change.programs?.length ? change.programs.map(programLabel).join(", ") : "none"}`;
   await supabase.from("activities").insert({ lead_id: leadId, actor_id: user?.id ?? null, type: "note", body });
 
   revalidateLeadLists();
@@ -195,10 +190,11 @@ export async function bulkChangeLeadProgram(leadIds: string[], program: string, 
 
 export async function bulkUpdateLeads(
   leadIds: string[],
-  change: { status?: LeadStatus; assigneeId?: string | null; clientType?: string | null }
+  change: { status?: LeadStatus; engagement?: LeadEngagement; clientType?: string | null }
 ): Promise<{ error?: string; updated?: number }> {
   if (leadIds.length === 0 || leadIds.length > MAX_BULK_LEADS) return { error: `Select between 1 and ${MAX_BULK_LEADS} leads.` };
   if (change.status && !ALL_STATUSES.includes(change.status)) return { error: "That isn't a valid stage." };
+  if (change.engagement && !isLeadEngagement(change.engagement)) return { error: "That isn't a valid status." };
   if (change.clientType && !isClientType(change.clientType)) return { error: "That isn't a valid client type." };
 
   const supabase = await createClient();
@@ -208,15 +204,19 @@ export async function bulkUpdateLeads(
 
   const update = {
     ...(change.status ? { status: change.status } : {}),
-    ...(change.assigneeId !== undefined ? { assigned_to: change.assigneeId } : {}),
+    ...(change.engagement ? { engagement: change.engagement } : {}),
     ...(change.clientType !== undefined ? { client_type: change.clientType } : {}),
   };
   const { data, error } = await supabase.from("leads").update(update).in("id", leadIds).select("id");
   if (error) return { error: error.message };
 
-  if (change.status) {
+  const body = [
+    change.status ? `Stage changed to ${STATUS_LABELS[change.status]}` : null,
+    change.engagement ? `Status changed to ${ENGAGEMENT_LABELS[change.engagement]}` : null,
+  ].filter(Boolean).join(". ");
+  if (body) {
     await supabase.from("activities").insert(
-      data.map((lead) => ({ lead_id: lead.id, actor_id: user?.id ?? null, type: "status_change" as const, body: `Status changed to "${change.status}"` }))
+      data.map((lead) => ({ lead_id: lead.id, actor_id: user?.id ?? null, type: "status_change" as const, body }))
     );
   }
 
@@ -227,6 +227,7 @@ export async function bulkUpdateLeads(
 }
 
 export async function updateLeadStatus(leadId: string, status: LeadStatus) {
+  if (!ALL_STATUSES.includes(status)) throw new Error("That isn't a valid stage.");
   const supabase = await createClient();
   const {
     data: { user },
@@ -239,12 +240,38 @@ export async function updateLeadStatus(leadId: string, status: LeadStatus) {
     lead_id: leadId,
     actor_id: user?.id ?? null,
     type: "status_change",
-    body: `Status changed to "${status}"`,
+    body: `Stage changed to ${STATUS_LABELS[status]}`,
   });
 
   revalidatePath("/");
   revalidatePath("/crm");
   revalidatePath("/leads");
+  revalidatePath("/companies", "layout");
+  revalidatePath(`/leads/${leadId}`);
+}
+
+/** Sets Engaged, Not Engaged, or Do Not Contact for the whole company. */
+export async function updateLeadEngagement(leadId: string, engagement: LeadEngagement) {
+  if (!isLeadEngagement(engagement)) throw new Error("That isn't a valid status.");
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  const { error } = await supabase.from("leads").update({ engagement }).eq("id", leadId);
+  if (error) throw error;
+
+  await supabase.from("activities").insert({
+    lead_id: leadId,
+    actor_id: user?.id ?? null,
+    type: "status_change",
+    body: `Status changed to ${ENGAGEMENT_LABELS[engagement]}`,
+  });
+
+  revalidatePath("/");
+  revalidatePath("/leads");
+  revalidatePath("/companies", "layout");
+  revalidatePath("/contacts");
   revalidatePath(`/leads/${leadId}`);
 }
 
@@ -314,4 +341,42 @@ export async function assignLead(leadId: string, assigneeId: string | null) {
   revalidatePath("/");
   revalidatePath("/crm");
   revalidatePath(`/leads/${leadId}`);
+}
+
+/**
+ * Puts a company on the Leads page: creates its lead if it has none, or marks a Not
+ * Engaged one Engaged. Do Not Contact companies are left alone.
+ */
+export async function makeLead(companyId: string): Promise<{ error?: string; leadId?: string }> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "Sign in first." };
+
+  const { data: existing } = await supabase.from("leads").select("id, engagement").eq("company_id", companyId).maybeSingle();
+  if (existing?.engagement === "do_not_contact") return { error: "This company is marked Do Not Contact. Change its status first." };
+
+  let leadId = existing?.id;
+  if (existing) {
+    if (existing.engagement !== "engaged") {
+      const { error } = await supabase.from("leads").update({ engagement: "engaged" }).eq("id", existing.id);
+      if (error) return { error: "The lead wasn't made. Please try again." };
+    }
+  } else {
+    const { data: lead, error } = await supabase.from("leads").insert({ company_id: companyId, engagement: "engaged" }).select("id").single();
+    if (error || !lead) return { error: "The lead wasn't made. Please try again." };
+    leadId = lead.id;
+  }
+
+  if (existing?.engagement !== "engaged") {
+    await supabase.from("activities").insert({ lead_id: leadId!, actor_id: user.id, type: "status_change", body: "Made a lead (status Engaged)" });
+  }
+
+  revalidatePath("/");
+  revalidatePath("/leads");
+  revalidatePath("/contacts");
+  revalidatePath("/companies");
+  revalidatePath(`/companies/${companyId}`);
+  return { leadId };
 }

@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import type { ActivityType, LeadStatus, UserRole } from "@/lib/supabase/types";
+import type { ActivityType, LeadEngagement, LeadStatus, UserRole } from "@/lib/supabase/types";
 import type { QuickEditRecord } from "@/lib/leads/quick-edit";
 import type { ScoreReason } from "@/lib/leads/scoring";
 
@@ -41,7 +41,7 @@ export async function getLeadQuickEdit(leadId: string): Promise<QuickEditRecord 
     otherContacts: Math.max(contacts.length - 1, 0),
     values: {
       status: lead.status,
-      assignedTo: lead.assigned_to ?? "",
+      engagement: lead.engagement,
       clientType: lead.client_type ?? "",
       programs: lead.programs,
       companyName: company.name,
@@ -60,6 +60,7 @@ export async function getLeadQuickEdit(leadId: string): Promise<QuickEditRecord 
 export type LeadDetail = {
   id: string;
   status: LeadStatus;
+  engagement: LeadEngagement;
   score: number;
   scoreReasons: ScoreReason[];
   assignedTo: string | null;
@@ -111,6 +112,7 @@ export async function getLeadDetail(leadId: string): Promise<LeadDetail | null> 
     clientType: lead.client_type,
     programs: lead.programs,
     status: lead.status,
+    engagement: lead.engagement,
     score: lead.score,
     scoreReasons: Array.isArray(lead.score_reasons) ? (lead.score_reasons as ScoreReason[]) : [],
     assignedTo: lead.assigned_to,

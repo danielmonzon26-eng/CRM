@@ -1,10 +1,11 @@
 import { createClient } from "@/lib/supabase/server";
 import { ALL_STATUSES, TABLE_PAGE_SIZE, type LeadFilters, type LeadSort, type LeadViewState } from "@/lib/leads/filters";
-import type { LeadStatus } from "@/lib/supabase/types";
+import type { LeadEngagement, LeadStatus } from "@/lib/supabase/types";
 
 export type LeadRow = {
   id: string;
   status: LeadStatus;
+  engagement: LeadEngagement;
   score: number;
   assignedTo: string | null;
   createdAt: string;
@@ -29,7 +30,8 @@ export type LeadFacets = { industries: string[]; communities: string[] };
 function filterArgs(filters: LeadFilters) {
   return {
     p_search: filters.q || null,
-    p_owner: filters.owner || null,
+    // The Leads page only lists Engaged companies; the rest are under Contacts and Companies.
+    p_engagement: "engaged",
     p_industry: filters.industry || null,
     p_community: filters.community || null,
     p_min_score: filters.score ? Number(filters.score) : null,
@@ -61,6 +63,7 @@ export async function searchLeads(
     rows: data.map((r) => ({
       id: r.id,
       status: r.status as LeadStatus,
+      engagement: r.engagement as LeadEngagement,
       score: r.score,
       assignedTo: r.assigned_to,
       createdAt: r.created_at,
