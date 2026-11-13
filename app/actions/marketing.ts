@@ -368,6 +368,8 @@ export async function applySuggestedPromotions(eventId: string): Promise<Result>
 
 export type EventPostInput = {
   eventId: string;
+  /** Set to change a post the event already has; null to plan a new one. */
+  postId?: string | null;
   /** "28", "14", "7", "1" days before the event, or "custom" for a set date. */
   timing: string;
   date: string;
@@ -378,17 +380,21 @@ export type EventPostInput = {
 
 const TIMINGS: Record<string, number> = { "28": 28, "14": 14, "7": 7, "1": 1 };
 const TIMING_WORDS: Record<number, string> = { 28: "4 weeks before", 14: "2 weeks before", 7: "1 week before", 1: "1 day before" };
-const MAX_PER_TIMING = 2;
+/** The most social posts one event can have, counting the automatic requests. */
+const MAX_EVENT_POSTS = 3;
 
 /**
- * Plans a social post from an event's page: what it covers, where it goes and when, relative
- * to the event (it moves if the event does) or on a set date. It starts as Requested, so it
- * appears in Social and the Planner to be written and approved. Up to two per timing.
+ * Plans or changes one of an event's social posts: what it covers, where it goes and when,
+ * relative to the event (it moves if the event does) or on a set date. New posts start as
+ * Requested, so they appear in Social and the Planner to be written and approved. An event
+ * has at most three posts, and one per timing.
  */
-export async function scheduleEventPost(input: EventPostInput): Promise<Result> {
+export async function saveEventPost(input: EventPostInput): Promise<Result> {
   const user = await getCurrentUser();
   if (!user) return { error: "Sign in first." };
   if (!UUID.test(input.eventId)) return { error: "That event wasn't found." };
+  const postId = input.postId ?? null;
+  if (postId && !UUID.test(postId)) return { error: "That post wasn't found." };
   const topic = input.topic.trim();
   if (!topic) return { error: "Say what the post should cover." };
   const channelIds = [...new Set(input.channelIds)];
@@ -399,18 +405,19 @@ export async function scheduleEventPost(input: EventPostInput): Promise<Result> 
   if (input.timing === "custom" && !/^\d{4}-\d{2}-\d{2}$/.test(input.date)) return { error: "Pick the date it should go out." };
 
   const supabase = await createClient();
-  const { data: event, error: eventError } = await supabase.from("events").select("starts_at").eq("id", input.eventId).maybeSingle();
+  const [{ data: event, error: eventError }, { data: siblings, error: postsError }] = await Promise.all([
+    supabase.from("events").select("starts_at").eq("id", input.eventId).maybeSingle(),
+    supabase.from("social_posts").select("id, status, event_days_before, auto_days_before").eq("event_id", input.eventId),
+  ]);
   if (eventError || !event) return { error: "That event wasn't found." };
-
-  if (days !== null) {
-    const { count, error } = await supabase
-      .from("social_posts")
-      .select("id", { count: "exact", head: true })
-      .eq("event_id", input.eventId)
-      .or(`event_days_before.eq.${days},auto_days_before.eq.${days}`);
-    if (error) return { error: SAVE_FAILED };
-    if ((count ?? 0) >= MAX_PER_TIMING) return { error: `There are already two posts ${TIMING_WORDS[days]}. Pick another time, or edit one of those.` };
-  }
+  if (postsError) return { error: SAVE_FAILED };
+  const all = siblings ?? [];
+  const current = postId ? all.find((p) => p.id === postId) : null;
+  if (postId && !current) return { error: "That post wasn't found. It may have been deleted." };
+  const others = all.filter((p) => p.id !== postId);
+  if (!postId && others.length >= MAX_EVENT_POSTS) return { error: "This event already has three posts, the most it can have. Change or remove one of those instead." };
+  if (days !== null && others.some((p) => (p.event_days_before ?? p.auto_days_before) === days))
+    return { error: `There's already a post ${TIMING_WORDS[days]}. Pick another time, or change that one.` };
 
   let day = input.date;
   if (days !== null) {
@@ -425,17 +432,45 @@ export async function scheduleEventPost(input: EventPostInput): Promise<Result> 
     return { error: "Check the date and time." };
   }
 
-  const { data: post, error } = await supabase
-    .from("social_posts")
-    .insert({ title: topic.slice(0, 200), caption: "", scheduled_at: scheduledAt, status: "requested", event_id: input.eventId, event_days_before: days })
-    .select("id")
-    .single();
-  if (error || !post) return { error: SAVE_FAILED };
-  if (channelIds.length) {
-    const { error: linkError } = await supabase.from("social_post_channels").insert(channelIds.map((channel_id) => ({ post_id: post.id, channel_id })));
-    if (linkError) return { error: "The post was planned, but its channels didn't save. Add them when you write it.", id: post.id };
+  let id = postId;
+  if (current) {
+    const { data: links, error: linksError } = await supabase.from("social_post_channels").select("channel_id").eq("post_id", current.id);
+    if (linksError) return { error: SAVE_FAILED };
+    const had = (links ?? []).map((l) => l.channel_id);
+    const removed = had.filter((c) => !channelIds.includes(c));
+    const added = channelIds.filter((c) => !had.includes(c));
+    // Changing where an approved post goes needs approving again, like changing its words
+    // (the database handles the words).
+    const reapprove = current.status === "approved" && (removed.length > 0 || added.length > 0) && user.role !== "admin";
+    // Once changed here, an automatic request becomes an ordinary planned post: it keeps its
+    // new time when the event moves, and isn't replaced if the event is published again.
+    const { error } = await supabase
+      .from("social_posts")
+      .update({ title: topic.slice(0, 200), scheduled_at: scheduledAt, event_days_before: days, auto_days_before: null, ...(reapprove ? { status: "waiting_approval" } : {}) })
+      .eq("id", current.id);
+    if (error) return { error: SAVE_FAILED };
+    if (removed.length) {
+      const { error: e } = await supabase.from("social_post_channels").delete().eq("post_id", current.id).in("channel_id", removed);
+      if (e) return { error: "The post saved, but its channels didn't update. Please try again.", id: current.id };
+    }
+    if (added.length) {
+      const { error: e } = await supabase.from("social_post_channels").insert(added.map((channel_id) => ({ post_id: current.id, channel_id })));
+      if (e) return { error: "The post saved, but its channels didn't update. Please try again.", id: current.id };
+    }
+  } else {
+    const { data: post, error } = await supabase
+      .from("social_posts")
+      .insert({ title: topic.slice(0, 200), caption: "", scheduled_at: scheduledAt, status: "requested", event_id: input.eventId, event_days_before: days })
+      .select("id")
+      .single();
+    if (error || !post) return { error: SAVE_FAILED };
+    id = post.id;
+    if (channelIds.length) {
+      const { error: linkError } = await supabase.from("social_post_channels").insert(channelIds.map((channel_id) => ({ post_id: post.id, channel_id })));
+      if (linkError) return { error: "The post was planned, but its channels didn't save. Add them when you write it.", id: post.id };
+    }
   }
   revalidate();
   revalidatePath(`/events/${input.eventId}`);
-  return { id: post.id };
+  return { id: id! };
 }
