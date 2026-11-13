@@ -164,6 +164,7 @@ function RequestPanel({
   const [audience, setAudience] = useState<Audience>(attendedCount > 0 ? "attended" : "registered");
   const [mailboxes, setMailboxes] = useState<{ id: string; email: string; name: string | null }[] | null>(null);
   const [mailbox, setMailbox] = useState("");
+  const [mailboxesFailed, setMailboxesFailed] = useState(false);
   const [progress, setProgress] = useState<{ sent: number; total: number } | null>(null);
   const [busy, setBusy] = useState(false);
   const stop = useRef(false);
@@ -174,7 +175,10 @@ function RequestPanel({
         setMailboxes(list);
         setMailbox(list[0]?.id ?? "");
       })
-      .catch(() => setMailboxes([]));
+      .catch(() => {
+        setMailboxesFailed(true);
+        setMailboxes([]);
+      });
   }, []);
 
   const notYetSent = Math.max(0, summary.requested - summary.sentCount - summary.failedCount);
@@ -269,6 +273,8 @@ function RequestPanel({
           Send from
           {mailboxes === null ? (
             <p className="mt-1.5 font-normal text-slate-500">Checking mailboxes...</p>
+          ) : mailboxesFailed ? (
+            <p role="alert" className="mt-1.5 font-normal text-rose-800">The mailbox list didn&apos;t load. Refresh the page, or download the links instead.</p>
           ) : noMailbox ? (
             <p className="mt-1.5 font-normal text-slate-600">
               No Outlook mailbox is connected yet.{" "}

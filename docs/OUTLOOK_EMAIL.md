@@ -71,3 +71,16 @@ Catapult Microsoft account, and approves. Their email starts appearing within a 
   by one CRM user.
 - **Disconnect** removes that person's copied email and meetings from the CRM. Nothing is
   deleted from Outlook.
+
+## Controlling what gets sent
+
+Every email the CRM sends (new emails, replies, event feedback requests) goes through one
+function in `lib/outlook/send.ts`, so two Vercel settings control all of it:
+
+| Setting | Effect |
+|---|---|
+| `OUTBOUND_EMAIL=off` | Stops all sending. People see "Sending email is switched off". Remove it to turn sending back on. |
+| `OUTBOUND_TEST_ADDRESS=you@example.com` | Sends everything to that one address instead, with the real recipients named in the subject. |
+
+Outside the live site (preview deploys and local copies) email only goes out when
+`OUTBOUND_TEST_ADDRESS` is set, so a test can never reach a real contact.

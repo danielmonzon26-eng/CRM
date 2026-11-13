@@ -58,6 +58,10 @@ export async function saveLeadQuickEdit(
 
   const { data: lead, error: leadError } = await supabase.from("leads").select("company_id").eq("id", leadId).single();
   if (leadError) return { error: leadError.message };
+  if (changes.status) {
+    const stageError = await automaticStageError(supabase, [leadId], changes.status);
+    if (stageError) return { error: stageError };
+  }
 
   const activity: { type: "note" | "status_change"; body: string }[] = [];
 
@@ -188,6 +192,23 @@ export async function bulkChangeLeadProgram(leadIds: string[], program: string, 
   return { updated: data };
 }
 
+/**
+ * Proposal and Client follow proposals, so they can only be set by hand on leads that
+ * already qualify (for example, moving back after being moved away by mistake).
+ */
+async function automaticStageError(supabase: Awaited<ReturnType<typeof createClient>>, leadIds: string[], stage: LeadStatus): Promise<string | null> {
+  if (stage !== "proposal" && stage !== "client") return null;
+  let query = supabase.from("deals").select("lead_id").in("lead_id", leadIds);
+  if (stage === "client") query = query.eq("stage", "accepted");
+  const { data, error } = await query;
+  if (error) return "The stage couldn't be checked. Please try again.";
+  const qualifying = new Set(data.map((d) => d.lead_id));
+  if (leadIds.every((id) => qualifying.has(id))) return null;
+  return stage === "proposal"
+    ? "Proposal is set on its own when a proposal is created for the lead."
+    : "Client is set on its own when a proposal is accepted.";
+}
+
 export async function bulkUpdateLeads(
   leadIds: string[],
   change: { status?: LeadStatus; engagement?: LeadEngagement; clientType?: string | null }
@@ -201,6 +222,10 @@ export async function bulkUpdateLeads(
   const {
     data: { user },
   } = await supabase.auth.getUser();
+  if (change.status) {
+    const stageError = await automaticStageError(supabase, leadIds, change.status);
+    if (stageError) return { error: stageError };
+  }
 
   const update = {
     ...(change.status ? { status: change.status } : {}),
@@ -226,15 +251,18 @@ export async function bulkUpdateLeads(
   return { updated: data.length };
 }
 
-export async function updateLeadStatus(leadId: string, status: LeadStatus) {
-  if (!ALL_STATUSES.includes(status)) throw new Error("That isn't a valid stage.");
+export async function updateLeadStatus(leadId: string, status: LeadStatus): Promise<{ error?: string }> {
+  if (!ALL_STATUSES.includes(status)) return { error: "That isn't a valid stage." };
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
+  const stageError = await automaticStageError(supabase, [leadId], status);
+  if (stageError) return { error: stageError };
+
   const { error } = await supabase.from("leads").update({ status }).eq("id", leadId);
-  if (error) throw error;
+  if (error) return { error: "The stage didn't change. Please try again." };
 
   await supabase.from("activities").insert({
     lead_id: leadId,
@@ -248,6 +276,7 @@ export async function updateLeadStatus(leadId: string, status: LeadStatus) {
   revalidatePath("/leads");
   revalidatePath("/companies", "layout");
   revalidatePath(`/leads/${leadId}`);
+  return {};
 }
 
 /** Sets Engaged, Not Engaged or Do Not Contact for the whole company. */
@@ -345,6 +374,11 @@ export async function makeLead(companyId: string): Promise<{ error?: string; lea
     }
   } else {
     const { data: lead, error } = await supabase.from("leads").insert({ company_id: companyId, engagement: "engaged" }).select("id").single();
+    if (error?.code === "23505") {
+      // A second click got here first: one lead per company, so use that one.
+      const { data: made } = await supabase.from("leads").select("id").eq("company_id", companyId).maybeSingle();
+      if (made) return { leadId: made.id };
+    }
     if (error || !lead) return { error: "The lead wasn't made. Please try again." };
     leadId = lead.id;
   }

@@ -97,6 +97,8 @@ function CreateProposalDialog({
   const [payment, setPayment] = useState<DealPayment | null>(null);
   const [file, setFile] = useState<File | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // One key for this form: a second submit of the same form can't make a second proposal.
+  const [requestKey] = useState(() => crypto.randomUUID());
 
   useEffect(() => {
     ref.current?.showModal();
@@ -126,6 +128,7 @@ function CreateProposalDialog({
           staffIds,
           payment,
           sentOn: stage === "sent" ? sentOn : null,
+          requestKey,
         });
       } catch (e) {
         setError(e instanceof Error && e.message ? e.message : "That proposal didn't save. Please try again.");

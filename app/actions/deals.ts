@@ -47,6 +47,8 @@ export type CreateDealInput = {
   staffIds?: string[];
   payment?: DealPayment | null;
   sentOn?: string | null;
+  /** Made once per form in the browser, so a repeated submit returns the first proposal. */
+  requestKey?: string;
 };
 
 export async function createDeal(input: CreateDealInput): Promise<string> {
@@ -64,10 +66,12 @@ export async function createDeal(input: CreateDealInput): Promise<string> {
   const {
     data: { user },
   } = await supabase.auth.getUser();
+  const requestKey = input.requestKey && /^[\w-]{8,64}$/.test(input.requestKey) ? input.requestKey : null;
 
   const { data: deal, error } = await supabase
     .from("deals")
     .insert({
+      request_key: requestKey,
       name: input.name.trim(),
       stage,
       company_id: input.companyId,
@@ -83,7 +87,14 @@ export async function createDeal(input: CreateDealInput): Promise<string> {
     })
     .select("id")
     .single();
-  if (error) throw error;
+  if (error) {
+    // Already created by an earlier copy of this same request.
+    if (error.code === "23505" && requestKey) {
+      const { data: existing } = await supabase.from("deals").select("id").eq("request_key", requestKey).maybeSingle();
+      if (existing) return existing.id;
+    }
+    throw error;
+  }
 
   const staffIds = [...new Set(input.staffIds ?? [])];
   if (staffIds.length > 0) {

@@ -85,7 +85,18 @@ function localInputValue(date = new Date()): string {
  * Every touchpoint with the company in one place, with notes, calls and meetings logged
  * at the top. Filters and search work on what's already loaded.
  */
-export function ActivityCentre({ leadId, notes, items }: { leadId: string; notes: LeadNote[]; items: TimelineItem[] }) {
+export function ActivityCentre({
+  leadId,
+  notes,
+  items,
+  unavailable = [],
+}: {
+  leadId: string;
+  notes: LeadNote[];
+  items: TimelineItem[];
+  /** Sources that failed to load, named so their absence isn't mistaken for "nothing happened". */
+  unavailable?: string[];
+}) {
   const [filter, setFilter] = useState<"all" | TimelineCategory>("all");
   const [query, setQuery] = useState("");
   const [showSystem, setShowSystem] = useState(false);
@@ -130,6 +141,12 @@ export function ActivityCentre({ leadId, notes, items }: { leadId: string; notes
 
       <div className="mt-2 space-y-4">
         <NoteComposer leadId={leadId} />
+
+        {unavailable.length > 0 && (
+          <p role="alert" className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-900">
+            Some history couldn&apos;t load ({unavailable.join(", ")}), so it&apos;s missing below. Refresh the page to try again.
+          </p>
+        )}
 
         {pinned.length > 0 && (
           <div>

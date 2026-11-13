@@ -9,7 +9,14 @@ import { FeedbackProvider } from "@/components/ui/feedback";
 
 export async function AppShell({ children }: { children: React.ReactNode }) {
   const [user, cookieStore] = await Promise.all([getCurrentUser(), cookies()]);
-  const openTaskCount = user ? await getOpenTaskCount().catch(() => 0) : 0;
+  // Only the nav badge depends on this, so a failure hides the badge and is logged; the
+  // Tasks page itself shows its own error.
+  const openTaskCount = user
+    ? await getOpenTaskCount().catch((e) => {
+        console.error("Open task count failed:", e);
+        return 0;
+      })
+    : 0;
   const isAdmin = user?.role === "admin";
 
   return (

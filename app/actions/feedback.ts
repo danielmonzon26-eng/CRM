@@ -3,7 +3,8 @@
 import { revalidatePath } from "next/cache";
 import { getCurrentUser } from "@/lib/auth/session";
 import { formatEventWhen } from "@/lib/events/format";
-import { graph, isOutlookConfigured, ReconnectRequired } from "@/lib/outlook/graph";
+import { isOutlookConfigured, ReconnectRequired } from "@/lib/outlook/graph";
+import { routeOutbound, SendBlocked, sendFromMailbox } from "@/lib/outlook/send";
 import { getAccessToken } from "@/lib/outlook/sync";
 import { getSiteUrl } from "@/lib/site-url";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -99,6 +100,15 @@ export async function sendFeedbackBatch(eventId: string, accountId: string): Pro
   if (!event) return { error: "That event wasn't found." };
   if (!account || account.status !== "connected") return { error: "That mailbox needs to be connected again on the Communication page." };
 
+  // Checked once up front, so a switched-off or test-only setup stops the whole batch with
+  // a clear reason instead of marking every person as failed.
+  try {
+    routeOutbound(["check@example.com"]);
+  } catch (e) {
+    if (e instanceof SendBlocked) return { error: e.message };
+    throw e;
+  }
+
   let token: string;
   try {
     token = await getAccessToken(admin, account);
@@ -115,16 +125,11 @@ export async function sendFeedbackBatch(eventId: string, accountId: string): Pro
     if (i > 0) await sleep(GAP_MS);
     if (!row.email) continue;
     try {
-      await graph(token, "/me/sendMail", {
-        method: "POST",
-        body: {
-          message: {
-            subject: `How was ${event.title}?`,
-            body: { contentType: "Text", content: emailBody(row.full_name?.split(" ")[0] ?? "", event.title, when, `${siteUrl}/feedback/${row.token}`, sender) },
-            toRecipients: [{ emailAddress: { address: row.email, name: row.full_name ?? undefined } }],
-          },
-          saveToSentItems: true,
-        },
+      await sendFromMailbox(token, {
+        to: [row.email],
+        toNames: row.full_name ? { [row.email]: row.full_name } : undefined,
+        subject: `How was ${event.title}?`,
+        body: emailBody(row.full_name?.split(" ")[0] ?? "", event.title, when, `${siteUrl}/feedback/${row.token}`, sender),
       });
       await supabase.from("event_feedback").update({ request_sent_at: new Date().toISOString(), send_error: null }).eq("id", row.id);
       sent++;

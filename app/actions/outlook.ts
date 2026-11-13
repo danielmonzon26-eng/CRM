@@ -2,7 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 import { getCurrentUser } from "@/lib/auth/session";
-import { graph, GraphError, isOutlookConfigured, ReconnectRequired } from "@/lib/outlook/graph";
+import { GraphError, isOutlookConfigured, ReconnectRequired } from "@/lib/outlook/graph";
+import { SendBlocked, sendFromMailbox } from "@/lib/outlook/send";
 import { getAccessToken, STALE_MS, syncAccounts } from "@/lib/outlook/sync";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
@@ -119,12 +120,8 @@ export async function sendOutlookEmail(input: SendEmailInput): Promise<ActionRes
   if (!account) return { error: "Connect your Outlook first, on the Communication page." };
   if (account.status !== "connected") return { error: "Your Outlook needs to be connected again, on the Communication page." };
 
-  const recipients = (list: string[]) => list.map((address) => ({ emailAddress: { address } }));
-
   try {
-    const token = await getAccessToken(admin, account);
-    let draft: { id: string; conversationId?: string; subject?: string; webLink?: string };
-
+    let replyToGraphId: string | undefined;
     if (input.replyToId) {
       const { data: original } = await admin
         .from("emails")
@@ -132,17 +129,10 @@ export async function sendOutlookEmail(input: SendEmailInput): Promise<ActionRes
         .eq("id", input.replyToId)
         .maybeSingle();
       if (!original || original.account_id !== account.id) return { error: "You can only reply to email in your own mailbox." };
-      draft = await graph(token, `/me/messages/${encodeURIComponent(original.graph_id)}/createReply`, {
-        method: "POST",
-        body: { message: { toRecipients: recipients(to), ccRecipients: recipients(cc) }, comment: body },
-      });
-    } else {
-      draft = await graph(token, "/me/messages", {
-        method: "POST",
-        body: { subject, body: { contentType: "Text", content: body }, toRecipients: recipients(to), ccRecipients: recipients(cc) },
-      });
+      replyToGraphId = original.graph_id;
     }
-    await graph(token, `/me/messages/${encodeURIComponent(draft.id)}/send`, { method: "POST" });
+    const token = await getAccessToken(admin, account);
+    const draft = await sendFromMailbox(token, { to, cc, subject, body }, replyToGraphId);
 
     // Recorded now so it shows straight away; the next sync updates the same row by ID.
     const owner = account.email.toLowerCase();
@@ -178,6 +168,7 @@ export async function sendOutlookEmail(input: SendEmailInput): Promise<ActionRes
     }
   } catch (e) {
     console.error("Outlook send failed:", e);
+    if (e instanceof SendBlocked) return { error: e.message };
     if (e instanceof ReconnectRequired) return { error: "Your Outlook needs to be connected again, on the Communication page." };
     if (e instanceof GraphError && e.status === 403) return { error: "Outlook didn't allow sending. Ask an admin to check the app's permissions." };
     return { error: "The email wasn't sent. Please try again." };

@@ -42,7 +42,7 @@ export default async function CompanyDetailPage({ params }: { params: Promise<{ 
     lead ? getDiscoveryCalls(lead.id) : [],
   ]);
   const [canSend, timeline] = await Promise.all([
-    user ? canUserSend(user.id) : false,
+    user ? canUserSend(user.id).catch(() => false) : false,
     lead ? getActivityTimeline(lead.id, contacts.map((c) => c.email).filter((e): e is string => Boolean(e))) : null,
   ]);
   const primaryContact = contacts.find((c) => c.isPrimary) ?? contacts[0] ?? null;
@@ -153,7 +153,7 @@ export default async function CompanyDetailPage({ params }: { params: Promise<{ 
             </div>
           </section>
 
-          {lead && timeline && <ActivityCentre leadId={lead.id} notes={timeline.notes} items={timeline.items} />}
+          {lead && timeline && <ActivityCentre leadId={lead.id} notes={timeline.notes} items={timeline.items} unavailable={timeline.unavailable} />}
         </div>
 
         <aside className="space-y-4 lg:sticky lg:top-20 lg:self-start">

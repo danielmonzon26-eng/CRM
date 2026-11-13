@@ -6,6 +6,8 @@ import { ComposeEmailButton } from "./compose-email";
 import { EmailList } from "./email-list";
 import { MailAutoSync } from "./mail-sync";
 import { MeetingList } from "./meeting-list";
+import { LoadError } from "@/components/ui/load-error";
+import { settle } from "@/lib/settle";
 
 /** "Email & meetings" for a lead or company page, matched on its contacts' addresses. */
 export async function RecordCommunication({
@@ -24,11 +26,22 @@ export async function RecordCommunication({
   const user = await getCurrentUser();
   if (!user) return null;
 
-  const [accounts, emails, meetings] = await Promise.all([
-    getMailAccounts(),
-    getEmailsForAddresses(contactEmails, user.id),
-    getMeetingsForAddresses(contactEmails),
+  const [accountsResult, emailsResult, meetingsResult] = await Promise.all([
+    settle(getMailAccounts()),
+    settle(getEmailsForAddresses(contactEmails, user.id)),
+    settle(getMeetingsForAddresses(contactEmails)),
   ]);
+  if (!accountsResult.ok) {
+    return (
+      <section>
+        <h2 className="text-sm font-semibold text-slate-700">Email & meetings</h2>
+        <LoadError what="Email and meetings" className="mt-2" />
+      </section>
+    );
+  }
+  const accounts = accountsResult.value;
+  const emails = emailsResult.ok ? emailsResult.value : [];
+  const meetings = meetingsResult.ok ? meetingsResult.value : [];
   const mine = accounts.find((a) => a.userId === user.id);
   const canSend = isOutlookConfigured() && mine?.status === "connected";
 
@@ -53,7 +66,9 @@ export async function RecordCommunication({
         <p className="mt-2 text-sm text-slate-500">Add an email address to a contact to see their emails and meetings here.</p>
       ) : (
         <div className="mt-2 space-y-4">
-          <EmailList emails={emails} canSend={canSend} blockedReason={blockedReason} leadId={leadId} showMailbox={accounts.length > 1} emptyText="No email with these contacts yet." />
+          {!emailsResult.ok && <LoadError what="Email with these contacts" />}
+          {!meetingsResult.ok && <LoadError what="Meetings with these contacts" />}
+          {emailsResult.ok && <EmailList emails={emails} canSend={canSend} blockedReason={blockedReason} leadId={leadId} showMailbox={accounts.length > 1} emptyText="No email with these contacts yet." />}
           {meetings.length > 0 && (
             <div>
               <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-500">Meetings</h3>
