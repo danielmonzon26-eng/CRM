@@ -134,7 +134,8 @@ export function LinkedLine({
           </span>
           <div className="min-w-0">
             <LineSwitcher linked={linked} otherLines={otherLines} eventId={eventId} pending={pending} run={run} />
-            <p className="mt-1 text-xs text-slate-500">Changes here show on the Budgets page, and changes there show here.</p>
+            <AllocationBar linked={linked} />
+            <p className="mt-1.5 text-xs text-slate-500">Changes here show on the Budgets page, and changes there show here.</p>
           </div>
         </div>
         <div className="flex gap-1.5">
@@ -712,6 +713,49 @@ function SavedMarketingItem({
  * What the budget sets aside for the event, against its cost breakdown: set aside, costs
  * planned, spent, and what's left. The set-aside amount is edited right here.
  */
+/**
+ * How much of the event's set-aside amount its costs use: the bar fills as costs are
+ * planned, turns amber near the limit and red once the costs go over.
+ */
+function AllocationBar({ linked }: { linked: NonNullable<EventBudget["linked"]> }) {
+  const planned = linked.plannedAmount;
+  if (planned === null || planned <= 0) {
+    return (
+      <div className="mt-2 max-w-md">
+        <div className="h-2 rounded-full bg-slate-100" />
+        <p className="mt-1 text-xs text-amber-800">Set the amount set aside for this event (below) to track how much is allocated.</p>
+      </div>
+    );
+  }
+  const used = linked.amount;
+  const pct = Math.round((used / planned) * 100);
+  const over = used > planned;
+  const tone = over ? "bg-rose-500" : pct >= 90 ? "bg-amber-500" : "bg-emerald-500";
+  return (
+    <div className="mt-2 max-w-md">
+      <div
+        className={`h-2 overflow-hidden rounded-full ${over ? "bg-rose-100" : "bg-slate-100"}`}
+        role="progressbar"
+        aria-label="Set-aside amount allocated"
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-valuenow={Math.min(pct, 100)}
+        aria-valuetext={`${formatMoney(used)} of ${formatMoney(planned)} allocated${over ? `, over by ${formatMoney(used - planned)}` : ""}`}
+      >
+        <div className={`h-full rounded-full transition-[width,background-color] duration-500 ease-out ${tone}`} style={{ width: `${Math.min(pct, 100)}%` }} />
+      </div>
+      <p className="mt-1 flex flex-wrap justify-between gap-x-3 text-xs">
+        <span className="text-slate-600">
+          <span className="font-semibold tabular-nums text-slate-900">{formatMoney(used)}</span> of {formatMoney(planned)} allocated · {pct}%
+        </span>
+        <span className={`font-medium tabular-nums ${over ? "text-rose-700" : "text-emerald-700"}`}>
+          {over ? `Over by ${formatMoney(used - planned)}` : `${formatMoney(planned - used)} left`}
+        </span>
+      </p>
+    </div>
+  );
+}
+
 function SetAside({
   linked,
   eventId,
@@ -731,7 +775,6 @@ function SetAside({
     if (now === (planned === null ? "" : String(planned))) return;
     run(() => setEventSetAside(eventId, linked.lineId, now));
   };
-  const pctOf = (part: number) => (planned && planned > 0 ? Math.min(100, (part / planned) * 100) : 0);
   return (
     <section aria-labelledby="set-aside-title" className="border-b border-slate-100 bg-slate-50/60 px-4 py-3">
       <div className="flex flex-wrap items-end justify-between gap-3">
@@ -791,14 +834,6 @@ function SetAside({
           </div>
         </dl>
       </div>
-      {planned !== null && planned > 0 ? (
-        <div className="mt-2 flex h-2 overflow-hidden rounded-full bg-slate-200" role="img" aria-label={`${Math.round(pctOf(linked.amount))}% of the set-aside amount is planned`}>
-          <span className="bg-violet-500" style={{ width: `${pctOf(linked.spent)}%` }} />
-          <span className={linked.amount > planned ? "bg-rose-500" : "bg-brand-400"} style={{ width: `${Math.max(0, pctOf(linked.amount) - pctOf(linked.spent))}%` }} />
-        </div>
-      ) : (
-        <p className="mt-1 text-xs text-amber-800">Enter what the budget sets aside for this event to see how the costs compare.</p>
-      )}
     </section>
   );
 }
