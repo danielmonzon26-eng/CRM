@@ -346,7 +346,7 @@ export async function applySuggestedPromotions(eventId: string): Promise<Result>
   const event = timeline?.events[0];
   if (!event) return { error: "That event isn't published and upcoming." };
   if (event.promotions.length) return { error: "This event already has a plan. Edit it on the timeline." };
-  if (!event.suggestions.length) return { error: "There's no ad budget to plan with. Add an Ad spend cost on the event's Budget & marketing tab." };
+  if (!event.suggestions.length) return { error: "There's no ad budget to plan with. Add an Ad spend cost on the event's Budget & Marketing tab." };
   const supabase = await createClient();
   const { error } = await supabase.from("marketing_promotions").insert(
     event.suggestions.map((s) => ({
