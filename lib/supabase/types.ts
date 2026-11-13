@@ -1387,6 +1387,8 @@ export type Database = {
       is_admin: { Args: Record<string, never>; Returns: boolean };
       unseen_reply_count: { Args: Record<string, never>; Returns: number };
       mark_all_emails_seen: { Args: Record<string, never>; Returns: number };
+      get_registration_questions: { Args: { p_slug: string }; Returns: unknown };
+      save_registration_answers: { Args: { p_ticket: string; p_answers: unknown }; Returns: boolean };
     };
     Enums: Record<string, never>;
   };

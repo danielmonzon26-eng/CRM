@@ -1,21 +1,13 @@
 import { parseQuestions, type RegistrationQuestion } from "@/lib/events/questions";
-import { createAdminClient } from "@/lib/supabase/admin";
+import { createClient } from "@/lib/supabase/server";
 
-/**
- * A public event's registration questions, read on the server (visitors aren't signed in,
- * and the public event function doesn't return them). Only published events answer.
- */
+/** A published event's registration questions, for the public page (no sign-in needed). */
 export async function getRegistrationQuestions(slug: string): Promise<RegistrationQuestion[]> {
-  const { data, error } = await createAdminClient()
-    .from("events")
-    .select("registration_questions")
-    .eq("slug", slug)
-    .eq("status", "published")
-    .is("archived_at", null)
-    .maybeSingle();
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("get_registration_questions", { p_slug: slug });
   if (error) {
     console.error("Loading registration questions failed:", error.message);
     return [];
   }
-  return parseQuestions(data?.registration_questions);
+  return parseQuestions(data);
 }
