@@ -13,6 +13,8 @@ export type LineSummary = {
   /** The marketing items' share. */
   marketing: number;
   isEventLine: boolean;
+  /** For an event line: what the budget sets aside for it, if set. */
+  plannedAmount: number | null;
 };
 
 export type StreamGroup = {
@@ -31,7 +33,7 @@ async function lineSummaries(lineIds: string[]): Promise<Map<string, LineSummary
   if (lineIds.length === 0) return new Map();
   const supabase = await createClient();
   const [{ data: lines, error }, { data: items, error: itemsError }, { data: mItems, error: mError }, { data: budgets, error: bError }] = await Promise.all([
-    supabase.from("budget_lines").select("id, name, amount, budget_id, event_id").in("id", lineIds),
+    supabase.from("budget_lines").select("id, name, amount, budget_id, event_id, planned_amount").in("id", lineIds),
     supabase.from("budget_items").select("line_id, amount").in("line_id", lineIds),
     supabase.from("marketing_items").select("budget_line_id, amount").in("budget_line_id", lineIds),
     supabase.from("budgets").select("id, name"),
@@ -49,6 +51,7 @@ async function lineSummaries(lineIds: string[]): Promise<Map<string, LineSummary
         booked: (items ?? []).filter((i) => i.line_id === l.id).reduce((s, i) => s + Number(i.amount), 0),
         marketing: (mItems ?? []).filter((m) => m.budget_line_id === l.id).reduce((s, m) => s + Number(m.amount), 0),
         isEventLine: !!l.event_id,
+        plannedAmount: l.planned_amount === null ? null : Number(l.planned_amount),
       },
     ]),
   );

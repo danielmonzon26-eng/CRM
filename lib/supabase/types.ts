@@ -837,6 +837,7 @@ export type Database = {
           sort_order: number;
           created_at: string;
           updated_at: string;
+          planned_amount: number | null;
         };
         Insert: {
           id?: string;
@@ -850,6 +851,7 @@ export type Database = {
           owner_name?: string | null;
           notes?: string | null;
           sort_order?: number;
+          planned_amount?: number | null;
         };
         Update: Partial<Database["public"]["Tables"]["budget_lines"]["Insert"]>;
         Relationships: [];

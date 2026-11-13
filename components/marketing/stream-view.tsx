@@ -65,8 +65,14 @@ function Group({ group, options, today }: { group: StreamGroup; options: ItemOpt
         </div>
         {line && (
           <dl className="flex flex-wrap gap-x-5 gap-y-1 text-sm">
+            {line.isEventLine && line.plannedAmount !== null && (
+              <div>
+                <dt className="text-xs text-slate-500">Set aside</dt>
+                <dd className="font-semibold tabular-nums text-slate-900">{money(line.plannedAmount)}</dd>
+              </div>
+            )}
             <div>
-              <dt className="text-xs text-slate-500">{line.isEventLine ? "Event budget" : "Budget"}</dt>
+              <dt className="text-xs text-slate-500">{line.isEventLine ? "Event costs" : "Budget"}</dt>
               <dd className="font-semibold tabular-nums text-slate-900">{money(line.amount)}</dd>
             </div>
             <div>
@@ -77,6 +83,12 @@ function Group({ group, options, today }: { group: StreamGroup; options: ItemOpt
               <div>
                 <dt className="text-xs text-slate-500">Left on the line</dt>
                 <dd className={`font-semibold tabular-nums ${remaining < 0 ? "text-rose-700" : "text-emerald-700"}`}>{money(remaining)}</dd>
+              </div>
+            )}
+            {line.isEventLine && line.plannedAmount !== null && (
+              <div>
+                <dt className="text-xs text-slate-500">{line.plannedAmount - line.amount < 0 ? "Over" : "Left"}</dt>
+                <dd className={`font-semibold tabular-nums ${line.plannedAmount - line.amount < 0 ? "text-rose-700" : "text-emerald-700"}`}>{money(Math.abs(line.plannedAmount - line.amount))}</dd>
               </div>
             )}
             {line.isEventLine && line.booked - marketing > 0 && (
