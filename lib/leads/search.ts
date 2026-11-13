@@ -92,8 +92,9 @@ export async function searchLeads(
 export async function withBmcScores(result: { rows: LeadRow[]; total: number }) {
   if (result.rows.length === 0) return result;
   const supabase = await createClient();
-  const { data } = await supabase.from("leads").select("id, bmc_score").in("id", result.rows.map((r) => r.id));
-  const scoreById = new Map((data ?? []).map((l) => [l.id, l.bmc_score == null ? null : Number(l.bmc_score)]));
+  const { data, error } = await supabase.from("leads").select("id, bmc_score").in("id", result.rows.map((r) => r.id));
+  if (error) throw error;
+  const scoreById = new Map(data.map((l) => [l.id, l.bmc_score == null ? null : Number(l.bmc_score)]));
   return { ...result, rows: result.rows.map((r) => ({ ...r, bmcScore: scoreById.get(r.id) ?? null })) };
 }
 

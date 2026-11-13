@@ -99,8 +99,9 @@ export async function canUserSend(userId: string): Promise<boolean> {
 
 export async function getMailAccounts(): Promise<MailAccount[]> {
   const supabase = await createClient();
-  const { data } = await supabase.from("mail_accounts").select(ACCOUNT_COLUMNS).order("email");
-  return (data ?? []).map(toAccount);
+  const { data, error } = await supabase.from("mail_accounts").select(ACCOUNT_COLUMNS).order("email");
+  if (error) throw error;
+  return data.map(toAccount);
 }
 
 /** Contacts on any of `addresses`, keyed by lowercased email, with their company. */
@@ -116,11 +117,13 @@ async function contactsByEmail(supabase: Supabase, addresses: string[]): Promise
   if (matched.length === 0) return map;
 
   const leadIds = [...new Set(matched.map((c) => c.lead_id))];
-  const { data: leads } = await supabase.from("leads").select("id, company_id").in("id", leadIds);
-  const companyIds = [...new Set((leads ?? []).map((l) => l.company_id))];
-  const { data: companies } = companyIds.length
+  const { data: leads, error: leadsError } = await supabase.from("leads").select("id, company_id").in("id", leadIds);
+  if (leadsError) throw leadsError;
+  const companyIds = [...new Set(leads.map((l) => l.company_id))];
+  const { data: companies, error: companiesError } = companyIds.length
     ? await supabase.from("companies").select("id, name").in("id", companyIds)
-    : { data: [] };
+    : { data: [], error: null };
+  if (companiesError) throw companiesError;
   const nameByCompany = new Map((companies ?? []).map((c) => [c.id, c.name]));
   const companyByLead = new Map((leads ?? []).map((l) => [l.id, nameByCompany.get(l.company_id) ?? null]));
 
@@ -195,8 +198,9 @@ export type InboxFilter = "all" | "unread" | "needs_reply";
 /** The Communication page list: recent email with any contact, newest first. */
 export async function getInbox(currentUserId: string, filter: InboxFilter, limit = 200): Promise<EmailItem[]> {
   const supabase = await createClient();
-  const { data } = await supabase.from("emails").select(EMAIL_COLUMNS).order("sent_at", { ascending: false }).limit(limit);
-  const items = await decorateEmails(supabase, (data ?? []) as EmailRow[], currentUserId);
+  const { data, error } = await supabase.from("emails").select(EMAIL_COLUMNS).order("sent_at", { ascending: false }).limit(limit);
+  if (error) throw error;
+  const items = await decorateEmails(supabase, data as EmailRow[], currentUserId);
   if (filter === "unread") return items.filter((e) => e.direction === "inbound" && !e.isRead);
   if (filter === "needs_reply") return items.filter((e) => e.needsReply);
   return items;
@@ -207,13 +211,14 @@ export async function getEmailsForAddresses(addresses: string[], currentUserId: 
   const wanted = [...new Set(addresses.map((a) => a.trim().toLowerCase()).filter(Boolean))];
   if (wanted.length === 0) return [];
   const supabase = await createClient();
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from("emails")
     .select(EMAIL_COLUMNS)
     .overlaps("participants", wanted)
     .order("sent_at", { ascending: false })
     .limit(limit);
-  return decorateEmails(supabase, (data ?? []) as EmailRow[], currentUserId);
+  if (error) throw error;
+  return decorateEmails(supabase, data as EmailRow[], currentUserId);
 }
 
 type MeetingRow = {
@@ -265,13 +270,14 @@ export async function getUpcomingMeetings(limit = 20): Promise<MeetingItem[]> {
   const supabase = await createClient();
   const today = new Date();
   today.setUTCHours(0, 0, 0, 0);
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from("meetings")
     .select(MEETING_COLUMNS)
     .gte("ends_at", today.toISOString())
     .order("starts_at")
     .limit(limit);
-  return decorateMeetings(supabase, (data ?? []) as MeetingRow[]);
+  if (error) throw error;
+  return decorateMeetings(supabase, data as MeetingRow[]);
 }
 
 /** Past and upcoming meetings with any of the given contact addresses. */
@@ -279,11 +285,12 @@ export async function getMeetingsForAddresses(addresses: string[], limit = 30): 
   const wanted = [...new Set(addresses.map((a) => a.trim().toLowerCase()).filter(Boolean))];
   if (wanted.length === 0) return [];
   const supabase = await createClient();
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from("meetings")
     .select(MEETING_COLUMNS)
     .overlaps("participants", wanted)
     .order("starts_at", { ascending: false })
     .limit(limit);
-  return decorateMeetings(supabase, (data ?? []) as MeetingRow[]);
+  if (error) throw error;
+  return decorateMeetings(supabase, data as MeetingRow[]);
 }

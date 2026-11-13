@@ -10,7 +10,7 @@ import { useFeedback } from "@/components/ui/feedback";
 import { Skeleton } from "@/components/ui/skeleton";
 import { NAICS_SECTORS, industryLabelForCode, parseIndustry } from "@/lib/industries/naics";
 import { CLIENT_TYPES, LEAD_PROGRAMS } from "@/lib/leads/classification";
-import { ALL_ENGAGEMENTS, ALL_STATUSES, ENGAGEMENT_LABELS, STATUS_LABELS } from "@/lib/leads/filters";
+import { ALL_ENGAGEMENTS, ALL_STATUSES, AUTOMATIC_STAGES, ENGAGEMENT_LABELS, STATUS_LABELS } from "@/lib/leads/filters";
 import { getQuickEditChanges, type QuickEditChanges, type QuickEditRecord, type QuickEditValues } from "@/lib/leads/quick-edit";
 import type { LeadFacets } from "@/lib/leads/search";
 import type { LeadEngagement, LeadStatus } from "@/lib/supabase/types";
@@ -47,7 +47,11 @@ function QuickEditFields({
           <label className={LABEL}>
             Stage
             <select value={values.status} onChange={(e) => onChange({ status: e.target.value as LeadStatus })} className={FIELD}>
-              {ALL_STATUSES.map((s) => <option key={s} value={s}>{STATUS_LABELS[s]}</option>)}
+              {ALL_STATUSES.map((s) => (
+                <option key={s} value={s} disabled={Boolean(AUTOMATIC_STAGES[s]) && s !== record.values.status}>
+                  {AUTOMATIC_STAGES[s] && s !== record.values.status ? `${STATUS_LABELS[s]} (${AUTOMATIC_STAGES[s]!.toLowerCase()})` : STATUS_LABELS[s]}
+                </option>
+              ))}
             </select>
           </label>
           <label className={LABEL}>

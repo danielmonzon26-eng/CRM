@@ -4,7 +4,7 @@ import { useState, useTransition } from "react";
 import { ChevronDown } from "lucide-react";
 import { updateLeadEngagement, updateLeadStatus } from "@/app/actions/leads";
 import { useFeedback } from "@/components/ui/feedback";
-import { ALL_ENGAGEMENTS, ALL_STATUSES, ENGAGEMENT_LABELS, ENGAGEMENT_STYLES, STATUS_LABELS, STATUS_STYLES } from "@/lib/leads/filters";
+import { ALL_ENGAGEMENTS, ALL_STATUSES, AUTOMATIC_STAGES, ENGAGEMENT_LABELS, ENGAGEMENT_STYLES, STATUS_LABELS, STATUS_STYLES } from "@/lib/leads/filters";
 import type { LeadEngagement, LeadStatus } from "@/lib/supabase/types";
 
 const SELECT =
@@ -17,7 +17,7 @@ const INLINE =
  * Saves the new value straight away. Shows it immediately, and puts it back with a
  * message if saving fails.
  */
-function useSavedValue<T extends string>(initial: T, save: (value: T) => Promise<void>, label: string) {
+function useSavedValue<T extends string>(initial: T, save: (value: T) => Promise<{ error?: string } | void>, label: string) {
   const { toast } = useFeedback();
   const [value, setValue] = useState(initial);
   const [fromServer, setFromServer] = useState(initial);
@@ -32,7 +32,11 @@ function useSavedValue<T extends string>(initial: T, save: (value: T) => Promise
     setValue(next);
     startTransition(async () => {
       try {
-        await save(next);
+        const result = await save(next);
+        if (result?.error) {
+          setValue(previous);
+          toast(result.error, "error");
+        }
       } catch {
         setValue(previous);
         toast(`The ${label} didn't change. Please try again.`, "error");
@@ -65,8 +69,9 @@ export function StatusSelect({ leadId, status, id, inline = false }: { leadId: s
       onClick={(e) => e.stopPropagation()}
     >
       {ALL_STATUSES.map((s) => (
-        <option key={s} value={s}>
-          {STATUS_LABELS[s]}
+        // Proposal and Client follow proposals, so they show but can't be picked.
+        <option key={s} value={s} disabled={Boolean(AUTOMATIC_STAGES[s]) && s !== value}>
+          {AUTOMATIC_STAGES[s] && s !== value ? `${STATUS_LABELS[s]} (${AUTOMATIC_STAGES[s]!.toLowerCase()})` : STATUS_LABELS[s]}
         </option>
       ))}
     </select>

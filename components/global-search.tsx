@@ -28,6 +28,7 @@ export function GlobalSearch() {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<SearchResult | null>(null);
+  const [searchFailed, setSearchFailed] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
   const [activeIndex, setActiveIndex] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -68,12 +69,22 @@ export function GlobalSearch() {
     const controller = new AbortController();
     const handle = setTimeout(() => {
       fetch(`/api/search?q=${encodeURIComponent(trimmed)}`, { signal: controller.signal })
-        .then((r) => (r.ok ? r.json() : null))
+        .then((r) => {
+          if (!r.ok) throw new Error(`Search returned ${r.status}`);
+          return r.json();
+        })
         .then((data) => {
-          if (data) setResults(data);
+          setResults(data);
+          setSearchFailed(false);
           setIsSearching(false);
         })
-        .catch(() => undefined);
+        .catch((e) => {
+          // A new keystroke cancels the old search; that isn't a failure.
+          if (e instanceof DOMException && e.name === "AbortError") return;
+          setResults(null);
+          setSearchFailed(true);
+          setIsSearching(false);
+        });
     }, 200);
     return () => {
       clearTimeout(handle);
@@ -166,7 +177,10 @@ export function GlobalSearch() {
             </div>
 
             <div ref={listRef} id="command-list" role="listbox" aria-label="Results" className="min-h-0 flex-1 overflow-y-auto p-2">
-              {items.length === 0 && !isSearching && <p className="px-3 py-8 text-center text-sm text-slate-500">No matches for &quot;{query.trim()}&quot;.</p>}
+              {searchFailed && !isSearching && (
+                <p role="alert" className="mx-2 my-2 rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-800">Search didn&apos;t load. Try again in a moment.</p>
+              )}
+              {items.length === 0 && !isSearching && !searchFailed && <p className="px-3 py-8 text-center text-sm text-slate-500">No matches for &quot;{query.trim()}&quot;.</p>}
               {items.map((item, index) => {
                 const Icon = item.icon;
                 const heading = item.group !== previousGroup ? item.group : null;

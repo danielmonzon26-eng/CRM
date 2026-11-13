@@ -333,6 +333,7 @@ export type Database = {
           payment: DealPayment | null;
           sent_on: string | null;
           accepted_on: string | null;
+          request_key: string | null;
           created_by: string | null;
           created_at: string;
           updated_at: string;
@@ -362,6 +363,7 @@ export type Database = {
           payment?: DealPayment | null;
           sent_on?: string | null;
           accepted_on?: string | null;
+          request_key?: string | null;
           created_by?: string | null;
           created_at?: string;
           updated_at?: string;

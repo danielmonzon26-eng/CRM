@@ -32,6 +32,16 @@ export const STATUS_DOTS: Record<LeadStatus, string> = {
   client: "bg-emerald-600",
 };
 
+/**
+ * Stages the system sets, never picked by hand: Proposal when a proposal is created for the
+ * lead, Client when one is accepted. Picking them would let the stage disagree with
+ * whether a proposal exists. They show in pickers, disabled, with this reason.
+ */
+export const AUTOMATIC_STAGES: Partial<Record<LeadStatus, string>> = {
+  proposal: "Set when a proposal is created",
+  client: "Set when a proposal is accepted",
+};
+
 /** Stored in leads.engagement and shown as "Status". */
 export const ALL_ENGAGEMENTS: LeadEngagement[] = ["engaged", "not_engaged", "do_not_contact"];
 

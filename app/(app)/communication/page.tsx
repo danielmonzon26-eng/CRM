@@ -6,7 +6,9 @@ import { EmailList } from "@/components/outlook/email-list";
 import { MailboxPanel } from "@/components/outlook/mailbox-panel";
 import { MailAutoSync, SyncNowButton } from "@/components/outlook/mail-sync";
 import { MeetingList } from "@/components/outlook/meeting-list";
+import { LoadError } from "@/components/ui/load-error";
 import { EmptyState, Page, PageHeader } from "@/components/ui/page";
+import { settle } from "@/lib/settle";
 import { getCurrentUser } from "@/lib/auth/session";
 import { isOutlookConfigured } from "@/lib/outlook/graph";
 import { getInbox, getMailAccounts, getUpcomingMeetings, type InboxFilter } from "@/lib/outlook/queries";
@@ -38,11 +40,14 @@ export default async function CommunicationPage({
   const { filter, outlook } = await searchParams;
   const activeFilter = (TABS.some((t) => t.value === filter) ? filter : "all") as InboxFilter;
   const configured = isOutlookConfigured();
-  const [accounts, emails, meetings] = await Promise.all([
+  // Each part loads on its own, so one failure shows where it happened and the rest still works.
+  const [accounts, inbox, upcoming] = await Promise.all([
     getMailAccounts(),
-    getInbox(user.id, activeFilter),
-    getUpcomingMeetings(),
+    settle(getInbox(user.id, activeFilter)),
+    settle(getUpcomingMeetings()),
   ]);
+  const emails = inbox.ok ? inbox.value : [];
+  const meetings = upcoming.ok ? upcoming.value : [];
   const mine = accounts.find((a) => a.userId === user.id);
   const canSend = configured && mine?.status === "connected";
   const notice = outlook ? NOTICES[outlook] : undefined;
@@ -89,7 +94,9 @@ export default async function CommunicationPage({
             ))}
           </nav>
 
-          {accounts.length === 0 ? (
+          {!inbox.ok ? (
+            <LoadError what="Email" />
+          ) : accounts.length === 0 ? (
             <EmptyState
               icon={Inbox}
               title="No mailboxes connected yet"
@@ -118,7 +125,7 @@ export default async function CommunicationPage({
               Upcoming meetings
             </h2>
             <div className="mt-2">
-              <MeetingList meetings={meetings} emptyText="No upcoming meetings with contacts." />
+              {upcoming.ok ? <MeetingList meetings={meetings} emptyText="No upcoming meetings with contacts." /> : <LoadError what="Meetings" />}
             </div>
           </section>
         </aside>

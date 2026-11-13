@@ -91,11 +91,12 @@ export async function getCompanyDetail(companyId: string): Promise<CompanyDetail
   if (error) throw error;
   if (!company) return null;
 
-  const { data: lead } = await supabase
+  const { data: lead, error: leadError } = await supabase
     .from("leads")
     .select("id, status, engagement, client_type, programs")
     .eq("company_id", companyId)
     .maybeSingle();
+  if (leadError) throw leadError;
 
   return {
     ...company,

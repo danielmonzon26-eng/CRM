@@ -1,3 +1,4 @@
+import { settle } from "@/lib/settle";
 import { createClient } from "@/lib/supabase/server";
 import { getDiscoveryCalls } from "@/lib/discovery/queries";
 import { getEventRegistrationsForLead } from "@/lib/events/queries";
@@ -80,19 +81,35 @@ export const NOTE_KIND_LABELS: Record<NoteKind, string> = { note: "Note", call: 
  * Every touchpoint with a lead's company, newest first: notes, stage and status changes,
  * Outlook email and meetings, proposals, events, discovery calls and tasks.
  */
-export async function getActivityTimeline(leadId: string, contactEmails: string[]): Promise<{ notes: LeadNote[]; items: TimelineItem[] }> {
+export async function getActivityTimeline(
+  leadId: string,
+  contactEmails: string[]
+): Promise<{ notes: LeadNote[]; items: TimelineItem[]; unavailable: string[] }> {
   const supabase = await createClient();
-  const [notesResult, activitiesResult, profilesResult, emails, meetings, calls, registrations] = await Promise.all([
+  const [notesResult, activitiesResult, profilesResult, emailsResult, meetingsResult, callsResult, registrationsResult] = await Promise.all([
     supabase.from("lead_notes").select("*").eq("lead_id", leadId).order("occurred_at", { ascending: false }),
     supabase.from("activities").select("id, type, body, actor_id, created_at").eq("lead_id", leadId).order("created_at", { ascending: false }).limit(500),
     supabase.from("profiles").select("id, full_name, email"),
-    getEmailsForAddresses(contactEmails, "", 200).catch(() => []),
-    getMeetingsForAddresses(contactEmails, 100).catch(() => []),
-    getDiscoveryCalls(leadId).catch(() => []),
-    getEventRegistrationsForLead(leadId).catch(() => []),
+    settle(getEmailsForAddresses(contactEmails, "", 200)),
+    settle(getMeetingsForAddresses(contactEmails, 100)),
+    settle(getDiscoveryCalls(leadId)),
+    settle(getEventRegistrationsForLead(leadId)),
   ]);
   if (notesResult.error) throw notesResult.error;
   if (activitiesResult.error) throw activitiesResult.error;
+  if (profilesResult.error) throw profilesResult.error;
+
+  // A source that failed is named on screen, so its absence isn't read as "nothing happened".
+  const unavailable = [
+    !emailsResult.ok && "email",
+    !meetingsResult.ok && "meetings",
+    !callsResult.ok && "discovery calls",
+    !registrationsResult.ok && "event attendance",
+  ].filter((s): s is string => Boolean(s));
+  const emails = emailsResult.ok ? emailsResult.value : [];
+  const meetings = meetingsResult.ok ? meetingsResult.value : [];
+  const calls = callsResult.ok ? callsResult.value : [];
+  const registrations = registrationsResult.ok ? registrationsResult.value : [];
 
   const nameOf = new Map((profilesResult.data ?? []).map((p) => [p.id, p.full_name ?? p.email ?? "Someone"]));
   const who = (id: string | null) => (id ? nameOf.get(id) ?? "Someone" : null);
@@ -190,6 +207,7 @@ export async function getActivityTimeline(leadId: string, contactEmails: string[
 
   items.sort((a, b) => b.at.localeCompare(a.at));
   return {
+    unavailable,
     notes,
     items: items.map((item) => ({ ...item, timeLabel: timeFormat.format(new Date(item.at)), dayLabel: dayLabel(item.at) })),
   };

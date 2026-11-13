@@ -29,6 +29,7 @@ import { CLIENT_TYPES, LEAD_PROGRAMS, clientTypeLabel, programLabel } from "@/li
 import {
   ALL_ENGAGEMENTS,
   ALL_STATUSES,
+  AUTOMATIC_STAGES,
   ENGAGEMENT_LABELS,
   STATUS_LABELS,
   TABLE_PAGE_SIZE,
@@ -160,7 +161,7 @@ function LeadsTable({
             className="rounded-md bg-white/10 px-2 py-1 text-sm text-white [&>option]:text-slate-900"
           >
             <option value="">Set stage...</option>
-            {ALL_STATUSES.map((s) => <option key={s} value={s}>{STATUS_LABELS[s]}</option>)}
+            {ALL_STATUSES.filter((s) => !AUTOMATIC_STAGES[s]).map((s) => <option key={s} value={s}>{STATUS_LABELS[s]}</option>)}
           </select>
           <select
             aria-label="Set status on selected leads"
