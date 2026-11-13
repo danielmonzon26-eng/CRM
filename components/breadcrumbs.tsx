@@ -22,6 +22,7 @@ const LABELS: Record<string, string> = {
   calendar: "Calendar",
   marketing: "Marketing",
   approvals: "Approvals",
+  planner: "Planner",
   initiatives: "Initiatives",
   channels: "Channels",
   posts: "Posts",

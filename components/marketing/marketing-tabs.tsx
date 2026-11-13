@@ -2,10 +2,11 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { CalendarDays, Columns3, Radio, Target } from "lucide-react";
+import { CalendarDays, Columns3, LayoutDashboard, Radio, Target } from "lucide-react";
 
 const TABS = [
-  { href: "/marketing", label: "Planner", icon: CalendarDays },
+  { href: "/marketing", label: "Overview", icon: LayoutDashboard },
+  { href: "/marketing/planner", label: "Planner", icon: CalendarDays },
   { href: "/marketing/approvals", label: "Approvals", icon: Columns3 },
   { href: "/marketing/initiatives", label: "Initiatives", icon: Target },
   { href: "/marketing/channels", label: "Channels", icon: Radio },
