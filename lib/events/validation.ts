@@ -38,13 +38,31 @@ export function isWebUrl(value: string): boolean {
   }
 }
 
+/**
+ * A link as a full web address: "zoom.us/j/123" becomes "https://zoom.us/j/123". Blank
+ * stays blank; null means it isn't a web address at all (e.g. "TBD").
+ */
+export function normalizeWebUrl(value: string): string | null {
+  const v = value.trim();
+  if (!v) return "";
+  if (isWebUrl(v)) return v;
+  if (!/^[a-z][a-z0-9+.-]*:/i.test(v) && /^[^\s/]+\.[^\s]+$/.test(v) && isWebUrl(`https://${v}`)) return `https://${v}`;
+  return null;
+}
+
 /** Everything still needed before an event can be published. */
 export function getMissingForPublish(input: EventInput): string[] {
   const missing: string[] = [];
   if (!input.title.trim()) missing.push("Event name");
   if (!input.startsAt) missing.push("Start date and time");
   if (input.format !== "online" && !input.venueName.trim()) missing.push("Venue");
-  if (input.format !== "in_person" && !isWebUrl(input.onlineUrl.trim())) missing.push("Livestream or join link");
   if (input.ticketType === "paid" && !input.ticketPrice.trim()) missing.push("Ticket price");
   return missing;
+}
+
+/** Worth adding, but not needed to publish: the join link can come later. */
+export function getPublishReminders(input: EventInput): string[] {
+  const reminders: string[] = [];
+  if (input.format !== "in_person" && !input.onlineUrl.trim()) reminders.push("Livestream or join link");
+  return reminders;
 }

@@ -3,11 +3,17 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { fromDateTimeInput, toDateTimeInput } from "@/lib/events/format";
-import { getMissingForPublish, isWebUrl, type EventInput } from "@/lib/events/validation";
+import { getMissingForPublish, isWebUrl, normalizeWebUrl, type EventInput } from "@/lib/events/validation";
 import type { EventRow } from "@/lib/events/queries";
 import type { EventStatus } from "@/lib/supabase/types";
 
-export type ActionResult = { error?: string; id?: string; slug?: string };
+export type ActionResult = {
+  error?: string;
+  id?: string;
+  slug?: string;
+  /** Saved, but with something left out (e.g. a link that isn't a web address). */
+  warning?: string;
+};
 
 function slugify(title: string): string {
   return title
@@ -50,11 +56,13 @@ function parseEventInput(input: EventInput, requireComplete: boolean) {
 
   const inPerson = input.format !== "online";
   const online = input.format !== "in_person";
-  const onlineUrl = input.onlineUrl.trim();
-  if (online && onlineUrl && !isWebUrl(onlineUrl)) return { error: "The join link must start with https://." };
-
-  const imageUrl = input.imageUrl.trim();
-  if (imageUrl && !isWebUrl(imageUrl)) return { error: "The image link must start with https://." };
+  // A link that isn't a web address doesn't stop the rest of the event from saving: it's
+  // left out (the saved one is kept) and the person is told.
+  const onlineUrl = online ? normalizeWebUrl(input.onlineUrl) : "";
+  const imageUrl = normalizeWebUrl(input.imageUrl);
+  const warnings: string[] = [];
+  if (onlineUrl === null) warnings.push("the join link isn't a web address yet (e.g. https://zoom.us/j/123), so it wasn't saved");
+  if (imageUrl === null) warnings.push("the image link isn't a web address, so it wasn't saved");
 
   const startsAt = fromDateTimeInput(input.startsAt);
   const endsAt = input.endsAt ? fromDateTimeInput(input.endsAt) : null;
@@ -87,17 +95,18 @@ function parseEventInput(input: EventInput, requireComplete: boolean) {
   }
 
   return {
+    warning: warnings.length ? `Saved, but ${warnings.join(", and ")}.` : undefined,
     values: {
+      ...(imageUrl === null ? {} : { image_url: imageUrl || null }),
+      ...(onlineUrl === null ? {} : { online_url: online ? onlineUrl || null : null }),
       title,
       program: input.program.trim() || null,
       event_type: input.eventType.trim() || null,
       description: input.description.trim() || null,
-      image_url: imageUrl || null,
       owner_id: input.ownerId || null,
       format: input.format,
       venue_name: inPerson ? input.venueName.trim() || null : null,
       venue_address: inPerson ? input.venueAddress.trim() || null : null,
-      online_url: online ? onlineUrl || null : null,
       starts_at: startsAt,
       ends_at: endsAt,
       agenda: input.agenda.filter((a) => a.title.trim()),
@@ -172,7 +181,7 @@ export async function saveEvent(id: string | null, input: EventInput): Promise<A
     if (error) return { error: error.message };
 
     revalidateEvent(id);
-    return { id };
+    return { id, warning: parsed.warning };
   }
 
   const parsed = parseEventInput(input, false);
@@ -189,7 +198,7 @@ export async function saveEvent(id: string | null, input: EventInput): Promise<A
   if (error) return { error: error.message };
 
   revalidateEvent(data.id);
-  return { id: data.id, slug: data.slug };
+  return { id: data.id, slug: data.slug, warning: parsed.warning };
 }
 
 export async function setEventStatus(id: string, status: EventStatus): Promise<ActionResult> {
