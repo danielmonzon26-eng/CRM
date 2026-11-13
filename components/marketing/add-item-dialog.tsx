@@ -208,7 +208,7 @@ function AddItemDialog({ options, defaults = {}, onClose }: { options: ItemOptio
               <span className="mt-1 block text-xs font-normal text-amber-800">
                 This event has no budget line yet.{" "}
                 <Link href={`/events/${event!.id}?tab=budget`} className="underline">
-                  Set it up on its Budget tab
+                  Set it up on its Budget &amp; marketing tab
                 </Link>
                 , or pick another line.
               </span>

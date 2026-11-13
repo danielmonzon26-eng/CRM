@@ -36,7 +36,7 @@ const TABS = [
   ["registrations", "Registrations"],
   ["agenda", "Agenda"],
   ["speakers", "Speakers"],
-  ["budget", "Budget"],
+  ["budget", "Budget & marketing"],
   ["tasks", "Tasks"],
   ["communications", "Communications"],
   ["files", "Files"],

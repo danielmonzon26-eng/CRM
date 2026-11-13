@@ -40,7 +40,7 @@ export function PromotionTimeline({ today, start, end, events }: { today: string
   return (
     <div className="space-y-4">
       <p className="text-sm text-slate-600">
-        The ad budget comes from each event&apos;s Budget tab: costs named like <span className="font-medium">Ad spend</span>, <span className="font-medium">Ads</span>,{" "}
+        The ad budget comes from each event&apos;s Budget &amp; marketing tab: costs named like <span className="font-medium">Ad spend</span>, <span className="font-medium">Ads</span>,{" "}
         <span className="font-medium">Boost</span> or <span className="font-medium">Paid social</span>.
       </p>
 
@@ -48,7 +48,7 @@ export function PromotionTimeline({ today, start, end, events }: { today: string
         <div className="rounded-xl border border-dashed border-slate-300 bg-white px-6 py-12 text-center">
           <Rocket className="mx-auto h-6 w-6 text-slate-400" strokeWidth={2} />
           <p className="mt-2 font-medium text-slate-900">No ad budget on upcoming events yet</p>
-          <p className="mx-auto mt-1 max-w-md text-sm text-slate-500">Add an &quot;Ad spend&quot; cost on an event&apos;s Budget tab, and a suggested boost plan shows up here.</p>
+          <p className="mx-auto mt-1 max-w-md text-sm text-slate-500">Add an &quot;Ad spend&quot; cost on an event&apos;s Budget &amp; marketing tab, and a suggested boost plan shows up here.</p>
         </div>
       ) : (
         <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-card">
