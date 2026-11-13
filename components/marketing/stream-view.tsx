@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { AlertTriangle, ArrowUpRight, Plus } from "lucide-react";
 import { AddMarketingItemButton } from "@/components/marketing/add-item-dialog";
-import { ItemRow, ItemTableHead, itemTableMinWidth, PostRow, type ItemColumn } from "@/components/marketing/planner-table";
+import { ItemRow, ItemTableHead, PostRow, type ItemColumn } from "@/components/marketing/planner-table";
 import { money } from "@/components/ui/dashboard";
 import type { MarketingStream } from "@/lib/budgets/marketing-items";
 import type { ItemOptions } from "@/lib/marketing/items-queries";
@@ -75,7 +75,7 @@ function SocialPosts({ posts, hide }: { posts: PostItem[]; hide: ItemColumn[] })
   const past = posts.filter((p) => p.isPast).sort((a, b) => byDate(b, a));
   const table = (list: PostItem[]) => (
     <div className="overflow-x-auto">
-      <table className="w-full table-fixed text-sm" style={{ minWidth: itemTableMinWidth(hide) }}>
+      <table className="w-full table-fixed text-sm">
         <ItemTableHead hide={hide} />
         <tbody className="divide-y divide-slate-100">
           {list.map((p) => (
@@ -178,7 +178,7 @@ function Group({ group, options, today, hide, posts }: { group: StreamGroup; opt
       )}
       {(group.items.length > 0 || adding.length > 0 || posts.length > 0) && (
         <div className="overflow-x-auto">
-          <table className="w-full table-fixed text-sm" style={{ minWidth: itemTableMinWidth(hide) }}>
+          <table className="w-full table-fixed text-sm">
             <ItemTableHead hide={hide} />
             <tbody className="divide-y divide-slate-100">
               {adding.map((k) => (

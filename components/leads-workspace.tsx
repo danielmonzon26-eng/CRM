@@ -225,7 +225,7 @@ function LeadsTable({
       )}
 
       <div className="relative overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-card">
-        <table className="w-full min-w-[1120px] text-left text-sm">
+        <table className="w-full text-left text-sm">
           <thead className="border-b border-slate-100 text-xs uppercase tracking-wide text-slate-500">
             <tr>
               <th scope="col" className="w-10 px-4 py-2.5">

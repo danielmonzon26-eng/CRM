@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef, useState, useTransition } from "react";
+import { Fragment, useMemo, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AlertCircle, Check, Copy, ExternalLink, Loader2, Plus, Search, Trash2 } from "lucide-react";
@@ -157,7 +157,7 @@ export function PlannerTable({ items, posts, options, today }: { items: Marketin
       </p>
 
       <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-card">
-        <table className="w-full table-fixed text-sm" style={{ minWidth: itemTableMinWidth() }}>
+        <table className="w-full table-fixed text-sm">
           <ItemTableHead />
           <tbody className="divide-y divide-slate-100">
             {adding.map((key) => (
@@ -165,7 +165,7 @@ export function PlannerTable({ items, posts, options, today }: { items: Marketin
             ))}
             {rows.length === 0 && adding.length === 0 && (
               <tr>
-                <td colSpan={10} className="px-4 py-10 text-center text-sm text-slate-500">
+                <td colSpan={6} className="px-4 py-10 text-center text-sm text-slate-500">
                   Nothing here yet. Use <span className="font-medium">Add item</span> for Catapult marketing, or add marketing items on an event&apos;s Budget tab.
                 </td>
               </tr>
@@ -203,7 +203,6 @@ export function ItemRow({
 }) {
   const router = useRouter();
   const { confirm, toast } = useFeedback();
-  const show = (c: ItemColumn) => !hide?.includes(c);
   const [draft, setDraft] = useState<Draft>(() => draftOf(item, options, defaults));
   const saved = useRef(JSON.stringify(draftOf(item, options, defaults)));
   const [state, setState] = useState<"idle" | "saving" | "saved" | "error">("idle");
@@ -247,10 +246,9 @@ export function ItemRow({
   // Grouped by budget and section, so each choice is just the line's name and fits its cell.
   const byBudget = linesForEvent.reduce<Record<string, ItemOptions["lines"]>>((acc, l) => ((acc[l.section ? `${l.budgetName} · ${l.section}` : l.budgetName] ??= []).push(l), acc), {});
 
-  return (
-    <tr className={`align-top ${!item ? "bg-brand-50/30" : ""}`}>
-      {show("stream") && (
-        <td className="px-2 py-1.5">
+  const cells: Partial<Record<ItemColumn, React.ReactNode>> = {
+    stream: (
+      <>
           <select
             aria-label="Stream"
             value={draft.stream}
@@ -266,10 +264,10 @@ export function ItemRow({
               </option>
             ))}
           </select>
-        </td>
-      )}
-      {show("type") && (
-        <td className="px-2 py-1.5">
+      </>
+    ),
+    type: (
+      <>
           <select aria-label="Marketing item" value={draft.type} onChange={(e) => change({ type: e.target.value })} className={`${PILL_CELL} ${MARKETING_CATEGORY_STYLES[draft.type] ?? "bg-white"}`}>
             {MARKETING_CATEGORIES.map(([key, label]) => (
               <option key={key} value={key}>
@@ -277,10 +275,10 @@ export function ItemRow({
               </option>
             ))}
           </select>
-        </td>
-      )}
-      {show("description") && (
-        <td className="px-2 py-1.5">
+      </>
+    ),
+    description: (
+      <>
           <input
             aria-label="Description"
             value={draft.description}
@@ -295,10 +293,10 @@ export function ItemRow({
               {error}
             </p>
           )}
-        </td>
-      )}
-      {show("event") && (
-        <td className="px-2 py-1.5">
+      </>
+    ),
+    event: (
+      <>
           {draft.stream === "catapult" ? (
             <span className="block px-2 py-1.5 text-slate-400">Catapult</span>
           ) : (
@@ -329,10 +327,10 @@ export function ItemRow({
               </select>
             </div>
           )}
-        </td>
-      )}
-      {show("due") && (
-        <td className="px-2 py-1.5">
+      </>
+    ),
+    due: (
+      <>
           <div className="flex gap-1">
             {draft.eventId && (
               <select
@@ -360,10 +358,10 @@ export function ItemRow({
           </div>
           {draft.eventId && draft.timing && draft.timing !== "custom" && <p className={`px-2 text-xs ${late ? "font-medium text-rose-700" : "text-slate-500"}`}>{late ? "Overdue · " : ""}{fmtDay(due)}</p>}
           {late && draft.timing === "custom" && <p className="px-2 text-xs font-medium text-rose-700">Overdue</p>}
-        </td>
-      )}
-      {show("amount") && (
-        <td className="px-2 py-1.5">
+      </>
+    ),
+    amount: (
+      <>
           <span className="relative block">
             <span aria-hidden="true" className="pointer-events-none absolute inset-y-0 left-2 flex items-center text-sm text-slate-400">
               $
@@ -381,10 +379,10 @@ export function ItemRow({
               className={`${CELL} pl-5 text-right tabular-nums`}
             />
           </span>
-        </td>
-      )}
-      {show("line") && (
-        <td className="px-2 py-1.5">
+      </>
+    ),
+    line: (
+      <>
           <select
             aria-label="Budget line"
             value={draft.budgetLineId ?? ""}
@@ -403,10 +401,10 @@ export function ItemRow({
             ))}
             {item?.budgetLine && !linesForEvent.some((l) => l.id === item.budgetLine!.id) && <option value={item.budgetLine.id}>{item.budgetLine.name}</option>}
           </select>
-        </td>
-      )}
-      {show("assigned") && (
-        <td className="px-2 py-1.5">
+      </>
+    ),
+    assigned: (
+      <>
           <select aria-label="Assigned to" value={draft.assignedTo ?? ""} onChange={(e) => change({ assignedTo: e.target.value || null })} className={`${CELL} ${!draft.assignedTo ? "text-slate-400" : ""}`}>
             <option value="">Unassigned</option>
             {options.members.map((m) => (
@@ -415,10 +413,10 @@ export function ItemRow({
               </option>
             ))}
           </select>
-        </td>
-      )}
-      {show("status") && (
-        <td className="px-2 py-1.5">
+      </>
+    ),
+    status: (
+      <>
           <select aria-label="Status" value={draft.status} onChange={(e) => change({ status: e.target.value })} className={`${PILL_CELL} ${MARKETING_STATUS_STYLES[draft.status as keyof typeof MARKETING_STATUS_STYLES]}`}>
             {MARKETING_STATUSES.map(([key, label]) => (
               <option key={key} value={key}>
@@ -426,8 +424,13 @@ export function ItemRow({
               </option>
             ))}
           </select>
-        </td>
-      )}
+      </>
+    ),
+  };
+
+  return (
+    <tr className={`align-top ${!item ? "bg-brand-50/30" : ""}`}>
+      {renderGroups(cells, hide)}
       <td className="px-2 py-2">
         <div className="flex items-center justify-end gap-1">
           <span className="w-4" aria-live="polite">
@@ -543,60 +546,63 @@ export function SponsorField({
 }
 
 export function PostRow({ post, hide }: { post: PostItem; hide?: ItemColumn[] }) {
-  const show = (c: ItemColumn) => !hide?.includes(c);
   const late = post.isPast && post.status !== "approved";
-  return (
-    <tr className="align-top bg-slate-50/60 text-slate-700">
-      {show("stream") && (
-        <td className="px-2 py-1.5">
+  const cells: Partial<Record<ItemColumn, React.ReactNode>> = {
+    stream: (
+      <>
           <span className={`${READ_CELL} font-medium ${MARKETING_STREAM_STYLES[post.event ? "event" : "catapult"]}`}>{post.event ? "Event" : "Catapult"}</span>
-        </td>
-      )}
-      {show("type") && (
-        <td className="px-2 py-1.5">
+      </>
+    ),
+    type: (
+      <>
           <span className={`${READ_CELL} ${MARKETING_CATEGORY_STYLES.social}`}>Social post</span>
-        </td>
-      )}
-      {show("description") && (
-        <td className="px-2 py-1.5">
+      </>
+    ),
+    description: (
+      <>
           <Link href={`/marketing/posts/${post.id}`} className="block px-2 py-1.5 font-medium text-slate-900 hover:text-brand-700 hover:underline">
             {post.title}
           </Link>
           <span className="block px-2 text-xs text-slate-500">{post.platforms.length ? post.channels.map((c) => c.name).join(", ") : "No channels yet"}</span>
-        </td>
-      )}
-      {show("event") && (
-        <td className="px-2 py-1.5">
+      </>
+    ),
+    event: (
+      <>
           <span className="block truncate px-2 py-2 text-sm">{post.event?.title ?? post.initiative?.name ?? <span className="text-slate-400">Catapult</span>}</span>
-        </td>
-      )}
-      {show("due") && (
-        <td className="px-2 py-1.5">
+      </>
+    ),
+    due: (
+      <>
           <span className={`block px-2 py-2 text-sm ${late ? "font-medium text-rose-700" : ""}`}>{post.scheduledLabel ?? "Not scheduled"}</span>
-        </td>
-      )}
-      {show("amount") && (
-        <td className="px-2 py-1.5">
+      </>
+    ),
+    amount: (
+      <>
           <span className="block px-2 py-2 text-right text-slate-400">—</span>
-        </td>
-      )}
-      {show("line") && (
-        <td className="px-2 py-1.5">
+      </>
+    ),
+    line: (
+      <>
           <span className="block px-2 py-2 text-xs text-slate-500">Written in Social Planner</span>
-        </td>
-      )}
-      {show("assigned") && (
-        <td className="px-2 py-1.5">
+      </>
+    ),
+    assigned: (
+      <>
           <span className="block px-2 py-2 text-sm text-slate-400">{post.createdByName ?? "—"}</span>
-        </td>
-      )}
-      {show("status") && (
-        <td className="px-2 py-1.5">
+      </>
+    ),
+    status: (
+      <>
           <span className={READ_CELL}>
             <PostStatusPill status={post.status} size="sm" />
           </span>
-        </td>
-      )}
+      </>
+    ),
+  };
+
+  return (
+    <tr className="align-top bg-slate-50/60 text-slate-700">
+      {renderGroups(cells, hide)}
       <td className="px-2 py-2 text-right">
         <Link href={`/marketing/posts/${post.id}`} aria-label={`Open ${post.title}`} className="inline-flex rounded-md p-1 text-slate-400 hover:bg-slate-100 hover:text-brand-700">
           <ExternalLink className="h-4 w-4" strokeWidth={2} />
@@ -608,44 +614,75 @@ export function PostRow({ post, hide }: { post: PostItem; hide?: ItemColumn[] })
 
 export type ItemColumn = "stream" | "type" | "description" | "event" | "due" | "amount" | "line" | "assigned" | "status" | "actions";
 
-/** Every column, with a fixed width in px so each dropdown shows its whole choice. Description takes what's left. */
-const COLUMNS: { key: ItemColumn; label: string; width: number | null; right?: boolean }[] = [
-  { key: "stream", label: "Stream", width: 128 },
-  { key: "type", label: "Marketing item", width: 184 },
-  { key: "description", label: "Description", width: null },
-  { key: "event", label: "Event or sponsor", width: 224 },
-  { key: "due", label: "Due", width: 184 },
-  { key: "amount", label: "Amount", width: 96, right: true },
-  { key: "line", label: "Budget line", width: 232 },
-  { key: "assigned", label: "Assigned to", width: 152 },
-  { key: "status", label: "Status", width: 152 },
-  { key: "actions", label: "", width: 80 },
+/**
+ * The table's columns. Related fields share a column, one above the other, so the whole
+ * table fits the screen without scrolling sideways. Description takes what's left.
+ */
+const GROUPS: { keys: ItemColumn[]; width: number | null; right?: boolean }[] = [
+  { keys: ["stream", "type"], width: 184 },
+  { keys: ["description"], width: null },
+  { keys: ["event", "due"], width: 224 },
+  { keys: ["line", "amount"], width: 232 },
+  { keys: ["assigned", "status"], width: 156 },
 ];
-/** The least the description gets before the table scrolls sideways. */
-const DESCRIPTION_MIN = 260;
+const LABELS: Record<ItemColumn, string> = {
+  stream: "Stream",
+  type: "Marketing item",
+  description: "Description",
+  event: "Event or sponsor",
+  due: "Due",
+  amount: "Amount",
+  line: "Budget line",
+  assigned: "Assigned to",
+  status: "Status",
+  actions: "",
+};
+const ACTIONS_WIDTH = 80;
+/** A column's width when only one of its fields shows (e.g. Amount without Budget line). */
+const SINGLE_WIDTH: Partial<Record<ItemColumn, number>> = { type: 184, due: 184, amount: 112, status: 156 };
 
-/** The table's minimum width for the columns shown, so nothing is squeezed. */
-export function itemTableMinWidth(hide: ItemColumn[] = []): number {
-  return COLUMNS.filter((c) => !hide.includes(c.key)).reduce((s, c) => s + (c.width ?? DESCRIPTION_MIN), 0);
+function visibleGroups(hide: ItemColumn[] = []) {
+  return GROUPS.map((g) => {
+    const keys = g.keys.filter((k) => !hide.includes(k));
+    const width = keys.length === 1 && g.keys.length > 1 ? (SINGLE_WIDTH[keys[0]] ?? g.width) : g.width;
+    return { ...g, keys, width };
+  }).filter((g) => g.keys.length > 0);
+}
+
+/** A row's cells, laid out in the shared columns (paired fields stacked). */
+function renderGroups(cells: Partial<Record<ItemColumn, React.ReactNode>>, hide: ItemColumn[] = []) {
+  return visibleGroups(hide).map((g) => (
+    <td key={g.keys.join("-")} className="px-2 py-1.5">
+      <div className="space-y-1.5">
+        {g.keys.map((k) => (
+          <Fragment key={k}>{cells[k]}</Fragment>
+        ))}
+      </div>
+    </td>
+  ));
 }
 
 /** Column widths and headings shared by every item table. */
 export function ItemTableHead({ hide = [] }: { hide?: ItemColumn[] }) {
-  const cols = COLUMNS.filter((c) => !hide.includes(c.key));
+  const groups = visibleGroups(hide);
   return (
     <>
       <colgroup>
-        {cols.map((c) => (
-          <col key={c.key} style={c.width ? { width: c.width } : undefined} />
+        {groups.map((g) => (
+          <col key={g.keys.join("-")} style={g.width ? { width: g.width } : undefined} />
         ))}
+        <col style={{ width: ACTIONS_WIDTH }} />
       </colgroup>
       <thead className="border-b border-slate-200 bg-slate-50 text-left text-xs font-medium uppercase tracking-wide text-slate-500">
         <tr>
-          {cols.map((c) => (
-            <th key={c.key} scope="col" className={`px-3 py-2.5 ${c.right ? "text-right" : ""}`}>
-              {c.label || <span className="sr-only">Actions</span>}
+          {groups.map((g) => (
+            <th key={g.keys.join("-")} scope="col" className="px-3 py-2.5">
+              {g.keys.map((k) => LABELS[k]).join(" · ")}
             </th>
           ))}
+          <th scope="col" className="px-3 py-2.5">
+            <span className="sr-only">Actions</span>
+          </th>
         </tr>
       </thead>
     </>

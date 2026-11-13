@@ -148,7 +148,7 @@ export function BudgetItemsView({ budget, events }: { budget: BudgetOverview; ev
         <section className="rounded-xl border border-slate-200 bg-white shadow-card">
           <p className="border-b border-slate-100 px-5 py-3 text-xs text-slate-500">Click any name or amount to change it. A quarter's amount is shared evenly across its months, and totals update automatically.</p>
           <div className="relative overflow-x-auto">
-            <table className="w-full min-w-[860px] text-left text-sm">
+            <table className="w-full text-left text-sm">
               <thead className="text-xs uppercase tracking-wide text-slate-500">
                 <tr>
                   <th scope="col" className="px-5 py-2.5 font-medium">Line item</th>
