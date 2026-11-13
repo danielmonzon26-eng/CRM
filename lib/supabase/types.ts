@@ -621,6 +621,12 @@ export type Database = {
         Update: Partial<Database["public"]["Tables"]["social_post_channels"]["Insert"]>;
         Relationships: [];
       };
+      event_programs: {
+        Row: { id: string; name: string; sort_order: number; created_at: string };
+        Insert: { id?: string; name: string; sort_order?: number };
+        Update: Partial<Database["public"]["Tables"]["event_programs"]["Insert"]>;
+        Relationships: [];
+      };
       email_seen: {
         Row: { user_id: string; email_id: string; seen_at: string };
         Insert: { user_id?: string; email_id: string; seen_at?: string };
