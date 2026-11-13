@@ -1,5 +1,6 @@
 import { calgaryDateKey, EVENT_TIME_ZONE } from "@/lib/events/format";
 import { getPosts } from "@/lib/marketing/queries";
+import { AD_CATEGORIES, isMarketingCategory } from "@/lib/budgets/marketing-items";
 import { addDays, isAdCost, suggestPromotions, type PromotionKind, type PromotionStatus, type SuggestedPromotion } from "@/lib/marketing/promotions";
 import { createClient } from "@/lib/supabase/server";
 import type { SocialPlatform, SocialPostStatus } from "@/lib/supabase/types";
@@ -57,15 +58,22 @@ export async function getPromotionTimeline(now = new Date(), eventId?: string): 
   if (promosError) throw promosError;
   const lineIds = (lines ?? []).map((l) => l.id);
   const { data: items, error: itemsError } = lineIds.length
-    ? await supabase.from("budget_items").select("line_id, name, amount").in("line_id", lineIds)
-    : { data: [] as { line_id: string; name: string; amount: number }[], error: null };
+    ? await supabase.from("budget_items").select("line_id, name, amount, marketing_category").in("line_id", lineIds)
+    : { data: [] as { line_id: string; name: string; amount: number; marketing_category: string | null }[], error: null };
   if (itemsError) throw itemsError;
   const postTitle = new Map(posts.map((p) => [p.id, p.title]));
 
   const result = (events ?? []).map((ev): PromotionEvent => {
     const day = calgaryDateKey(ev.starts_at);
     const line = (lines ?? []).find((l) => l.event_id === ev.id);
-    const adItems = (items ?? []).filter((i) => i.line_id === line?.id && isAdCost(i.name)).map((i) => ({ name: i.name, amount: Number(i.amount) }));
+    // Marketing items in an advertising category count; uncategorised costs count by name.
+    const adItems = (items ?? [])
+      .filter(
+        (i) =>
+          i.line_id === line?.id &&
+          (isMarketingCategory(i.marketing_category) ? AD_CATEGORIES.includes(i.marketing_category) : isAdCost(i.name)),
+      )
+      .map((i) => ({ name: i.name, amount: Number(i.amount) }));
     const adBudget = adItems.reduce((s, i) => s + i.amount, 0);
     const eventPosts = posts.filter((p) => p.event?.id === ev.id);
     const promotions = (promos ?? [])

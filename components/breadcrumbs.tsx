@@ -24,6 +24,7 @@ const LABELS: Record<string, string> = {
   approvals: "Approvals",
   planner: "Planner",
   promotion: "Promotion",
+  deliverables: "Marketing items",
   initiatives: "Initiatives",
   channels: "Channels",
   posts: "Posts",

@@ -2,6 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 import { getBudgetList, getSelectedBudgetId } from "@/lib/budgets/queries";
+import { isDeliveryTiming, isMarketingCategory, MARKETING_CATEGORY_LABELS, type DeliveryTiming, type MarketingCategory } from "@/lib/budgets/marketing-items";
+import { calgaryDateKey } from "@/lib/events/format";
 import { createClient } from "@/lib/supabase/server";
 
 type Result = { error?: string };
@@ -15,8 +17,18 @@ export type EventBudget = {
     planMonth: string | null;
     amount: number;
     spent: number;
-    items: { id: string; name: string; amount: number; spent: number }[];
+    items: {
+      id: string;
+      name: string;
+      amount: number;
+      spent: number;
+      category: MarketingCategory | null;
+      timing: DeliveryTiming | null;
+      deliveryOn: string | null;
+    }[];
   } | null;
+  /** The event's Calgary date, for working out marketing delivery dates. */
+  eventDay: string | null;
   budgets: { id: string; name: string; periodLabel: string | null; sections: string[] }[];
   defaultBudgetId: string | null;
   unlinkedLines: { id: string; name: string; amount: number; budgetName: string }[];
@@ -28,24 +40,26 @@ function revalidate(eventId: string, lineId?: string) {
   revalidatePath("/events");
   revalidatePath("/budgets", "layout");
   revalidatePath("/");
+  revalidatePath("/marketing", "layout");
   if (lineId) revalidatePath(`/budgets/lines/${lineId}`);
 }
 
 /** Everything the wizard's Budget step needs: the linked line and its items, or the choices for linking one. */
 export async function loadEventBudget(eventId: string): Promise<EventBudget> {
   const supabase = await createClient();
-  const [{ data: line }, budgets, defaultBudgetId, { data: allLines }] = await Promise.all([
+  const [{ data: line }, budgets, defaultBudgetId, { data: allLines }, { data: event }] = await Promise.all([
     supabase.from("budget_lines").select("id, budget_id, section, plan_month, amount").eq("event_id", eventId).maybeSingle(),
     getBudgetList(),
     getSelectedBudgetId(),
     supabase.from("budget_lines").select("id, budget_id, kind, section, name, amount, event_id"),
+    supabase.from("events").select("starts_at").eq("id", eventId).maybeSingle(),
   ]);
   const budgetName = new Map(budgets.map((b) => [b.id, b.name]));
 
   let linked: EventBudget["linked"] = null;
   if (line) {
     const [{ data: items }, { data: expenses }] = await Promise.all([
-      supabase.from("budget_items").select("id, name, amount").eq("line_id", line.id).order("sort_order"),
+      supabase.from("budget_items").select("id, name, amount, marketing_category, delivery_timing, delivery_on").eq("line_id", line.id).order("sort_order"),
       supabase.from("budget_expenses").select("item_id, amount").eq("line_id", line.id),
     ]);
     const spentByItem = new Map<string, number>();
@@ -58,12 +72,21 @@ export async function loadEventBudget(eventId: string): Promise<EventBudget> {
       planMonth: line.plan_month,
       amount: Number(line.amount),
       spent: (expenses ?? []).reduce((sum, e) => sum + Number(e.amount), 0),
-      items: (items ?? []).map((i) => ({ id: i.id, name: i.name, amount: Number(i.amount), spent: spentByItem.get(i.id) ?? 0 })),
+      items: (items ?? []).map((i) => ({
+        id: i.id,
+        name: i.name,
+        amount: Number(i.amount),
+        spent: spentByItem.get(i.id) ?? 0,
+        category: isMarketingCategory(i.marketing_category) ? i.marketing_category : null,
+        timing: isDeliveryTiming(i.delivery_timing) ? i.delivery_timing : null,
+        deliveryOn: i.delivery_on,
+      })),
     };
   }
 
   return {
     linked,
+    eventDay: event?.starts_at ? calgaryDateKey(event.starts_at) : null,
     budgets: budgets.map((b) => ({
       ...b,
       sections: [...new Set((allLines ?? []).filter((l) => l.budget_id === b.id && l.kind === "event").map((l) => l.section))].sort(),
@@ -83,11 +106,15 @@ export async function createEventBudgetLine(input: {
   eventId: string;
   budgetId: string;
   section: string;
-  items: { name: string; amount: number }[];
+  items: { name: string; amount: number; category?: string | null; timing?: string | null; deliveryOn?: string | null }[];
 }): Promise<Result & { lineId?: string }> {
   const section = input.section.trim();
   if (!section) return { error: "Choose or type a section, such as Events." };
   if (input.items.some((i) => !i.name.trim() || !Number.isFinite(i.amount) || i.amount < 0)) return { error: "Check the item names and amounts." };
+  for (const i of input.items) {
+    const problem = marketingProblem(i.category ?? null, i.timing ?? null, i.deliveryOn ?? null);
+    if (problem) return { error: problem };
+  }
 
   const supabase = await createClient();
   const [{ data: event }, { data: budget }, { data: existing }] = await Promise.all([
@@ -122,7 +149,15 @@ export async function createEventBudgetLine(input: {
   if (input.items.length) {
     const { error: itemsError } = await supabase
       .from("budget_items")
-      .insert(input.items.map((item, i) => ({ line_id: lineId, name: item.name.trim(), amount: item.amount, sort_order: i + 1 })));
+      .insert(
+        input.items.map((item, i) => ({
+          line_id: lineId,
+          name: item.name.trim(),
+          amount: item.amount,
+          sort_order: i + 1,
+          ...marketingColumns(item.category ?? null, item.timing ?? null, item.deliveryOn ?? null),
+        })),
+      );
     if (itemsError) return { error: "The line was created, but some items didn't save. Add them again below.", lineId };
   }
 
@@ -143,5 +178,65 @@ export async function setEventBudgetLine(eventId: string, lineId: string | null)
   const { data: line, error } = await supabase.from("budget_lines").update({ event_id: null }).eq("event_id", eventId).select("id").maybeSingle();
   if (error) return { error: "The line wasn't unlinked. Please try again." };
   revalidate(eventId, line?.id);
+  return {};
+}
+
+const DAY = /^\d{4}-\d{2}-\d{2}$/;
+
+function marketingProblem(category: string | null, timing: string | null, deliveryOn: string | null): string | null {
+  if (!category) return null;
+  if (!isMarketingCategory(category)) return "Choose a marketing category from the list.";
+  if (timing && !isDeliveryTiming(timing)) return "Choose when it needs to be delivered.";
+  if (timing === "custom" && !(deliveryOn && DAY.test(deliveryOn))) return "Pick the delivery date.";
+  return null;
+}
+
+function marketingColumns(category: string | null, timing: string | null, deliveryOn: string | null) {
+  if (!category || !isMarketingCategory(category)) return { marketing_category: null, delivery_timing: null, delivery_on: null };
+  const t = timing && isDeliveryTiming(timing) ? timing : null;
+  return { marketing_category: category, delivery_timing: t, delivery_on: t === "custom" ? deliveryOn : null };
+}
+
+/**
+ * A marketing item on the event's budget line: its category, a description, the amount
+ * and when it's needed. Its name is the description (or the category when blank).
+ */
+export async function saveMarketingItem(input: {
+  eventId: string;
+  lineId: string;
+  itemId: string | null;
+  category: string;
+  description: string;
+  amount: string;
+  timing: string;
+  deliveryOn: string;
+}): Promise<Result> {
+  if (!isMarketingCategory(input.category)) return { error: "Choose a marketing category from the list." };
+  const problem = marketingProblem(input.category, input.timing || null, input.deliveryOn || null);
+  if (problem) return { error: problem };
+  const amount = input.amount.trim() === "" ? 0 : Number(input.amount);
+  if (!Number.isFinite(amount) || amount < 0) return { error: "Enter the amount in dollars, or leave it blank." };
+  const name = (input.description.trim() || MARKETING_CATEGORY_LABELS[input.category as MarketingCategory]).slice(0, 200);
+  const values = { name, amount: Math.round(amount * 100) / 100, ...marketingColumns(input.category, input.timing || null, input.deliveryOn || null) };
+
+  const supabase = await createClient();
+  if (input.itemId) {
+    const { error } = await supabase.from("budget_items").update(values).eq("id", input.itemId).eq("line_id", input.lineId).select("id").single();
+    if (error) return { error: "That didn't save. Please try again." };
+  } else {
+    const { data: last } = await supabase.from("budget_items").select("sort_order").eq("line_id", input.lineId).order("sort_order", { ascending: false }).limit(1).maybeSingle();
+    const { error } = await supabase.from("budget_items").insert({ line_id: input.lineId, ...values, sort_order: (last?.sort_order ?? 0) + 1 });
+    if (error) return { error: "That didn't save. Please try again." };
+  }
+  revalidate(input.eventId, input.lineId);
+  return {};
+}
+
+/** Ticks a marketing item off as delivered (or back to not yet). */
+export async function setMarketingItemDelivered(itemId: string, delivered: boolean): Promise<Result> {
+  const supabase = await createClient();
+  const { error } = await supabase.from("budget_items").update({ delivered_at: delivered ? new Date().toISOString() : null }).eq("id", itemId).select("id").single();
+  if (error) return { error: "That didn't save. Please try again." };
+  revalidatePath("/marketing", "layout");
   return {};
 }

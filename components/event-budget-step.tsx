@@ -4,10 +4,11 @@ import { useCallback, useEffect, useState, useTransition } from "react";
 import Link from "next/link";
 import { ExternalLink, Link2, Plus, Trash2, Unlink, Wallet } from "lucide-react";
 import { deleteBudgetItem, saveBudgetItem } from "@/app/actions/budgets";
-import { createEventBudgetLine, loadEventBudget, setEventBudgetLine, type EventBudget } from "@/app/actions/event-budget";
+import { createEventBudgetLine, loadEventBudget, saveMarketingItem, setEventBudgetLine, type EventBudget } from "@/app/actions/event-budget";
 import { buttonClass } from "@/components/ui/button";
 import { formatMoney } from "@/lib/budgets/money";
 import { EVENT_COST_PRESETS } from "@/lib/budgets/event-presets";
+import { deliveryDate, DELIVERY_TIMINGS, MARKETING_CATEGORIES, MARKETING_CATEGORY_LABELS, type DeliveryTiming, type MarketingCategory } from "@/lib/budgets/marketing-items";
 
 // No width here: each use sets its own, so flex rows lay out side by side.
 const INPUT =
@@ -82,7 +83,7 @@ export function EventBudgetStep({
   return (
     <div className="space-y-3">
       {data.linked ? (
-        <LinkedLine linked={data.linked} pending={pending} run={run} eventId={eventId} />
+        <LinkedLine linked={data.linked} pending={pending} run={run} eventId={eventId} eventDay={data.eventDay} />
       ) : (
         <SetUp data={data} eventId={eventId} pending={pending} run={run} />
       )}
@@ -95,20 +96,23 @@ export function EventBudgetStep({
   );
 }
 
-function LinkedLine({
+export function LinkedLine({
   linked,
   eventId,
+  eventDay,
   pending,
   run,
 }: {
   linked: NonNullable<EventBudget["linked"]>;
   eventId: string;
+  eventDay: string | null;
   pending: boolean;
   run: (action: () => Promise<{ error?: string }>) => void;
 }) {
   const [draft, setDraft] = useState<Draft>({ name: "", amount: "" });
   const remaining = linked.amount - linked.spent;
   const usedNames = new Set(linked.items.map((i) => i.name.toLowerCase()));
+  const other = linked.items.filter((i) => !i.category);
 
   function addItem(name: string, amount: string) {
     run(() => saveBudgetItem({ lineId: linked.lineId, itemId: null, name, amount: amount || "0" }));
@@ -148,6 +152,9 @@ function LinkedLine({
         </div>
       </div>
 
+      <MarketingItems linked={linked} eventId={eventId} eventDay={eventDay} pending={pending} run={run} />
+
+      <h3 className="border-t border-slate-100 px-4 pb-1 pt-3 text-sm font-semibold text-slate-900">Other costs</h3>
       <table className="w-full text-sm">
         <thead className="text-left text-xs text-slate-500">
           <tr>
@@ -160,14 +167,14 @@ function LinkedLine({
           </tr>
         </thead>
         <tbody className="divide-y divide-slate-100">
-          {linked.items.length === 0 && (
+          {other.length === 0 && (
             <tr>
               <td colSpan={4} className="px-4 py-3 text-sm text-slate-500">
-                No costs yet. Add them below.
+                No other costs yet. Add them below.
               </td>
             </tr>
           )}
-          {linked.items.map((item) => (
+          {other.map((item) => (
             <tr key={`${item.id}-${item.name}-${item.amount}`}>
               <td className="px-4 py-1.5">
                 <input
@@ -244,7 +251,7 @@ function LinkedLine({
           }}
           className="flex flex-wrap gap-2"
         >
-          <input aria-label="New cost" placeholder="Cost, e.g. Ad spend" value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} className={`${INPUT} min-w-0 flex-1`} />
+          <input aria-label="New cost" placeholder="Cost, e.g. Venue rental" value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} className={`${INPUT} min-w-0 flex-1`} />
           <MoneyField label="Planned amount" value={draft.amount} onChange={(amount) => setDraft({ ...draft, amount })} />
           <button type="submit" disabled={pending || !draft.name.trim()} className={buttonClass("secondary")}>
             <Plus className="h-4 w-4" strokeWidth={2} />
@@ -256,7 +263,7 @@ function LinkedLine({
   );
 }
 
-function SetUp({
+export function SetUp({
   data,
   eventId,
   pending,
@@ -270,12 +277,10 @@ function SetUp({
   const [budgetId, setBudgetId] = useState(data.defaultBudgetId ?? data.budgets[0]?.id ?? "");
   const sections = data.budgets.find((b) => b.id === budgetId)?.sections ?? [];
   const [section, setSection] = useState(sections[0] ?? "Events");
-  const [rows, setRows] = useState<Draft[]>([
-    { name: "Materials", amount: "" },
-    { name: "Ad spend", amount: "" },
-  ]);
+  const [rows, setRows] = useState<Draft[]>([{ name: "Materials", amount: "" }]);
+  const [marketingRows, setMarketingRows] = useState<MarketingDraft[]>([{ ...BLANK_MARKETING, category: "online_advertising", description: "Ad spend" }]);
   const [lineToLink, setLineToLink] = useState("");
-  const total = rows.reduce((sum, r) => sum + (Number(r.amount) || 0), 0);
+  const total = [...rows, ...marketingRows].reduce((sum, r) => sum + (Number(r.amount) || 0), 0);
 
   if (data.budgets.length === 0) {
     return (
@@ -294,7 +299,18 @@ function SetUp({
       <form
         onSubmit={(e) => {
           e.preventDefault();
-          const items = rows.filter((r) => r.name.trim()).map((r) => ({ name: r.name.trim(), amount: Number(r.amount) || 0 }));
+          const items = [
+            ...marketingRows
+              .filter((r) => r.category)
+              .map((r) => ({
+                name: r.description.trim() || MARKETING_CATEGORY_LABELS[r.category as MarketingCategory],
+                amount: Number(r.amount) || 0,
+                category: r.category,
+                timing: r.timing,
+                deliveryOn: r.deliveryOn || null,
+              })),
+            ...rows.filter((r) => r.name.trim()).map((r) => ({ name: r.name.trim(), amount: Number(r.amount) || 0 })),
+          ];
           run(() => createEventBudgetLine({ eventId, budgetId, section, items }));
         }}
         className="space-y-3 rounded-xl border border-slate-200 p-4"
@@ -334,7 +350,35 @@ function SetUp({
         </div>
 
         <fieldset>
-          <legend className="text-sm font-medium text-slate-700">Costs</legend>
+          <legend className="text-sm font-medium text-slate-700">Marketing items</legend>
+          <p className="text-xs text-slate-500">Booked into Marketing with their delivery dates.</p>
+          {marketingRows.length > 0 && <MarketingHeader />}
+          <ul className="mt-1 space-y-2">
+            {marketingRows.map((row, i) => (
+              <li key={i} className="flex items-start gap-2">
+                <MarketingFields value={row} onChange={(next) => setMarketingRows(marketingRows.map((r, j) => (j === i ? next : r)))} eventDay={data.eventDay} />
+                <button
+                  type="button"
+                  aria-label="Remove this marketing item"
+                  onClick={() => setMarketingRows(marketingRows.filter((_, j) => j !== i))}
+                  className="mt-1.5 rounded-md p-1 text-slate-400 hover:bg-rose-50 hover:text-rose-700"
+                >
+                  <Trash2 className="h-4 w-4" strokeWidth={2} />
+                </button>
+              </li>
+            ))}
+          </ul>
+          <button
+            type="button"
+            onClick={() => setMarketingRows([...marketingRows, BLANK_MARKETING])}
+            className="mt-2 rounded-full border border-dashed border-slate-300 px-2.5 py-0.5 text-xs text-slate-700 hover:border-brand-400 hover:text-brand-700"
+          >
+            + Marketing item
+          </button>
+        </fieldset>
+
+        <fieldset>
+          <legend className="text-sm font-medium text-slate-700">Other costs</legend>
           <ul className="mt-1.5 space-y-2">
             {rows.map((row, i) => (
               <li key={i} className="flex gap-2">
@@ -440,4 +484,205 @@ function MoneyField({ label, value, onChange }: { label: string; value: string; 
       />
     </span>
   );
+}
+
+const MK_GRID = "grid min-w-0 flex-1 grid-cols-1 gap-2 sm:grid-cols-[180px_minmax(0,1fr)_120px] lg:grid-cols-[180px_minmax(0,1fr)_110px_260px]";
+
+/** Column names above the marketing rows, on wide screens. */
+function MarketingHeader() {
+  return (
+    <div aria-hidden="true" className="mt-2 hidden items-start gap-2 pr-8 text-xs font-medium text-slate-500 lg:flex">
+      <div className={MK_GRID}>
+        <span>Category</span>
+        <span>Description</span>
+        <span className="text-right">Amount</span>
+        <span>Delivery</span>
+      </div>
+    </div>
+  );
+}
+
+const SMALL =
+  "rounded-lg border border-slate-300 bg-white px-2.5 py-1.5 text-sm text-slate-900 focus:border-brand-600 focus:outline-none focus:ring-2 focus:ring-brand-100";
+const dueFormat = new Intl.DateTimeFormat("en-CA", { weekday: "short", month: "short", day: "numeric", timeZone: "UTC" });
+const dueLabel = (day: string | null) => (day ? dueFormat.format(new Date(`${day}T00:00:00Z`)) : null);
+
+type MarketingDraft = { category: MarketingCategory | ""; description: string; amount: string; timing: DeliveryTiming; deliveryOn: string };
+const BLANK_MARKETING: MarketingDraft = { category: "", description: "", amount: "", timing: "2_weeks", deliveryOn: "" };
+
+/** One marketing item's fields: category, description, amount and when it's due. */
+function MarketingFields({
+  value,
+  onChange,
+  eventDay,
+  onCommit,
+}: {
+  value: MarketingDraft;
+  onChange: (next: MarketingDraft) => void;
+  eventDay: string | null;
+  /** Called when a change should save (a dropdown or date picked, or a field left). */
+  onCommit?: (next: MarketingDraft) => void;
+}) {
+  const due = deliveryDate(eventDay, value.timing, value.deliveryOn || null);
+  const change = (patch: Partial<MarketingDraft>, commit = false) => {
+    const next = { ...value, ...patch };
+    onChange(next);
+    if (commit) onCommit?.(next);
+  };
+  return (
+    <div className={MK_GRID}>
+      <select aria-label="Marketing category" value={value.category} onChange={(e) => change({ category: e.target.value as MarketingCategory }, true)} className={SMALL}>
+        <option value="" disabled>
+          Category
+        </option>
+        {MARKETING_CATEGORIES.map(([key, label]) => (
+          <option key={key} value={key}>
+            {label}
+          </option>
+        ))}
+      </select>
+      <input
+        aria-label="Description"
+        placeholder="Description, e.g. Event poster design"
+        value={value.description}
+        onChange={(e) => change({ description: e.target.value })}
+        onBlur={() => onCommit?.(value)}
+        className={SMALL}
+      />
+      <span className="relative block">
+        <span aria-hidden="true" className="pointer-events-none absolute inset-y-0 left-2.5 flex items-center text-sm text-slate-400">
+          $
+        </span>
+        <input
+          aria-label="Amount"
+          type="number"
+          min={0}
+          step="0.01"
+          inputMode="decimal"
+          placeholder="0.00"
+          value={value.amount}
+          onChange={(e) => change({ amount: e.target.value })}
+          onBlur={() => onCommit?.(value)}
+          className={`${SMALL} w-full pl-6 text-right tabular-nums`}
+        />
+      </span>
+      <div className="flex gap-2 sm:col-span-3 lg:col-span-1">
+        <select
+          aria-label="Delivery"
+          value={value.timing}
+          onChange={(e) => {
+            const timing = e.target.value as DeliveryTiming;
+            change({ timing, deliveryOn: timing === "custom" ? value.deliveryOn || due || "" : value.deliveryOn }, timing !== "custom" || !!(value.deliveryOn || due));
+          }}
+          className={`${SMALL} ${value.timing === "custom" ? "w-[8.5rem] shrink-0" : "min-w-0 flex-1"}`}
+          title={due ? `Due ${dueLabel(due)}` : undefined}
+        >
+          {DELIVERY_TIMINGS.map(([key, label]) => (
+            <option key={key} value={key}>
+              {label}
+            </option>
+          ))}
+        </select>
+        {value.timing === "custom" && (
+          <input aria-label="Delivery date" type="date" value={value.deliveryOn} onChange={(e) => change({ deliveryOn: e.target.value }, !!e.target.value)} className={`${SMALL} min-w-0 flex-1`} />
+        )}
+      </div>
+      {due && value.timing !== "custom" && <p className="text-xs text-slate-500 sm:col-span-3 lg:col-span-4">Due {dueLabel(due)}</p>}
+    </div>
+  );
+}
+
+/** Marketing costs on the event's line, each with a category and delivery date. They show in Marketing. */
+function MarketingItems({
+  linked,
+  eventId,
+  eventDay,
+  pending,
+  run,
+}: {
+  linked: NonNullable<EventBudget["linked"]>;
+  eventId: string;
+  eventDay: string | null;
+  pending: boolean;
+  run: (action: () => Promise<{ error?: string }>) => void;
+}) {
+  const items = linked.items.filter((i) => i.category);
+  const [draft, setDraft] = useState<MarketingDraft>(BLANK_MARKETING);
+  const total = items.reduce((s, i) => s + i.amount, 0);
+
+  return (
+    <section aria-labelledby="mk-items-title" className="px-4 py-3">
+      <div className="flex flex-wrap items-baseline justify-between gap-2">
+        <h3 id="mk-items-title" className="text-sm font-semibold text-slate-900">
+          Marketing items
+        </h3>
+        <p className="text-xs text-slate-500">
+          {items.length ? `${formatMoney(total)} · ` : ""}Booked into Marketing with their delivery dates
+        </p>
+      </div>
+      {items.length > 0 && <MarketingHeader />}
+      <ul className="mt-1 space-y-2">
+        {items.map((item) => (
+          <li key={`${item.id}-${item.name}-${item.amount}-${item.timing}-${item.deliveryOn}`} className="flex items-start gap-2">
+            <SavedMarketingItem item={item} eventId={eventId} lineId={linked.lineId} eventDay={eventDay} run={run} />
+            <button
+              type="button"
+              aria-label={`Remove ${item.name}`}
+              disabled={pending || item.spent > 0}
+              title={item.spent > 0 ? "Has expenses recorded against it" : undefined}
+              onClick={() => run(() => deleteBudgetItem(item.id, linked.lineId))}
+              className="mt-1.5 rounded-md p-1 text-slate-400 hover:bg-rose-50 hover:text-rose-700 disabled:opacity-30"
+            >
+              <Trash2 className="h-3.5 w-3.5" strokeWidth={2} />
+            </button>
+          </li>
+        ))}
+      </ul>
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          if (!draft.category) return;
+          const d = draft;
+          run(() => saveMarketingItem({ eventId, lineId: linked.lineId, itemId: null, ...d, category: d.category }));
+          setDraft(BLANK_MARKETING);
+        }}
+        className="mt-2 flex items-start gap-2 rounded-lg border border-dashed border-slate-300 p-2"
+      >
+        <MarketingFields value={draft} onChange={setDraft} eventDay={eventDay} />
+        <button type="submit" disabled={pending || !draft.category || (draft.timing === "custom" && !draft.deliveryOn)} className={buttonClass("secondary", "sm")}>
+          <Plus className="h-3.5 w-3.5" strokeWidth={2} />
+          Add
+        </button>
+      </form>
+    </section>
+  );
+}
+
+function SavedMarketingItem({
+  item,
+  eventId,
+  lineId,
+  eventDay,
+  run,
+}: {
+  item: NonNullable<EventBudget["linked"]>["items"][number];
+  eventId: string;
+  lineId: string;
+  eventDay: string | null;
+  run: (action: () => Promise<{ error?: string }>) => void;
+}) {
+  const initial: MarketingDraft = {
+    category: item.category ?? "",
+    description: item.name === MARKETING_CATEGORY_LABELS[item.category as MarketingCategory] ? "" : item.name,
+    amount: String(item.amount),
+    timing: item.timing ?? "2_weeks",
+    deliveryOn: item.deliveryOn ?? "",
+  };
+  const [value, setValue] = useState(initial);
+  const save = (next: MarketingDraft) => {
+    if (JSON.stringify(next) === JSON.stringify(initial) || !next.category) return;
+    if (next.timing === "custom" && !next.deliveryOn) return;
+    run(() => saveMarketingItem({ eventId, lineId, itemId: item.id, ...next, category: next.category }));
+  };
+  return <MarketingFields value={value} onChange={setValue} eventDay={eventDay} onCommit={save} />;
 }
