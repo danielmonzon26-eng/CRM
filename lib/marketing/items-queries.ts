@@ -21,7 +21,7 @@ export type MarketingItem = {
   delivered: boolean;
   event: { id: string; title: string; day: string; whenLabel: string } | null;
   sponsor: { id: string; name: string } | null;
-  budgetLine: { id: string; name: string; budgetName: string } | null;
+  budgetLine: { id: string; name: string; budgetId: string; budgetName: string } | null;
 };
 
 export type ItemOptions = {
@@ -79,7 +79,7 @@ export async function getMarketingItems(options: { eventId?: string } = {}): Pro
         delivered: i.status === "done",
         event: ev && day ? { id: ev.id, title: ev.title, day, whenLabel: eventDayFormat.format(new Date(ev.starts_at)) } : null,
         sponsor: i.sponsor_company_id ? sponsorById.get(i.sponsor_company_id) ?? null : null,
-        budgetLine: line ? { id: line.id, name: line.name, budgetName: budgetName.get(line.budget_id) ?? "Budget" } : null,
+        budgetLine: line ? { id: line.id, name: line.name, budgetId: line.budget_id, budgetName: budgetName.get(line.budget_id) ?? "Budget" } : null,
       };
     })
     .sort((a, b) => (a.due ?? "9999").localeCompare(b.due ?? "9999") || a.name.localeCompare(b.name));

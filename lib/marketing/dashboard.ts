@@ -1,115 +1,180 @@
-import { calgaryDateKey, EVENT_TIME_ZONE } from "@/lib/events/format";
-import { initiativePhase, PLATFORMS } from "@/lib/marketing/constants";
-import { getMarketingItems, type MarketingItem } from "@/lib/marketing/items-queries";
-import { getInitiatives, getPosts, type InitiativeItem, type PostItem } from "@/lib/marketing/queries";
+import { getBudgetOverview } from "@/lib/budgets/queries";
+import { MARKETING_CATEGORIES, MARKETING_STREAMS, type MarketingCategory, type MarketingStream } from "@/lib/budgets/marketing-items";
+import { calgaryDateKey } from "@/lib/events/format";
+import { getItemOptions, getMarketingItems, type MarketingItem } from "@/lib/marketing/items-queries";
+import { getPosts, type PostItem } from "@/lib/marketing/queries";
 import { createClient } from "@/lib/supabase/server";
-import type { SocialPlatform, SocialPostStatus } from "@/lib/supabase/types";
 
 const DAY_MS = 86_400_000;
-const eventDay = new Intl.DateTimeFormat("en-CA", { weekday: "short", month: "short", day: "numeric", timeZone: EVENT_TIME_ZONE });
+const dayFmt = new Intl.DateTimeFormat("en-CA", { weekday: "short", month: "short", day: "numeric", timeZone: "UTC" });
+const fmtDay = (day: string) => dayFmt.format(new Date(`${day}T00:00:00Z`));
 
-export type CoverageSlot = { days: 14 | 7 | 1; status: SocialPostStatus | null; postId: string | null; passed: boolean };
-
-export type EventCoverage = {
-  id: string;
+/** One line in a "needs attention", "running" or "upcoming" list. */
+export type DashboardEntry = {
+  key: string;
+  kind: "item" | "post" | "promotion" | "event" | "line";
   title: string;
-  whenLabel: string;
-  daysToGo: number;
-  slots: CoverageSlot[];
-  otherPosts: number;
+  detail: string;
+  day: string | null;
+  dayLabel: string | null;
+  href: string;
+  tag: string;
+  tone: "rose" | "amber" | "emerald" | "sky" | "slate";
+  amount?: number;
 };
 
 export type MarketingDashboard = {
-  waiting: number;
-  next7: { total: number; approved: number; notApproved: number };
-  toWrite: number;
-  overdue: number;
-  attention: PostItem[];
-  upcoming: PostItem[];
-  coverage: EventCoverage[];
-  platformMonth: { platform: SocialPlatform; counts: Record<SocialPostStatus, number>; total: number }[];
-  monthLabel: string;
-  initiatives: (InitiativeItem & { phase: string })[];
-  /** Marketing items not yet delivered: overdue or due in the next 2 weeks. */
-  itemsDue: MarketingItem[];
+  budget: {
+    name: string | null;
+    /** The current budget's total. */
+    total: number;
+    /** Marketing items booked against lines in that budget. */
+    allocated: number;
+    /** Committed and actual spending recorded on those items. */
+    spent: number;
+    remaining: number;
+    byStream: { key: MarketingStream; label: string; amount: number; count: number }[];
+    byType: { key: MarketingCategory; label: string; amount: number; count: number }[];
+  };
+  counts: { attention: number; running: number; upcoming: number };
+  attention: DashboardEntry[];
+  running: DashboardEntry[];
+  upcoming: DashboardEntry[];
   today: string;
 };
 
+const STREAM_HREF: Record<MarketingStream, string> = { catapult: "/marketing/catapult", event: "/marketing/event", sponsorship: "/marketing/sponsorship" };
+
+function itemEntry(i: MarketingItem, tag: string, tone: DashboardEntry["tone"]): DashboardEntry {
+  const label = MARKETING_STREAMS.find(([k]) => k === i.stream)?.[1] ?? "";
+  return {
+    key: `i-${i.id}`,
+    kind: "item",
+    title: i.name,
+    detail: `${label} · ${i.event?.title ?? i.sponsor?.name ?? "Catapult"}`,
+    day: i.due,
+    dayLabel: i.due ? fmtDay(i.due) : null,
+    href: STREAM_HREF[i.stream],
+    tag,
+    tone,
+    amount: i.amount,
+  };
+}
+
+function postEntry(p: PostItem, tag: string, tone: DashboardEntry["tone"]): DashboardEntry {
+  return {
+    key: `p-${p.id}`,
+    kind: "post",
+    title: p.title,
+    detail: `Social post${p.event ? ` · ${p.event.title}` : ""}`,
+    day: p.dayKey,
+    dayLabel: p.scheduledLabel,
+    href: `/marketing/posts/${p.id}`,
+    tag,
+    tone,
+  };
+}
+
+/** Everything the Marketing overview shows: the money, and what needs doing, is running, and is coming up. */
 export async function getMarketingDashboard(now = new Date()): Promise<MarketingDashboard> {
   const supabase = await createClient();
-  const horizon = new Date(now.getTime() + 60 * DAY_MS).toISOString();
-  const [posts, initiatives, { data: events, error }, items] = await Promise.all([
-    getPosts(),
-    getInitiatives(),
-    supabase
-      .from("events")
-      .select("id, title, starts_at")
-      .eq("status", "published")
-      .is("archived_at", null)
-      .gte("starts_at", now.toISOString())
-      .lte("starts_at", horizon)
-      .order("starts_at"),
-    // The items panel is a bonus; the rest of the overview doesn't depend on it.
-    getMarketingItems().catch((e) => {
-      console.error("Marketing items for the overview failed:", e);
-      return [] as MarketingItem[];
-    }),
-  ]);
-  if (error) throw error;
-
-  const t = now.getTime();
-  const at = (p: PostItem) => (p.scheduledAt ? new Date(p.scheduledAt).getTime() : null);
-  const within = (p: PostItem, days: number) => {
-    const ms = at(p);
-    return ms !== null && ms >= t && ms < t + days * DAY_MS;
-  };
-  const next7 = posts.filter((p) => within(p, 7));
-  const overdue = posts.filter((p) => p.isPast && p.status !== "approved");
-  const attention = [...overdue, ...next7.filter((p) => p.status !== "approved")]
-    .sort((a, b) => (at(a) ?? 0) - (at(b) ?? 0))
-    .slice(0, 8);
-
   const today = calgaryDateKey(now);
-  const month = today.slice(0, 7);
-  const monthPosts = posts.filter((p) => p.dayKey?.startsWith(month));
-  const platformMonth = PLATFORMS.map((pl) => {
-    const counts: Record<SocialPostStatus, number> = { requested: 0, waiting_approval: 0, approved: 0 };
-    for (const p of monthPosts) if (p.platforms.includes(pl.key)) counts[p.status] += 1;
-    return { platform: pl.key, counts, total: counts.requested + counts.waiting_approval + counts.approved };
-  });
+  const in30 = calgaryDateKey(new Date(now.getTime() + 30 * DAY_MS));
+  const in7 = calgaryDateKey(new Date(now.getTime() + 7 * DAY_MS));
 
-  const coverage: EventCoverage[] = (events ?? []).map((ev) => {
-    const mine = posts.filter((p) => p.event?.id === ev.id);
-    const start = new Date(ev.starts_at).getTime();
-    const slots = ([14, 7, 1] as const).map((days) => {
-      const post = mine.find((p) => p.autoDaysBefore === days) ?? null;
-      return { days, status: post?.status ?? null, postId: post?.id ?? null, passed: start - days * DAY_MS < t };
-    });
-    return {
-      id: ev.id,
-      title: ev.title,
-      whenLabel: eventDay.format(new Date(ev.starts_at)),
-      daysToGo: Math.max(0, Math.ceil((start - t) / DAY_MS)),
-      slots,
-      otherPosts: mine.filter((p) => !p.autoDaysBefore).length,
-    };
-  });
+  const [items, posts, options, overview, { data: promos, error: promosError }] = await Promise.all([
+    getMarketingItems(),
+    getPosts(),
+    getItemOptions(now),
+    // The money panel is a bonus; the lists still show if the budget can't load.
+    getBudgetOverview().catch((e) => {
+      console.error("Budget for the marketing overview failed:", e);
+      return null;
+    }),
+    supabase.from("marketing_promotions").select("id, name, event_id, starts_on, ends_on, amount, status").neq("status", "done").order("starts_on"),
+  ]);
+  if (promosError) throw promosError;
+
+  // ---- Money: the current budget, and the marketing items booked against it.
+  const inBudget = overview ? items.filter((i) => i.budgetLine?.budgetId === overview.id) : [];
+  const allocated = inBudget.reduce((s, i) => s + i.amount, 0);
+  let spent = 0;
+  if (inBudget.length) {
+    const { data: links } = await supabase.from("marketing_items").select("budget_item_id").in("id", inBudget.map((i) => i.id));
+    const budgetItemIds = (links ?? []).map((r) => r.budget_item_id).filter((x): x is string => !!x);
+    if (budgetItemIds.length) {
+      const { data: expenses } = await supabase.from("budget_expenses").select("amount").in("item_id", budgetItemIds);
+      spent = (expenses ?? []).reduce((s, e) => s + Number(e.amount), 0);
+    }
+  }
+  const total = overview?.approved ?? 0;
+
+  // ---- Needs attention
+  const attention: DashboardEntry[] = [];
+  for (const i of items) if (i.due && i.due < today && i.status !== "done") attention.push(itemEntry(i, "Overdue", "rose"));
+  for (const p of posts) {
+    if (p.isPast && p.status !== "approved") attention.push(postEntry(p, "Date passed", "rose"));
+    else if (p.status === "waiting_approval") attention.push(postEntry(p, "Waiting approval", "amber"));
+    else if (p.dayKey && p.dayKey <= in7 && p.status === "requested") attention.push(postEntry(p, "Not written yet", "amber"));
+  }
+  for (const e of options.events)
+    if (!e.lineId && e.day >= today && e.day <= in30)
+      attention.push({ key: `e-${e.id}`, kind: "event", title: e.title, detail: "Event without a budget line", day: e.day, dayLabel: e.whenLabel, href: `/events/${e.id}?tab=budget`, tag: "No budget", tone: "amber" });
+  for (const l of overview?.lines ?? [])
+    if (l.amount > 0 && l.committed + l.actual > l.amount)
+      attention.push({ key: `l-${l.id}`, kind: "line", title: l.name, detail: "Spending is over this line's budget", day: null, dayLabel: null, href: `/budgets/lines/${l.id}`, tag: "Over budget", tone: "rose", amount: l.committed + l.actual - l.amount });
+  attention.sort((a, b) => (a.day ?? "0000").localeCompare(b.day ?? "0000"));
+
+  // ---- Running now
+  const eventTitle = new Map(options.events.map((e) => [e.id, e.title]));
+  const running: DashboardEntry[] = [
+    ...items.filter((i) => i.status === "in_progress").map((i) => itemEntry(i, "In progress", "sky")),
+    ...(promos ?? [])
+      .filter((p) => p.status === "running" || (p.starts_on <= today && p.ends_on >= today))
+      .map(
+        (p): DashboardEntry => ({
+          key: `pr-${p.id}`,
+          kind: "promotion",
+          title: p.name,
+          detail: `Paid promotion${p.event_id && eventTitle.get(p.event_id) ? ` · ${eventTitle.get(p.event_id)}` : ""}`,
+          day: p.starts_on,
+          dayLabel: `${fmtDay(p.starts_on)} – ${fmtDay(p.ends_on)}`,
+          href: "/marketing/promotion",
+          tag: p.status === "running" ? "Running" : "Should be running",
+          tone: p.status === "running" ? "emerald" : "amber",
+          amount: Number(p.amount),
+        }),
+      ),
+  ];
+
+  // ---- Upcoming: the next 30 days
+  const upcoming: DashboardEntry[] = [
+    ...items.filter((i) => i.due && i.due >= today && i.due <= in30 && i.status !== "done").map((i) => itemEntry(i, i.status === "in_progress" ? "In progress" : "Planned", "slate")),
+    ...posts
+      .filter((p) => p.dayKey && p.dayKey >= today && p.dayKey <= in30)
+      .map((p) => postEntry(p, p.status === "approved" ? "Approved" : p.status === "waiting_approval" ? "Waiting approval" : "Requested", p.status === "approved" ? "emerald" : "slate")),
+  ].sort((a, b) => (a.day ?? "").localeCompare(b.day ?? ""));
 
   return {
-    waiting: posts.filter((p) => p.status === "waiting_approval").length,
-    next7: { total: next7.length, approved: next7.filter((p) => p.status === "approved").length, notApproved: next7.filter((p) => p.status !== "approved").length },
-    toWrite: posts.filter((p) => p.status === "requested" && within(p, 14)).length,
-    overdue: overdue.length,
-    attention,
-    upcoming: posts.filter((p) => p.status === "approved" && within(p, 14)).slice(0, 8),
-    coverage,
-    platformMonth,
-    monthLabel: new Intl.DateTimeFormat("en-CA", { month: "long", timeZone: EVENT_TIME_ZONE }).format(now),
-    initiatives: initiatives
-      .map((i) => ({ ...i, phase: initiativePhase(i.startsOn, i.endsOn, today) }))
-      .filter((i) => i.phase === "active" || i.phase === "upcoming")
-      .slice(0, 5),
-    itemsDue: items.filter((i) => !i.delivered && i.due && i.due <= new Date(t + 14 * DAY_MS).toISOString().slice(0, 10)).slice(0, 8),
+    budget: {
+      name: overview?.name ?? null,
+      total,
+      allocated,
+      spent,
+      remaining: total - allocated,
+      byStream: MARKETING_STREAMS.map(([key, label]) => {
+        const list = inBudget.filter((i) => i.stream === key);
+        return { key, label, amount: list.reduce((s, i) => s + i.amount, 0), count: list.length };
+      }),
+      byType: MARKETING_CATEGORIES.map(([key, label]) => {
+        const list = inBudget.filter((i) => i.type === key);
+        return { key, label, amount: list.reduce((s, i) => s + i.amount, 0), count: list.length };
+      }),
+    },
+    counts: { attention: attention.length, running: running.length, upcoming: upcoming.length },
+    attention: attention.slice(0, 12),
+    running: running.slice(0, 12),
+    upcoming: upcoming.slice(0, 15),
     today,
   };
 }
