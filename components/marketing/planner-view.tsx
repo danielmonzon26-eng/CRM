@@ -5,6 +5,8 @@ import Link from "next/link";
 import { CalendarPlus, ChevronLeft, ChevronRight, ImageIcon, Plus } from "lucide-react";
 import { PlatformIcon, PlatformIcons } from "@/components/marketing/platform-icon";
 import { PostQuickView } from "@/components/marketing/post-quick-view";
+import { MARKETING_CATEGORY_LABELS, MARKETING_CATEGORY_STYLES } from "@/lib/budgets/marketing-items";
+import type { MarketingItem } from "@/lib/marketing/items-queries";
 import { RequestPostDialog } from "@/components/marketing/request-post";
 import { PostStatusPill } from "@/components/marketing/status-pill";
 import { buttonClass } from "@/components/ui/button";
@@ -27,6 +29,8 @@ export function PlannerView({
   days,
   posts,
   unscheduled,
+  items = [],
+  basePath = "/marketing/social",
 }: {
   monthLabel: string;
   month: string;
@@ -36,6 +40,10 @@ export function PlannerView({
   days: Day[];
   posts: PostItem[];
   unscheduled: PostItem[];
+  /** Marketing items to show on their due dates (the Planner shows these; Social doesn't). */
+  items?: MarketingItem[];
+  /** Where month navigation points. */
+  basePath?: string;
 }) {
   const [platforms, setPlatforms] = useState<SocialPlatform[]>([]);
   const [statuses, setStatuses] = useState<SocialPostStatus[]>([]);
@@ -52,8 +60,13 @@ export function PlannerView({
     for (const p of visible) if (p.dayKey) map.set(p.dayKey, [...(map.get(p.dayKey) ?? []), p]);
     return map;
   }, [visible]);
+  const itemsByDay = useMemo(() => {
+    const map = new Map<string, MarketingItem[]>();
+    for (const i of items) if (i.due && i.status !== "done") map.set(i.due, [...(map.get(i.due) ?? []), i]);
+    return map;
+  }, [items]);
   const unscheduledVisible = unscheduled.filter(matches);
-  const monthDays = days.filter((d) => d.inMonth && byDay.has(d.key));
+  const monthDays = days.filter((d) => d.inMonth && (byDay.has(d.key) || itemsByDay.has(d.key)));
   const filtered = platforms.length > 0 || statuses.length > 0;
 
   const toggle = <T,>(list: T[], value: T) => (list.includes(value) ? list.filter((v) => v !== value) : [...list, value]);
@@ -62,17 +75,17 @@ export function PlannerView({
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2">
-          <Link href={`/marketing/planner?month=${prevMonth}`} aria-label="Previous month" className={buttonClass("secondary", "sm")}>
+          <Link href={`${basePath}?month=${prevMonth}`} aria-label="Previous month" className={buttonClass("secondary", "sm")}>
             <ChevronLeft className="h-4 w-4" strokeWidth={2} />
           </Link>
-          <Link href={`/marketing/planner?month=${nextMonth}`} aria-label="Next month" className={buttonClass("secondary", "sm")}>
+          <Link href={`${basePath}?month=${nextMonth}`} aria-label="Next month" className={buttonClass("secondary", "sm")}>
             <ChevronRight className="h-4 w-4" strokeWidth={2} />
           </Link>
           <h2 className="ml-1 text-lg font-semibold text-slate-900" aria-live="polite">
             {monthLabel}
           </h2>
           {month !== thisMonth && (
-            <Link href="/marketing/planner" className="ml-1 text-sm font-medium text-brand-700 hover:underline">
+            <Link href={basePath} className="ml-1 text-sm font-medium text-brand-700 hover:underline">
               Today
             </Link>
           )}
@@ -171,6 +184,15 @@ export function PlannerView({
                       </button>
                     )}
                   </div>
+                  {(itemsByDay.get(d.key) ?? []).length > 0 && (
+                    <ul className="mb-1 space-y-1">
+                      {(itemsByDay.get(d.key) ?? []).map((i) => (
+                        <li key={i.id}>
+                          <ItemChip item={i} />
+                        </li>
+                      ))}
+                    </ul>
+                  )}
                   <ul className="space-y-1">
                     {shown.map((p) => (
                       <li key={p.id}>
@@ -207,6 +229,11 @@ export function PlannerView({
                   {d.isToday && " · Today"}
                 </h3>
                 <ul className="space-y-1.5">
+                  {(itemsByDay.get(d.key) ?? []).map((i) => (
+                    <li key={i.id}>
+                      <ItemChip item={i} />
+                    </li>
+                  ))}
                   {(byDay.get(d.key) ?? []).map((p) => (
                     <li key={p.id}>
                       <PostRow post={p} onOpen={() => setViewing(p)} />
@@ -315,5 +342,19 @@ function PostRow({ post, flat = false, onOpen }: { post: PostItem; flat?: boolea
       </span>
       <PostStatusPill status={post.status} size="sm" />
     </button>
+  );
+}
+
+/** A marketing item on its due date: its type colour, stream and description; opens the table. */
+function ItemChip({ item }: { item: MarketingItem }) {
+  return (
+    <Link
+      href="/marketing/planner?view=table"
+      title={`${MARKETING_CATEGORY_LABELS[item.type]} · ${item.name}${item.event ? ` · ${item.event.title}` : ""}`}
+      className={`flex items-center gap-1 overflow-hidden rounded-md px-1.5 py-1 text-[11px] font-medium leading-tight hover:ring-2 hover:ring-brand-200 ${MARKETING_CATEGORY_STYLES[item.type] ?? "bg-slate-100 text-slate-700"}`}
+    >
+      <span className="shrink-0 rounded bg-white/70 px-1 text-[10px] uppercase tracking-wide">{item.stream === "catapult" ? "Cat" : item.stream === "event" ? "Evt" : "Spn"}</span>
+      <span className="truncate">{item.name}</span>
+    </Link>
   );
 }

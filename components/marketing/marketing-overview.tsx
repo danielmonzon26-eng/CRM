@@ -23,7 +23,7 @@ export function MarketingOverview({ d }: { d: MarketingDashboard }) {
           value={String(d.waiting)}
           label="Waiting approval"
           detail={d.waiting ? "Ready for an admin to review" : "Nothing waiting"}
-          href="/marketing/approvals"
+          href="/marketing/social/approvals"
           alert={d.waiting > 0}
         />
         <Kpi
@@ -32,7 +32,7 @@ export function MarketingOverview({ d }: { d: MarketingDashboard }) {
           value={String(d.next7.total)}
           label="Going out in 7 days"
           detail={d.next7.total ? `${d.next7.approved} approved · ${d.next7.notApproved} not yet` : "Nothing scheduled this week"}
-          href="/marketing/planner"
+          href="/marketing/social"
           alert={d.next7.notApproved > 0}
         />
         <Kpi
@@ -41,7 +41,7 @@ export function MarketingOverview({ d }: { d: MarketingDashboard }) {
           value={String(d.toWrite)}
           label="To write"
           detail="Requested, due in the next 2 weeks"
-          href="/marketing/approvals"
+          href="/marketing/social/approvals"
         />
         <Kpi
           icon={AlertTriangle}
@@ -49,13 +49,13 @@ export function MarketingOverview({ d }: { d: MarketingDashboard }) {
           value={String(d.overdue)}
           label="Date passed"
           detail={d.overdue ? "Not approved before their date" : "Nothing missed"}
-          href="/marketing/approvals"
+          href="/marketing/social/approvals"
           alert={d.overdue > 0}
         />
       </section>
 
       <div className="grid grid-cols-1 gap-5 xl:grid-cols-3">
-        <Panel title="Needs attention" subtitle="Date passed, or going out this week without approval" href="/marketing/approvals" linkLabel="Approvals" className="xl:col-span-2">
+        <Panel title="Needs attention" subtitle="Date passed, or going out this week without approval" href="/marketing/social/approvals" linkLabel="Approvals" className="xl:col-span-2">
           {d.attention.length === 0 ? (
             <PanelEmpty icon={CheckCircle2}>Everything going out this week is approved.</PanelEmpty>
           ) : (
@@ -69,7 +69,7 @@ export function MarketingOverview({ d }: { d: MarketingDashboard }) {
           )}
         </Panel>
 
-        <Panel title={`${d.monthLabel} by platform`} subtitle="Posts scheduled this month" href="/marketing/planner" linkLabel="Planner">
+        <Panel title={`${d.monthLabel} by platform`} subtitle="Posts scheduled this month" href="/marketing/social" linkLabel="Post calendar">
           <div className="space-y-2 p-3">
             {d.platformMonth.map((p) => (
               <div key={p.platform} className="px-2 py-1.5">
@@ -177,7 +177,7 @@ export function MarketingOverview({ d }: { d: MarketingDashboard }) {
         </Panel>
       </div>
 
-      <Panel title="Marketing items due" subtitle="From event budgets: overdue or due in the next 2 weeks" href="/marketing/deliverables" linkLabel="All items">
+      <Panel title="Marketing items due" subtitle="Catapult, event and sponsorship items: overdue or due in the next 2 weeks" href="/marketing/planner?view=table" linkLabel="All items">
         {d.itemsDue.length === 0 ? (
           <PanelEmpty icon={Package}>Nothing due in the next two weeks.</PanelEmpty>
         ) : (
@@ -186,11 +186,15 @@ export function MarketingOverview({ d }: { d: MarketingDashboard }) {
               const late = !!i.due && i.due < d.today;
               return (
                 <li key={i.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 px-5 py-2.5 text-sm">
-                  <span className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${MARKETING_CATEGORY_STYLES[i.category]}`}>{MARKETING_CATEGORY_LABELS[i.category]}</span>
+                  <span className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${MARKETING_CATEGORY_STYLES[i.type]}`}>{MARKETING_CATEGORY_LABELS[i.type]}</span>
                   <span className="min-w-0 flex-1 truncate text-slate-900">{i.name}</span>
-                  <Link href={`/events/${i.event.id}?tab=budget`} className="truncate text-xs text-slate-500 hover:text-brand-700 hover:underline">
-                    {i.event.title}
-                  </Link>
+                  {i.event ? (
+                    <Link href={`/events/${i.event.id}?tab=budget`} className="truncate text-xs text-slate-500 hover:text-brand-700 hover:underline">
+                      {i.event.title}
+                    </Link>
+                  ) : (
+                    <span className="truncate text-xs text-slate-500">{i.sponsor?.name ?? "Catapult"}</span>
+                  )}
                   <span className={`text-xs tabular-nums ${late ? "font-medium text-rose-700" : "text-slate-600"}`}>
                     {late ? "Overdue · " : "Due "}
                     {new Date(`${i.due}T00:00:00Z`).toLocaleDateString("en-CA", { month: "short", day: "numeric", timeZone: "UTC" })}
@@ -202,7 +206,7 @@ export function MarketingOverview({ d }: { d: MarketingDashboard }) {
         )}
       </Panel>
 
-      <Panel title="Approved and coming up" subtitle="Next 2 weeks" href="/marketing/planner" linkLabel="Planner">
+      <Panel title="Approved posts coming up" subtitle="Next 2 weeks" href="/marketing/social" linkLabel="Post calendar">
         {d.upcoming.length === 0 ? (
           <PanelEmpty icon={CalendarCheck}>Nothing approved for the next two weeks yet.</PanelEmpty>
         ) : (

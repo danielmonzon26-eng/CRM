@@ -185,7 +185,7 @@ export function PostComposer({
       else {
         dirtyRef.current = false;
         toast("Post deleted.");
-        router.push("/marketing/approvals");
+        router.push("/marketing/social/approvals");
       }
     });
   }
@@ -201,7 +201,7 @@ export function PostComposer({
       className="space-y-4"
     >
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <Link href="/marketing/approvals" className="inline-flex items-center gap-1 text-sm text-slate-500 hover:text-slate-900">
+        <Link href="/marketing/social/approvals" className="inline-flex items-center gap-1 text-sm text-slate-500 hover:text-slate-900">
           <ArrowLeft className="h-3.5 w-3.5" strokeWidth={2} />
           All posts
         </Link>
@@ -315,7 +315,7 @@ export function PostComposer({
                 Channels
               </h2>
               {isAdmin && (
-                <Link href="/marketing/channels" className="text-xs font-medium text-brand-700 hover:underline">
+                <Link href="/marketing/social/channels" className="text-xs font-medium text-brand-700 hover:underline">
                   Manage channels
                 </Link>
               )}
