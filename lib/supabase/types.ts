@@ -49,6 +49,8 @@ export type EmailDirection = "inbound" | "outbound";
 export type DealStage = "in_development" | "sent" | "accepted" | "declined";
 export type DealPayment = "paid" | "unpaid";
 export type NoteKind = "note" | "call" | "meeting" | "email";
+export type SocialPlatform = "linkedin" | "facebook" | "instagram";
+export type SocialPostStatus = "requested" | "waiting_approval" | "approved";
 
 // supabase-js's generated-types contract expects each table to declare its foreign-key
 // relationships (used for typed nested `select()` joins). None are modeled by hand here.
@@ -509,6 +511,77 @@ export type Database = {
         Row: { deal_id: string; contact_id: string; role: string; created_at: string };
         Insert: { deal_id: string; contact_id: string; role: string };
         Update: Partial<Database["public"]["Tables"]["deal_people"]["Insert"]>;
+        Relationships: [];
+      };
+      marketing_channels: {
+        Row: { id: string; platform: SocialPlatform; name: string; handle: string | null; active: boolean; sort_order: number; created_at: string; updated_at: string };
+        Insert: { id?: string; platform: SocialPlatform; name: string; handle?: string | null; active?: boolean; sort_order?: number };
+        Update: Partial<Database["public"]["Tables"]["marketing_channels"]["Insert"]>;
+        Relationships: [];
+      };
+      marketing_initiatives: {
+        Row: {
+          id: string;
+          name: string;
+          objective: string | null;
+          owner_id: string | null;
+          event_id: string | null;
+          starts_on: string | null;
+          ends_on: string | null;
+          budget: number | null;
+          created_by: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          name: string;
+          objective?: string | null;
+          owner_id?: string | null;
+          event_id?: string | null;
+          starts_on?: string | null;
+          ends_on?: string | null;
+          budget?: number | null;
+        };
+        Update: Partial<Database["public"]["Tables"]["marketing_initiatives"]["Insert"]>;
+        Relationships: [];
+      };
+      social_posts: {
+        Row: {
+          id: string;
+          initiative_id: string | null;
+          title: string;
+          caption: string;
+          scheduled_at: string | null;
+          status: SocialPostStatus;
+          image_path: string | null;
+          image_name: string | null;
+          review_note: string | null;
+          created_by: string | null;
+          submitted_at: string | null;
+          approved_by: string | null;
+          approved_at: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          initiative_id?: string | null;
+          title: string;
+          caption?: string;
+          scheduled_at?: string | null;
+          status?: SocialPostStatus;
+          image_path?: string | null;
+          image_name?: string | null;
+          review_note?: string | null;
+        };
+        Update: Partial<Database["public"]["Tables"]["social_posts"]["Insert"]>;
+        Relationships: [];
+      };
+      social_post_channels: {
+        Row: { post_id: string; channel_id: string };
+        Insert: { post_id: string; channel_id: string };
+        Update: Partial<Database["public"]["Tables"]["social_post_channels"]["Insert"]>;
         Relationships: [];
       };
       email_seen: {
@@ -1222,6 +1295,7 @@ export type Database = {
         };
       };
       unseen_reply_ids: { Args: Record<string, never>; Returns: string[] };
+      is_admin: { Args: Record<string, never>; Returns: boolean };
       unseen_reply_count: { Args: Record<string, never>; Returns: number };
       mark_all_emails_seen: { Args: Record<string, never>; Returns: number };
     };

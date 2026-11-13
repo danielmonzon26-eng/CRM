@@ -3,21 +3,20 @@ import { GlobalSearch } from "@/components/global-search";
 import { MobileNavDrawer, NotificationsLink, QuickCreateMenu, UserMenu } from "@/components/topbar-menus";
 import { buttonClass } from "@/components/ui/button";
 import type { CurrentUser } from "@/lib/auth/session";
+import type { NavCounts } from "@/components/nav-links";
 
 export function Topbar({
   user,
-  openTaskCount,
-  unseenMailCount,
+  counts,
   isAdmin,
 }: {
   user: CurrentUser | null;
-  openTaskCount: number;
-  unseenMailCount: number;
+  counts: NavCounts;
   isAdmin: boolean;
 }) {
   return (
     <header className="sticky top-0 z-20 flex h-16 items-center gap-3 border-b border-slate-200 bg-white px-4 sm:px-6 lg:px-8">
-      <MobileNavDrawer isAdmin={isAdmin} openTaskCount={openTaskCount} unseenMailCount={unseenMailCount} />
+      <MobileNavDrawer isAdmin={isAdmin} counts={counts} />
       <div className="min-w-0 flex-1">
         <GlobalSearch />
       </div>
@@ -25,7 +24,7 @@ export function Topbar({
         {user ? (
           <>
             <QuickCreateMenu />
-            <NotificationsLink openTaskCount={openTaskCount} />
+            <NotificationsLink openTaskCount={counts.tasks} />
             <UserMenu user={user} isAdmin={isAdmin} />
           </>
         ) : (

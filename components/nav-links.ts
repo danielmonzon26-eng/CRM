@@ -9,6 +9,7 @@ import {
   Home,
   ListChecks,
   Mail,
+  Megaphone,
   ShieldCheck,
   Ticket,
   Users,
@@ -16,7 +17,10 @@ import {
 } from "lucide-react";
 
 /** Which count, if any, shows beside the link. */
-export type NavBadge = "tasks" | "mail";
+export type NavBadge = "tasks" | "mail" | "approvals";
+
+/** The numbers behind the nav badges. */
+export type NavCounts = Record<NavBadge, number>;
 
 export type NavLink = { href: string; label: string; icon: LucideIcon; badge?: NavBadge };
 
@@ -38,6 +42,7 @@ export const CRM_LINKS: NavLink[] = [
 ];
 
 export const WORK_TABS: NavLink[] = [
+  { href: "/marketing", label: "Marketing", icon: Megaphone, badge: "approvals" },
   { href: "/budgets", label: "Budgets", icon: Wallet },
   { href: "/reports", label: "Reports", icon: BarChart3 },
   { href: "/tasks", label: "Tasks", icon: CheckSquare2, badge: "tasks" },

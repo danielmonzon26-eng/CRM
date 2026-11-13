@@ -11,19 +11,18 @@ import {
   WORK_TABS,
   isActive,
   isCrmPath,
+  type NavCounts,
   type NavLink,
 } from "@/components/nav-links";
 
 export function AppNav({
   isAdmin,
-  openTaskCount,
-  unseenMailCount = 0,
+  counts,
   collapsed = false,
   onNavigate,
 }: {
   isAdmin: boolean;
-  openTaskCount: number;
-  unseenMailCount?: number;
+  counts: NavCounts;
   collapsed?: boolean;
   onNavigate?: () => void;
 }) {
@@ -33,8 +32,9 @@ export function AppNav({
   const renderItem = (item: NavLink, nested = false) => {
     const active = isActive(pathname, item.href);
     const Icon = item.icon;
-    const badge = item.badge === "tasks" ? openTaskCount : item.badge === "mail" ? unseenMailCount : 0;
-    const badgeLabel = item.badge === "mail" ? `${badge} new ${badge === 1 ? "email" : "emails"}` : `${badge} open`;
+    const badge = item.badge ? counts[item.badge] : 0;
+    const badgeLabel =
+      item.badge === "mail" ? `${badge} new ${badge === 1 ? "email" : "emails"}` : item.badge === "approvals" ? `${badge} waiting approval` : `${badge} open`;
     return (
       <Link
         key={`${item.label}-${item.href}`}
@@ -58,7 +58,7 @@ export function AppNav({
             <span
               aria-hidden="true"
               className={`rounded-full px-1.5 py-0.5 text-[10px] font-semibold leading-none ${
-                active ? "bg-white text-brand-700" : item.badge === "mail" ? "bg-brand-500 text-white" : "bg-white/10 text-ink-100"
+                active ? "bg-white text-brand-700" : item.badge === "mail" || item.badge === "approvals" ? "bg-brand-500 text-white" : "bg-white/10 text-ink-100"
               }`}
             >
               {badge > 99 ? "99+" : badge}
@@ -85,9 +85,9 @@ export function AppNav({
       >
         <CRM_TAB.icon className="h-[18px] w-[18px]" strokeWidth={2} />
         {!collapsed && CRM_TAB.label}
-        {!inCrm && unseenMailCount > 0 && (
+        {!inCrm && counts.mail > 0 && (
           <span
-            title={`${unseenMailCount} new ${unseenMailCount === 1 ? "email" : "emails"} in Communication`}
+            title={`${counts.mail} new ${counts.mail === 1 ? "email" : "emails"} in Communication`}
             className={collapsed ? "absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-brand-500" : "ml-auto h-2 w-2 rounded-full bg-brand-500"}
           >
             <span className="sr-only">, new email in Communication</span>

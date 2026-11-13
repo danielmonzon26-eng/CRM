@@ -3,19 +3,18 @@
 import { useState } from "react";
 import { PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import { AppNav } from "@/components/app-nav";
+import type { NavCounts } from "@/components/nav-links";
 import { VersionStamp, Wordmark } from "@/components/wordmark";
 
 export const SIDEBAR_COOKIE = "sidebar-collapsed";
 
 export function Sidebar({
   isAdmin,
-  openTaskCount,
-  unseenMailCount,
+  counts,
   initialCollapsed,
 }: {
   isAdmin: boolean;
-  openTaskCount: number;
-  unseenMailCount: number;
+  counts: NavCounts;
   initialCollapsed: boolean;
 }) {
   const [collapsed, setCollapsed] = useState(initialCollapsed);
@@ -44,7 +43,7 @@ export function Sidebar({
         </div>
       )}
 
-      <AppNav isAdmin={isAdmin} openTaskCount={openTaskCount} unseenMailCount={unseenMailCount} collapsed={collapsed} />
+      <AppNav isAdmin={isAdmin} counts={counts} collapsed={collapsed} />
 
       <div className="border-t border-white/10 p-3">
         <button
