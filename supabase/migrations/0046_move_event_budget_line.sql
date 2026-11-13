@@ -120,8 +120,8 @@ begin
   update public.budget_lines set event_id = null, planned_amount = null where id = v_from.id;
   update public.budget_lines
   set event_id = p_event_id,
-      -- What's set aside: the new line's own plan if it had one, else what the event had.
-      planned_amount = coalesce(v_to.planned_amount, nullif(v_to.amount, 0), v_from.planned_amount)
+      -- What's set aside for the event comes with it; if it had none, the new line's plan.
+      planned_amount = coalesce(v_from.planned_amount, v_to.planned_amount, nullif(v_to.amount, 0))
   where id = v_to.id;
 
   -- Costs keep their order, after any the new line already has.
