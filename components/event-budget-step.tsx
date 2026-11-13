@@ -127,7 +127,7 @@ export function LinkedLine({
 
   return (
     <div className="rounded-xl border border-slate-200">
-      <div className="flex flex-wrap items-start justify-between gap-3 border-b border-slate-100 px-4 py-3">
+      <div className="flex flex-wrap items-start justify-between gap-3 border-b border-slate-100 px-5 py-4">
         <div className="flex items-start gap-2.5">
           <span aria-hidden="true" className="mt-0.5 flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-50 text-emerald-700">
             <Wallet className="h-4 w-4" strokeWidth={2} />
@@ -161,11 +161,11 @@ export function LinkedLine({
 
       <MarketingItems linked={linked} items={marketingItems} eventId={eventId} eventDay={eventDay} pending={pending} run={run} />
 
-      <h3 className="border-t border-slate-100 px-4 pb-1 pt-3 text-sm font-semibold text-slate-900">Other costs</h3>
+      <h3 className="border-y border-slate-100 bg-slate-50/80 px-5 py-2.5 text-sm font-semibold text-slate-900">Other costs</h3>
       <table className="w-full text-sm">
         <thead className="text-left text-xs text-slate-500">
           <tr>
-            <th scope="col" className="px-4 py-2 font-medium">Cost</th>
+            <th scope="col" className="px-5 py-2 font-medium">Cost</th>
             <th scope="col" className="w-32 px-2 py-2 text-right font-medium">Planned</th>
             <th scope="col" className="hidden w-24 px-2 py-2 text-right font-medium sm:table-cell">Spent</th>
             <th scope="col" className="w-10 px-2 py-2">
@@ -176,14 +176,14 @@ export function LinkedLine({
         <tbody className="divide-y divide-slate-100">
           {other.length === 0 && (
             <tr>
-              <td colSpan={4} className="px-4 py-3 text-sm text-slate-500">
+              <td colSpan={4} className="px-5 py-3 text-sm text-slate-500">
                 No other costs yet. Add them below.
               </td>
             </tr>
           )}
           {other.map((item) => (
             <tr key={`${item.id}-${item.name}-${item.amount}`}>
-              <td className="px-4 py-1.5">
+              <td className="px-5 py-1.5">
                 <input
                   aria-label="Cost name"
                   defaultValue={item.name}
@@ -226,7 +226,7 @@ export function LinkedLine({
         </tbody>
         <tfoot className="border-t border-slate-200 font-medium">
           <tr>
-            <td className="px-4 py-2 text-slate-900">Total</td>
+            <td className="px-5 py-2.5 text-slate-900">Total</td>
             <td className="px-2 py-2 text-right tabular-nums text-slate-900">{formatMoney(linked.amount)}</td>
             <td className="hidden px-2 py-2 text-right tabular-nums text-slate-700 sm:table-cell">{formatMoney(linked.spent)}</td>
             <td />
@@ -234,7 +234,7 @@ export function LinkedLine({
         </tfoot>
       </table>
 
-      <div className="space-y-2 border-t border-slate-100 px-4 py-3">
+      <div className="space-y-3 border-t border-slate-100 bg-slate-50/40 px-5 py-4">
         <p className={`text-xs ${remaining < 0 ? "font-medium text-rose-700" : "text-slate-500"}`}>
           {remaining < 0 ? `${formatMoney(-remaining)} over the plan.` : `${formatMoney(remaining)} not yet spent.`} Record spending under Budgets.
         </p>
@@ -633,8 +633,8 @@ function MarketingItems({
   const total = items.reduce((s, i) => s + i.amount, 0);
 
   return (
-    <section aria-labelledby="mk-items-title" className="px-4 py-3">
-      <div className="flex flex-wrap items-baseline justify-between gap-2">
+    <section aria-labelledby="mk-items-title" className="px-5 pb-5">
+      <div className="-mx-5 mb-3 flex flex-wrap items-baseline justify-between gap-2 border-b border-slate-100 bg-slate-50/80 px-5 py-2.5">
         <h3 id="mk-items-title" className="text-sm font-semibold text-slate-900">
           Marketing items
         </h3>
@@ -776,7 +776,7 @@ function SetAside({
     run(() => setEventSetAside(eventId, linked.lineId, now));
   };
   return (
-    <section aria-labelledby="set-aside-title" className="border-b border-slate-100 bg-slate-50/60 px-4 py-3">
+    <section aria-labelledby="set-aside-title" className="border-b border-slate-100 bg-slate-50/70 px-5 py-4">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h3 id="set-aside-title" className="text-sm font-semibold text-slate-900">

@@ -50,7 +50,7 @@ export function EventSocialPlan({ eventId, eventDay, posts, channels, today }: {
 
   return (
     <section aria-labelledby="event-social-title" className="rounded-xl border border-slate-200 bg-white shadow-card">
-      <header className="flex flex-wrap items-start justify-between gap-2 border-b border-slate-100 px-5 py-3.5">
+      <header className="flex flex-wrap items-start justify-between gap-2 rounded-t-xl border-b border-slate-200/70 bg-slate-50/80 px-5 py-4">
         <div>
           <h2 id="event-social-title" className="font-semibold text-slate-900">
             Social media
@@ -67,7 +67,7 @@ export function EventSocialPlan({ eventId, eventDay, posts, channels, today }: {
         </div>
       </header>
 
-      <div className="grid grid-cols-1 gap-3 p-4 sm:grid-cols-2 xl:grid-cols-5">
+      <div className="grid grid-cols-1 gap-3 p-5 sm:grid-cols-2 xl:grid-cols-5">
         {SLOTS.map((slot) => {
           const list = posts.filter((p) => daysOf(p) === slot.days);
           const day = slotDay(eventDay, slot.days);
