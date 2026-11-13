@@ -1,6 +1,7 @@
 import { calgaryDateKey, EVENT_TIME_ZONE, toDateTimeInput } from "@/lib/events/format";
 import { createClient } from "@/lib/supabase/server";
 import type { SocialPlatform, SocialPostStatus } from "@/lib/supabase/types";
+import { personName } from "@/lib/team/names";
 
 type Supabase = Awaited<ReturnType<typeof createClient>>;
 
@@ -75,7 +76,7 @@ function datesLabel(startsOn: string | null, endsOn: string | null): string {
 async function nameMap(supabase: Supabase): Promise<Map<string, string>> {
   const { data, error } = await supabase.from("profiles").select("id, email, full_name");
   if (error) throw error;
-  return new Map((data ?? []).map((p) => [p.id, p.full_name || p.email || "Unknown"]));
+  return new Map((data ?? []).map((p) => [p.id, personName(p.full_name, p.email, "Unknown")]));
 }
 
 export async function getChannels(includeInactive = false): Promise<Channel[]> {

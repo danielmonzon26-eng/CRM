@@ -91,3 +91,16 @@ export async function setUserAccess(userId: string, hasAccess: boolean): Promise
   revalidatePath("/admin");
   return {};
 }
+
+/** Sets a team member's full name, shown wherever people are listed or assigned. */
+export async function setUserName(userId: string, fullName: string): Promise<ActionResult> {
+  if (!(await requireAdmin())) return { error: "Only admins can change names." };
+  const name = fullName.trim().replace(/\s+/g, " ");
+  if (!name) return { error: "Enter their first and last name." };
+  if (name.length > 120) return { error: "Keep the name under 120 characters." };
+  const supabase = await createClient();
+  const { data, error } = await supabase.from("profiles").update({ full_name: name }).eq("id", userId).select("id");
+  if (error || !data?.length) return { error: "The name wasn't saved. Please try again." };
+  revalidatePath("/", "layout");
+  return {};
+}

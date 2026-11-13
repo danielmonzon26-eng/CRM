@@ -1,6 +1,7 @@
 import { deliveryDate, isDeliveryTiming, type DeliveryTiming, type MarketingCategory, type MarketingStatus, type MarketingStream } from "@/lib/budgets/marketing-items";
 import { calgaryDateKey, EVENT_TIME_ZONE } from "@/lib/events/format";
 import { createClient } from "@/lib/supabase/server";
+import { personName } from "@/lib/team/names";
 
 const eventDayFormat = new Intl.DateTimeFormat("en-CA", { month: "short", day: "numeric", timeZone: EVENT_TIME_ZONE });
 
@@ -118,6 +119,6 @@ export async function getItemOptions(now = new Date()): Promise<ItemOptions> {
     })),
     lines: (lines ?? []).map((l) => ({ id: l.id, name: l.name, budgetName: budgetName.get(l.budget_id) ?? "Budget", section: l.section, eventId: l.event_id })),
     sponsors: (sponsors ?? []).map((c) => ({ id: c.id, name: c.name })),
-    members: (people ?? []).map((p) => ({ id: p.id, name: p.full_name?.trim() || p.email || "Team member" })).sort((a, b) => a.name.localeCompare(b.name)),
+    members: (people ?? []).map((p) => ({ id: p.id, name: personName(p.full_name, p.email) })).sort((a, b) => a.name.localeCompare(b.name)),
   };
 }

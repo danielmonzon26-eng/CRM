@@ -11,6 +11,7 @@ import { useDismiss } from "@/components/ui/use-dismiss";
 import { VersionStamp, Wordmark } from "@/components/wordmark";
 import { getInitials } from "@/lib/text";
 import type { CurrentUser } from "@/lib/auth/session";
+import { personName } from "@/lib/team/names";
 
 const MENU =
   "animate-pop absolute right-0 top-full z-30 mt-2 w-56 overflow-hidden rounded-xl border border-slate-200 bg-white py-1 shadow-popover";
@@ -71,7 +72,7 @@ export function NotificationsLink({ openTaskCount }: { openTaskCount: number }) 
 export function UserMenu({ user, isAdmin }: { user: CurrentUser; isAdmin: boolean }) {
   const { open, setOpen, close, ref } = useMenu();
   const [isPending, startTransition] = useTransition();
-  const displayName = user.fullName ?? user.email ?? "Unknown";
+  const displayName = personName(user.fullName, user.email, "Unknown");
 
   return (
     <div ref={ref} className="relative">

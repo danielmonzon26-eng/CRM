@@ -15,6 +15,7 @@ import {
   type DeclinedBy,
 } from "@/lib/deals/stages";
 import { isLeadProgram, programLabel } from "@/lib/leads/classification";
+import { personName } from "@/lib/team/names";
 
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
 const MAX_FILE_BYTES = 50 * 1024 * 1024;
@@ -42,7 +43,7 @@ export async function listProposalStaff(): Promise<{ id: string; name: string }[
   const supabase = await createClient();
   const { data, error } = await supabase.from("profiles").select("id, email, full_name").order("full_name");
   if (error) throw error;
-  return data.map((p) => ({ id: p.id, name: p.full_name ?? p.email ?? "Unnamed user" }));
+  return data.map((p) => ({ id: p.id, name: personName(p.full_name, p.email, "Unnamed user") }));
 }
 
 export type CreateDealInput = {
