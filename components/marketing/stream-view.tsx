@@ -13,8 +13,8 @@ import type { StreamGroup } from "@/lib/marketing/streams";
 
 /** Columns each tab leaves out because the group heading already says it. */
 const HIDE: Record<MarketingStream, ItemColumn[]> = {
-  catapult: ["stream", "event", "line"],
-  event: ["stream", "event", "line"],
+  catapult: ["stream", "event"],
+  event: ["stream", "event"],
   sponsorship: ["stream"],
 };
 
@@ -75,9 +75,9 @@ function SocialPosts({ posts, hide }: { posts: PostItem[]; hide: ItemColumn[] })
   const past = posts.filter((p) => p.isPast).sort((a, b) => byDate(b, a));
   const table = (list: PostItem[]) => (
     <div className="overflow-x-auto">
-      <table className="w-full table-fixed text-sm">
+      <table className="item-table w-full table-fixed text-sm">
         <ItemTableHead hide={hide} />
-        <tbody className="divide-y divide-slate-100">
+        <tbody className="divide-y divide-slate-100 [&>tr:nth-child(even)]:bg-slate-50">
           {list.map((p) => (
             <PostRow key={p.id} post={p} hide={hide} />
           ))}
@@ -178,9 +178,9 @@ function Group({ group, options, today, hide, posts }: { group: StreamGroup; opt
       )}
       {(group.items.length > 0 || adding.length > 0 || posts.length > 0) && (
         <div className="overflow-x-auto">
-          <table className="w-full table-fixed text-sm">
+          <table className="item-table w-full table-fixed text-sm">
             <ItemTableHead hide={hide} />
-            <tbody className="divide-y divide-slate-100">
+            <tbody className="divide-y divide-slate-100 [&>tr:nth-child(even)]:bg-slate-50">
               {adding.map((k) => (
                 <ItemRow key={k} item={null} options={options} today={today} defaults={group.defaults} hide={hide} onDone={() => setAdding(adding.filter((x) => x !== k))} />
               ))}

@@ -141,3 +141,10 @@ input[type="date"]::-webkit-date-and-time-value,
 input[type="time"]::-webkit-date-and-time-value {
   text-align: left;
 }
+
+/* Marketing item tables: dropdowns keep just enough room for their arrow, so the whole
+   choice shows in a narrow cell. */
+.item-table select:not([multiple]):not([size]) {
+  padding-right: 1.6rem;
+  background-position: right 0.35rem center;
+}

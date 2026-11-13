@@ -15,6 +15,7 @@ type ChangeEvent = { target: { value: string; name?: string } };
 const WEEKDAYS = ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"];
 const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 const shown = new Intl.DateTimeFormat("en-CA", { weekday: "short", month: "short", day: "numeric", year: "numeric", timeZone: "UTC" });
+const shownCompact = new Intl.DateTimeFormat("en-CA", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" });
 const spoken = new Intl.DateTimeFormat("en-CA", { weekday: "long", month: "long", day: "numeric", year: "numeric", timeZone: "UTC" });
 
 const isDay = (v: unknown): v is string => typeof v === "string" && /^\d{4}-\d{2}-\d{2}$/.test(v);
@@ -53,6 +54,7 @@ export function DateInput({
   placeholder = "Pick a date",
   "aria-label": ariaLabel,
   title,
+  compact = false,
 }: {
   value?: string | null;
   defaultValue?: string | null;
@@ -67,6 +69,8 @@ export function DateInput({
   placeholder?: string;
   "aria-label"?: string;
   title?: string;
+  /** Leave out the weekday, for narrow table cells. */
+  compact?: boolean;
 }) {
   const controlled = value !== undefined;
   const [inner, setInner] = useState(defaultValue ?? "");
@@ -210,7 +214,7 @@ export function DateInput({
         }}
         className={`${className} inline-flex items-center justify-between gap-2 text-left disabled:cursor-not-allowed`}
       >
-        <span className={`truncate ${isDay(current) ? "" : "text-slate-400"}`}>{isDay(current) ? shown.format(toDate(current)) : placeholder}</span>
+        <span className={`truncate ${isDay(current) ? "" : "text-slate-400"}`}>{isDay(current) ? (compact ? shownCompact : shown).format(toDate(current)) : placeholder}</span>
         <CalendarDays aria-hidden="true" className="h-4 w-4 shrink-0 text-slate-400" strokeWidth={2} />
       </button>
 

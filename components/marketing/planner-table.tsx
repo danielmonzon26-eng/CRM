@@ -27,13 +27,15 @@ import { DateInput } from "@/components/ui/date-input";
 
 /** Every editable cell is the same box: white, a light border, a stronger one on hover. */
 const CELL =
-  "h-9 w-full rounded-md border border-slate-200 bg-white px-2 py-1.5 text-sm text-slate-900 hover:border-slate-300 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-100";
+  "h-9 w-full rounded-md border border-slate-200 bg-white px-2 py-1.5 text-[13px] text-slate-900 hover:border-slate-300 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-100";
 /** Dropdowns that carry a colour (stream, item, status): the same box, tinted. */
 const PILL_CELL =
-  "h-9 w-full rounded-md border border-slate-200 px-2 py-1.5 text-sm hover:border-slate-300 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-100";
+  "h-9 w-full rounded-md border border-slate-200 px-2 py-1.5 text-[13px] hover:border-slate-300 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-100";
 /** A read-only cell (social posts): the same size as the boxes, without the border. */
 const READ_CELL = "flex h-9 w-full items-center rounded-md px-2 text-sm";
 const dueFormat = new Intl.DateTimeFormat("en-CA", { weekday: "short", month: "short", day: "numeric", timeZone: "UTC" });
+const shortFormat = new Intl.DateTimeFormat("en-CA", { month: "short", day: "numeric", timeZone: "UTC" });
+const shortDay = (day: string) => shortFormat.format(new Date(`${day}T00:00:00Z`));
 const fmtDay = (day: string | null) => (day ? dueFormat.format(new Date(`${day}T00:00:00Z`)) : "—");
 
 type Row = { kind: "item"; item: MarketingItem } | { kind: "post"; post: PostItem } | { kind: "new"; key: string };
@@ -41,13 +43,22 @@ type Row = { kind: "item"; item: MarketingItem } | { kind: "post"; post: PostIte
 export type ItemDraft = Omit<MarketingItemInput, "id" | "assignedTo"> & { sponsorName: string; assignedTo: string | null };
 type Draft = ItemDraft;
 
+/**
+ * The line a non-event item is paid from when none is chosen: the general "Catapult" line, or
+ * else the first line that isn't an event's.
+ */
+function generalLineId(options: ItemOptions): string | null {
+  const general = options.lines.filter((l) => !l.eventId);
+  return (general.find((l) => /catapult/i.test(l.name)) ?? general[0])?.id ?? null;
+}
+
 function draftOf(item: MarketingItem | null, options: ItemOptions, defaults: Partial<Draft> = {}): Draft {
   if (!item) {
     const base: Draft = { stream: "catapult", type: "social", description: "", eventId: null, sponsorId: null, sponsorName: "", amount: "", budgetLineId: null, timing: "custom", deliveryOn: "", status: "planned", assignedTo: null };
     const d = { ...base, ...defaults };
     // An event item starts on the event's own budget line and "2 weeks before".
     const ev = d.eventId ? options.events.find((e) => e.id === d.eventId) : undefined;
-    return { ...d, budgetLineId: d.budgetLineId ?? ev?.lineId ?? null, timing: d.eventId && !defaults.timing ? "2_weeks" : d.timing };
+    return { ...d, budgetLineId: d.budgetLineId ?? ev?.lineId ?? generalLineId(options), timing: d.eventId && !defaults.timing ? "2_weeks" : d.timing };
   }
   return {
     stream: item.stream,
@@ -157,15 +168,15 @@ export function PlannerTable({ items, posts, options, today }: { items: Marketin
       </p>
 
       <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-card">
-        <table className="w-full table-fixed text-sm">
+        <table className="item-table w-full table-fixed text-sm">
           <ItemTableHead />
-          <tbody className="divide-y divide-slate-100">
+          <tbody className="divide-y divide-slate-100 [&>tr:nth-child(even)]:bg-slate-50">
             {adding.map((key) => (
               <ItemRow key={key} item={null} options={options} today={today} onDone={() => setAdding(adding.filter((k) => k !== key))} />
             ))}
             {rows.length === 0 && adding.length === 0 && (
               <tr>
-                <td colSpan={6} className="px-4 py-10 text-center text-sm text-slate-500">
+                <td colSpan={9} className="px-4 py-10 text-center text-sm text-slate-500">
                   Nothing here yet. Use <span className="font-medium">Add item</span> for Catapult marketing, or add marketing items on an event&apos;s Budget tab.
                 </td>
               </tr>
@@ -254,7 +265,10 @@ export function ItemRow({
             value={draft.stream}
             onChange={(e) => {
               const s = e.target.value as MarketingStream;
-              change({ stream: s, eventId: s === "catapult" ? null : draft.eventId, sponsorId: s === "sponsorship" ? draft.sponsorId : null, timing: s === "catapult" ? "custom" : draft.timing });
+              const eventId = s === "catapult" ? null : draft.eventId;
+              // The budget line follows: the event's own line, or the general Catapult line.
+              const lineId = (eventId && options.events.find((x) => x.id === eventId)?.lineId) || (s === "event" ? draft.budgetLineId : generalLineId(options));
+              change({ stream: s, eventId, sponsorId: s === "sponsorship" ? draft.sponsorId : null, timing: s === "catapult" ? "custom" : draft.timing, budgetLineId: lineId ?? draft.budgetLineId });
             }}
             className={`${PILL_CELL} font-medium ${MARKETING_STREAM_STYLES[draft.stream as MarketingStream]}`}
           >
@@ -298,7 +312,7 @@ export function ItemRow({
     event: (
       <>
           {draft.stream === "catapult" ? (
-            <span className="block px-2 py-1.5 text-slate-400">Catapult</span>
+            null
           ) : (
             <div className="space-y-1">
               {draft.stream === "sponsorship" && (
@@ -313,14 +327,14 @@ export function ItemRow({
                 value={draft.eventId ?? ""}
                 onChange={(e) => {
                   const ev = options.events.find((x) => x.id === e.target.value);
-                  change({ eventId: e.target.value || null, budgetLineId: draft.budgetLineId ?? ev?.lineId ?? null, timing: e.target.value ? draft.timing ?? "2_weeks" : "custom" });
+                  change({ eventId: e.target.value || null, budgetLineId: ev?.lineId ?? draft.budgetLineId ?? generalLineId(options), timing: e.target.value ? draft.timing ?? "2_weeks" : "custom" });
                 }}
                 className={CELL}
               >
                 <option value="">{draft.stream === "event" ? "Choose the event" : "No event"}</option>
                 {options.events.map((e) => (
                   <option key={e.id} value={e.id}>
-                    {e.whenLabel} · {e.title}
+                    {e.title} · {e.whenLabel}
                   </option>
                 ))}
                 {item?.event && !options.events.some((e) => e.id === item.event!.id) && <option value={item.event.id}>{item.event.title}</option>}
@@ -337,12 +351,13 @@ export function ItemRow({
                 aria-label="When it's due"
                 value={draft.timing ?? ""}
                 onChange={(e) => change({ timing: e.target.value || null, deliveryOn: e.target.value === "custom" ? draft.deliveryOn || due || "" : draft.deliveryOn }, e.target.value !== "custom" || !!(draft.deliveryOn || due))}
-                className={`${CELL} ${draft.timing === "custom" ? "w-24 shrink-0" : ""}`}
+                title={due ? `Due ${fmtDay(due)}${late ? " (overdue)" : ""}` : undefined}
+                className={`${CELL} ${draft.timing === "custom" ? "w-24 shrink-0" : ""} ${late ? "font-medium text-rose-700" : ""}`}
               >
                 <option value="">No date</option>
                 {DELIVERY_TIMINGS.map(([key, label]) => (
                   <option key={key} value={key}>
-                    {key === "custom" ? "Date" : label}
+                    {key === "custom" ? "Date" : key === draft.timing && due ? `${label.replace(" before", "")} · ${shortDay(due)}` : label}
                   </option>
                 ))}
               </select>
@@ -350,14 +365,13 @@ export function ItemRow({
             {(!draft.eventId || draft.timing === "custom") && (
               <DateInput
                 aria-label="Due date"
+                compact
                 value={draft.deliveryOn ?? ""}
                 onChange={(e) => change({ timing: e.target.value ? "custom" : null, deliveryOn: e.target.value })}
-                className={`${CELL} min-w-0`}
+                className={`${CELL} min-w-0 ${late ? "font-medium text-rose-700" : ""}`}
               />
             )}
           </div>
-          {draft.eventId && draft.timing && draft.timing !== "custom" && <p className={`px-2 text-xs ${late ? "font-medium text-rose-700" : "text-slate-500"}`}>{late ? "Overdue · " : ""}{fmtDay(due)}</p>}
-          {late && draft.timing === "custom" && <p className="px-2 text-xs font-medium text-rose-700">Overdue</p>}
       </>
     ),
     amount: (
@@ -406,7 +420,7 @@ export function ItemRow({
     assigned: (
       <>
           <select aria-label="Assigned to" value={draft.assignedTo ?? ""} onChange={(e) => change({ assignedTo: e.target.value || null })} className={`${CELL} ${!draft.assignedTo ? "text-slate-400" : ""}`}>
-            <option value="">Unassigned</option>
+            <option value="">Assign</option>
             {options.members.map((m) => (
               <option key={m.id} value={m.id}>
                 {m.name}
@@ -560,20 +574,23 @@ export function PostRow({ post, hide }: { post: PostItem; hide?: ItemColumn[] })
     ),
     description: (
       <>
-          <Link href={`/marketing/posts/${post.id}`} className="block px-2 py-1.5 font-medium text-slate-900 hover:text-brand-700 hover:underline">
+          <Link
+            href={`/marketing/posts/${post.id}`}
+            title={post.platforms.length ? post.channels.map((c) => c.name).join(", ") : "No channels yet"}
+            className="block truncate px-2 py-2 font-medium text-slate-900 hover:text-brand-700 hover:underline"
+          >
             {post.title}
           </Link>
-          <span className="block px-2 text-xs text-slate-500">{post.platforms.length ? post.channels.map((c) => c.name).join(", ") : "No channels yet"}</span>
       </>
     ),
     event: (
       <>
-          <span className="block truncate px-2 py-2 text-sm">{post.event?.title ?? post.initiative?.name ?? <span className="text-slate-400">Catapult</span>}</span>
+          <span className="block truncate px-2 py-2 text-sm">{post.event?.title ?? post.initiative?.name ?? ""}</span>
       </>
     ),
     due: (
       <>
-          <span className={`block px-2 py-2 text-sm ${late ? "font-medium text-rose-700" : ""}`}>{post.scheduledLabel ?? "Not scheduled"}</span>
+          <span className={`block px-2 py-2 text-sm ${late ? "font-medium text-rose-700" : ""}`}>{post.dayKey ? `${shortDay(post.dayKey)}${post.timeLabel ? ` · ${post.timeLabel}` : ""}` : "Not scheduled"}</span>
       </>
     ),
     amount: (
@@ -601,7 +618,7 @@ export function PostRow({ post, hide }: { post: PostItem; hide?: ItemColumn[] })
   };
 
   return (
-    <tr className="align-top bg-slate-50/60 text-slate-700">
+    <tr className="align-top text-slate-700">
       {renderGroups(cells, hide)}
       <td className="px-2 py-2 text-right">
         <Link href={`/marketing/posts/${post.id}`} aria-label={`Open ${post.title}`} className="inline-flex rounded-md p-1 text-slate-400 hover:bg-slate-100 hover:text-brand-700">
@@ -615,15 +632,18 @@ export function PostRow({ post, hide }: { post: PostItem; hide?: ItemColumn[] })
 export type ItemColumn = "stream" | "type" | "description" | "event" | "due" | "amount" | "line" | "assigned" | "status" | "actions";
 
 /**
- * The table's columns. Related fields share a column, one above the other, so the whole
- * table fits the screen without scrolling sideways. Description takes what's left.
+ * The table's columns, one field each on a single line. The budget line isn't a column: it's
+ * set from the event (or the general Catapult line). Description takes what's left.
  */
 const GROUPS: { keys: ItemColumn[]; width: number | null; right?: boolean }[] = [
-  { keys: ["stream", "type"], width: 184 },
+  { keys: ["stream"], width: 108 },
+  { keys: ["type"], width: 172 },
   { keys: ["description"], width: null },
-  { keys: ["event", "due"], width: 224 },
-  { keys: ["line", "amount"], width: 232 },
-  { keys: ["assigned", "status"], width: 156 },
+  { keys: ["event"], width: 160 },
+  { keys: ["due"], width: 152 },
+  { keys: ["amount"], width: 80, right: true },
+  { keys: ["assigned"], width: 124 },
+  { keys: ["status"], width: 116 },
 ];
 const LABELS: Record<ItemColumn, string> = {
   stream: "Stream",
@@ -637,14 +657,11 @@ const LABELS: Record<ItemColumn, string> = {
   status: "Status",
   actions: "",
 };
-const ACTIONS_WIDTH = 80;
-/** A column's width when only one of its fields shows (e.g. Amount without Budget line). */
-const SINGLE_WIDTH: Partial<Record<ItemColumn, number>> = { type: 184, due: 184, amount: 112, status: 156 };
-
+const ACTIONS_WIDTH = 60;
 function visibleGroups(hide: ItemColumn[] = []) {
   return GROUPS.map((g) => {
     const keys = g.keys.filter((k) => !hide.includes(k));
-    const width = keys.length === 1 && g.keys.length > 1 ? (SINGLE_WIDTH[keys[0]] ?? g.width) : g.width;
+    const width = g.width;
     return { ...g, keys, width };
   }).filter((g) => g.keys.length > 0);
 }
