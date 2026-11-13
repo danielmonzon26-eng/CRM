@@ -269,38 +269,52 @@ export function EventWizard({
 
   return (
     <div>
-      <ol className="mb-6 flex items-start rounded-xl border border-slate-200 bg-white px-3 py-4 shadow-card sm:px-6">
-        {STEPS.map((label, i) => {
-          const done = i < step;
-          const current = i === step;
-          return (
-            <li key={label} className="relative flex flex-1 flex-col items-center">
-              {i > 0 && (
-                <span className={`absolute right-1/2 top-4 h-px w-full ${done || current ? "bg-brand-600" : "bg-slate-200"}`} aria-hidden="true" />
-              )}
-              <button
-                type="button"
-                onClick={() => goTo(i)}
-                aria-current={current ? "step" : undefined}
-                className="relative flex flex-col items-center gap-1.5"
-              >
-                <span
-                  className={`flex h-8 w-8 items-center justify-center rounded-full text-sm font-semibold ${
-                    current
-                      ? "bg-brand-600 text-white"
-                      : done
-                        ? "border-2 border-brand-600 bg-white text-brand-600"
-                        : "border border-slate-300 bg-white text-slate-500"
-                  }`}
-                >
-                  {done ? <Check className="h-4 w-4" strokeWidth={2.5} /> : i + 1}
-                </span>
-                <span className={`text-xs sm:text-sm ${current ? "font-semibold text-slate-900" : "text-slate-500"}`}>{label}</span>
-              </button>
-            </li>
-          );
-        })}
-      </ol>
+      <nav aria-label="Event steps" className="mb-6 rounded-2xl border border-slate-200 bg-white px-4 py-4 shadow-card sm:px-6 sm:py-5">
+        {/* Phones: where you are, in words, over a progress bar. */}
+        <div className="sm:hidden">
+          <p className="flex items-baseline justify-between text-sm">
+            <span className="font-semibold text-slate-900">{STEPS[step]}</span>
+            <span className="text-xs text-slate-500">
+              Step {step + 1} of {STEPS.length}
+            </span>
+          </p>
+          <div className="mt-2.5 h-1.5 overflow-hidden rounded-full bg-slate-100">
+            <div className="h-full rounded-full bg-gradient-to-r from-brand-500 to-brand-600 transition-[width] duration-500 ease-out" style={{ width: `${((step + 1) / STEPS.length) * 100}%` }} />
+          </div>
+        </div>
+        <ol className="hidden items-start sm:flex">
+          {STEPS.map((label, i) => {
+            const done = i < step;
+            const current = i === step;
+            return (
+              <li key={label} className="relative flex flex-1 flex-col items-center">
+                {/* The track to the next step runs between the circles, leaving a gap at each end. */}
+                {i < STEPS.length - 1 && (
+                  <span aria-hidden="true" className="absolute left-[calc(50%+1.75rem)] right-[calc(-50%+1.75rem)] top-4 h-1 overflow-hidden rounded-full bg-slate-100">
+                    <span className={`block h-full origin-left rounded-full bg-gradient-to-r from-brand-500 to-brand-600 transition-transform duration-500 ease-out ${done ? "scale-x-100" : "scale-x-0"}`} />
+                  </span>
+                )}
+                <button type="button" onClick={() => goTo(i)} aria-current={current ? "step" : undefined} className="group relative flex flex-col items-center gap-2 rounded-xl px-2 focus-visible:outline-none">
+                  <span
+                    className={`flex h-9 w-9 items-center justify-center rounded-full text-sm font-semibold transition-all duration-300 ease-out group-focus-visible:ring-4 group-focus-visible:ring-brand-200 ${
+                      current
+                        ? "scale-110 bg-gradient-to-br from-brand-500 to-brand-700 text-white shadow-[0_6px_16px_-4px_rgba(255,103,41,0.5)] ring-4 ring-brand-100"
+                        : done
+                          ? "bg-brand-50 text-brand-700 group-hover:bg-brand-100"
+                          : "border border-slate-200 bg-white text-slate-400 group-hover:border-slate-300 group-hover:text-slate-600"
+                    }`}
+                  >
+                    {done ? <Check className="h-4 w-4" strokeWidth={2.75} /> : i + 1}
+                  </span>
+                  <span className={`text-center text-xs transition-colors lg:text-sm ${current ? "font-semibold text-slate-900" : done ? "font-medium text-brand-700" : "text-slate-500 group-hover:text-slate-700"}`}>
+                    {label}
+                  </span>
+                </button>
+              </li>
+            );
+          })}
+        </ol>
+      </nav>
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
         <div className="min-w-0 space-y-5">
