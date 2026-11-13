@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { CalendarPlus, ChevronLeft, ChevronRight, ImageIcon, Plus } from "lucide-react";
 import { PlatformIcon, PlatformIcons } from "@/components/marketing/platform-icon";
+import { PostQuickView } from "@/components/marketing/post-quick-view";
 import { RequestPostDialog } from "@/components/marketing/request-post";
 import { PostStatusPill } from "@/components/marketing/status-pill";
 import { buttonClass } from "@/components/ui/button";
@@ -41,6 +42,7 @@ export function PlannerView({
   const [expanded, setExpanded] = useState<string | null>(null);
   // The day a request is being made for ("" for no date); null when the popup is closed.
   const [requestDay, setRequestDay] = useState<string | null>(null);
+  const [viewing, setViewing] = useState<PostItem | null>(null);
 
   const matches = (p: PostItem) =>
     (platforms.length === 0 || p.platforms.some((x) => platforms.includes(x))) && (statuses.length === 0 || statuses.includes(p.status));
@@ -60,17 +62,17 @@ export function PlannerView({
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2">
-          <Link href={`/marketing?month=${prevMonth}`} aria-label="Previous month" className={buttonClass("secondary", "sm")}>
+          <Link href={`/marketing/planner?month=${prevMonth}`} aria-label="Previous month" className={buttonClass("secondary", "sm")}>
             <ChevronLeft className="h-4 w-4" strokeWidth={2} />
           </Link>
-          <Link href={`/marketing?month=${nextMonth}`} aria-label="Next month" className={buttonClass("secondary", "sm")}>
+          <Link href={`/marketing/planner?month=${nextMonth}`} aria-label="Next month" className={buttonClass("secondary", "sm")}>
             <ChevronRight className="h-4 w-4" strokeWidth={2} />
           </Link>
           <h2 className="ml-1 text-lg font-semibold text-slate-900" aria-live="polite">
             {monthLabel}
           </h2>
           {month !== thisMonth && (
-            <Link href="/marketing" className="ml-1 text-sm font-medium text-brand-700 hover:underline">
+            <Link href="/marketing/planner" className="ml-1 text-sm font-medium text-brand-700 hover:underline">
               Today
             </Link>
           )}
@@ -172,7 +174,7 @@ export function PlannerView({
                   <ul className="space-y-1">
                     {shown.map((p) => (
                       <li key={p.id}>
-                        <PostChip post={p} />
+                        <PostChip post={p} onOpen={() => setViewing(p)} />
                       </li>
                     ))}
                   </ul>
@@ -207,7 +209,7 @@ export function PlannerView({
                 <ul className="space-y-1.5">
                   {(byDay.get(d.key) ?? []).map((p) => (
                     <li key={p.id}>
-                      <PostRow post={p} />
+                      <PostRow post={p} onOpen={() => setViewing(p)} />
                     </li>
                   ))}
                 </ul>
@@ -232,7 +234,7 @@ export function PlannerView({
               <ul className="divide-y divide-slate-100">
                 {unscheduledVisible.map((p) => (
                   <li key={p.id}>
-                    <PostRow post={p} flat />
+                    <PostRow post={p} flat onOpen={() => setViewing(p)} />
                   </li>
                 ))}
               </ul>
@@ -259,18 +261,20 @@ export function PlannerView({
         </aside>
       </div>
       {requestDay !== null && <RequestPostDialog date={requestDay} onClose={() => setRequestDay(null)} />}
+      {viewing && <PostQuickView post={viewing} onClose={() => setViewing(null)} />}
     </div>
   );
 }
 
 /** A post in a calendar day: status colour on the left, time, channels and title. */
-function PostChip({ post }: { post: PostItem }) {
+function PostChip({ post, onOpen }: { post: PostItem; onOpen: () => void }) {
   const meta = POST_STATUS_META[post.status];
   return (
-    <Link
-      href={`/marketing/posts/${post.id}`}
+    <button
+      type="button"
+      onClick={onOpen}
       title={`${post.title} · ${meta.label}${post.timeLabel ? ` · ${post.timeLabel}` : ""}`}
-      className="flex items-stretch gap-1.5 overflow-hidden rounded-md border border-slate-200 bg-white py-1 pl-1 pr-1.5 text-[11px] leading-tight text-slate-800 shadow-sm hover:border-brand-300 hover:bg-brand-50/40"
+      className="flex w-full items-stretch gap-1.5 overflow-hidden rounded-md border text-left border-slate-200 bg-white py-1 pl-1 pr-1.5 text-[11px] leading-tight text-slate-800 shadow-sm hover:border-brand-300 hover:bg-brand-50/40"
     >
       <span aria-hidden="true" className={`w-1 shrink-0 rounded-full ${meta.dot}`} />
       <span className="min-w-0 flex-1">
@@ -283,15 +287,16 @@ function PostChip({ post }: { post: PostItem }) {
           ))}
         </span>
       </span>
-    </Link>
+    </button>
   );
 }
 
-function PostRow({ post, flat = false }: { post: PostItem; flat?: boolean }) {
+function PostRow({ post, flat = false, onOpen }: { post: PostItem; flat?: boolean; onOpen: () => void }) {
   return (
-    <Link
-      href={`/marketing/posts/${post.id}`}
-      className={`flex items-center gap-3 px-3 py-2.5 hover:bg-slate-50 ${flat ? "" : "rounded-lg border border-slate-200 bg-white shadow-sm"}`}
+    <button
+      type="button"
+      onClick={onOpen}
+      className={`flex w-full items-center gap-3 px-3 py-2.5 text-left hover:bg-slate-50 ${flat ? "" : "rounded-lg border border-slate-200 bg-white shadow-sm"}`}
     >
       {post.imageUrl ? (
         // eslint-disable-next-line @next/next/no-img-element
@@ -309,6 +314,6 @@ function PostRow({ post, flat = false }: { post: PostItem; flat?: boolean }) {
         </span>
       </span>
       <PostStatusPill status={post.status} size="sm" />
-    </Link>
+    </button>
   );
 }
