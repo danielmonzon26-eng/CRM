@@ -7,6 +7,9 @@ import { useRouter } from "next/navigation";
 import {
   Archive,
   ArchiveRestore,
+  ArrowDown,
+  ArrowUp,
+  ArrowUpDown,
   CalendarDays,
   Copy,
   LayoutGrid,
@@ -14,10 +17,11 @@ import {
   MapPin,
   Pencil,
   Ticket,
+  Trash2,
   Users,
   X,
 } from "lucide-react";
-import { duplicateEvent, setEventsArchived } from "@/app/actions/events";
+import { deleteEvent, duplicateEvent, setEventsArchived } from "@/app/actions/events";
 import { useFeedback } from "@/components/ui/feedback";
 import { FilterSelect, SearchField } from "@/components/ui/filter-controls";
 import { EmptyState } from "@/components/ui/page";
@@ -43,6 +47,24 @@ const VIEWS_KEY = "catapult-event-views";
 type Filters = { search: string; program: string; type: string; status: string; from: string; to: string };
 type SavedView = { name: string; tab: Tab; filters: Filters };
 const NO_FILTERS: Filters = { search: "", program: "", type: "", status: "", from: "", to: "" };
+
+type SortKey = "event" | "date" | "location" | "registrations" | "budget" | "status" | "owner";
+type Sort = { key: SortKey; desc: boolean } | null;
+/** Numbers read best biggest first; words and dates A to Z / soonest first. */
+const STARTS_DESC: SortKey[] = ["registrations", "budget"];
+
+function SortHeader({ label, sortKey, sort, onSort, className = "px-3" }: { label: string; sortKey: SortKey; sort: Sort; onSort: (key: SortKey) => void; className?: string }) {
+  const active = sort?.key === sortKey;
+  const Icon = active ? (sort.desc ? ArrowDown : ArrowUp) : ArrowUpDown;
+  return (
+    <th scope="col" aria-sort={active ? (sort.desc ? "descending" : "ascending") : "none"} className={`${className} py-3 font-medium`}>
+      <button type="button" onClick={() => onSort(sortKey)} className={`group inline-flex items-center gap-1 uppercase tracking-wide hover:text-slate-900 ${active ? "text-slate-900" : ""}`}>
+        {label}
+        <Icon aria-hidden="true" className={`h-3 w-3 ${active ? "" : "opacity-0 group-hover:opacity-50 group-focus-visible:opacity-50"}`} strokeWidth={2} />
+      </button>
+    </th>
+  );
+}
 
 function matchesTab(event: EventListItem, tab: Tab): boolean {
   if (tab === "Archived") return Boolean(event.archived_at);
@@ -113,7 +135,7 @@ export function EventsDirectory({ events, ownerNames }: { events: EventListItem[
   const [savedViews, setSavedViews] = useState<SavedView[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
-  const { promptText, toast } = useFeedback();
+  const { confirm, promptText, toast } = useFeedback();
 
   useEffect(() => {
     try {
@@ -150,6 +172,38 @@ export function EventsDirectory({ events, ownerNames }: { events: EventListItem[
     });
   }, [events, tab, filters]);
 
+  const [sort, setSort] = useState<Sort>(null);
+  const onSort = (key: SortKey) => setSort((c) => (c?.key === key ? { key, desc: !c.desc } : { key, desc: STARTS_DESC.includes(key) }));
+  const sorted = useMemo(() => {
+    if (!sort) return filtered;
+    const value = (e: EventListItem): string | number | null => {
+      switch (sort.key) {
+        case "event":
+          return e.title.toLowerCase();
+        case "date":
+          return e.starts_at;
+        case "location":
+          return location(e).toLowerCase();
+        case "registrations":
+          return e.registeredCount;
+        case "budget":
+          return e.budget_amount;
+        case "status":
+          return e.archived_at ? "archived" : STATUS_LABELS[e.status].toLowerCase();
+        case "owner":
+          return e.owner_id ? (ownerNames[e.owner_id] ?? "").toLowerCase() || null : null;
+      }
+    };
+    return [...filtered].sort((a, b) => {
+      const x = value(a);
+      const y = value(b);
+      // Blanks always go last, whichever way it's sorted.
+      if (x === null || y === null) return x === y ? 0 : x === null ? 1 : -1;
+      const diff = typeof x === "number" && typeof y === "number" ? x - y : String(x).localeCompare(String(y));
+      return (sort.desc ? -diff : diff) || a.starts_at.localeCompare(b.starts_at);
+    });
+  }, [filtered, sort, ownerNames]);
+
   const hasFilters = JSON.stringify(filters) !== JSON.stringify(NO_FILTERS);
   const setFilter = (key: keyof Filters, value: string) => setFilters((c) => ({ ...c, [key]: value }));
   const toggle = (id: string) =>
@@ -171,6 +225,28 @@ export function EventsDirectory({ events, ownerNames }: { events: EventListItem[
         setSelected(new Set());
         toast(`${ids.length === 1 ? "Event" : `${ids.length} events`} ${archived ? "archived" : "restored"}`);
       }
+    });
+  }
+
+  async function remove(event: EventListItem) {
+    const ok = await confirm({
+      title: `Delete ${event.title}?`,
+      body: "This can't be undone. Its tasks, files and notes are deleted too. If it has a budget line, the line stays in the budget, unlinked.",
+      confirmLabel: "Delete event",
+      danger: true,
+    });
+    if (!ok) return;
+    setError(null);
+    startTransition(async () => {
+      const result = await deleteEvent(event.id).catch(() => ({ error: "The event wasn't deleted. Please try again." }));
+      if (result.error) return setError(result.error);
+      setSelected((c) => {
+        const next = new Set(c);
+        next.delete(event.id);
+        return next;
+      });
+      toast("Event deleted");
+      router.refresh();
     });
   }
 
@@ -206,6 +282,23 @@ export function EventsDirectory({ events, ownerNames }: { events: EventListItem[
       >
         {event.archived_at ? <ArchiveRestore className="h-4 w-4" strokeWidth={2} /> : <Archive className="h-4 w-4" strokeWidth={2} />}
       </button>
+      {event.registeredCount === 0 ? (
+        <button
+          type="button"
+          disabled={isPending}
+          onClick={() => void remove(event)}
+          aria-label={`Delete ${event.title}`}
+          title="Delete"
+          className="rounded p-1.5 text-slate-500 hover:bg-rose-50 hover:text-rose-700 disabled:opacity-50"
+        >
+          <Trash2 className="h-4 w-4" strokeWidth={2} />
+        </button>
+      ) : (
+        <span title="Has registrations, so it can't be deleted. Archive it instead." className="cursor-not-allowed rounded p-1.5 text-slate-300">
+          <Trash2 aria-hidden="true" className="h-4 w-4" strokeWidth={2} />
+          <span className="sr-only">Can&apos;t delete {event.title}: it has registrations</span>
+        </span>
+      )}
     </div>
   );
 
@@ -317,18 +410,18 @@ export function EventsDirectory({ events, ownerNames }: { events: EventListItem[
                     className="h-4 w-4 accent-brand-600"
                   />
                 </th>
-                <th scope="col" className="px-2 py-3 font-medium">Event</th>
-                <th scope="col" className="px-3 py-3 font-medium">Date</th>
-                <th scope="col" className="px-3 py-3 font-medium">Location</th>
-                <th scope="col" className="px-3 py-3 font-medium">Registrations</th>
-                <th scope="col" className="px-3 py-3 font-medium">Budget</th>
-                <th scope="col" className="px-3 py-3 font-medium">Status</th>
-                <th scope="col" className="px-3 py-3 font-medium">Owner</th>
+                <SortHeader label="Event" sortKey="event" sort={sort} onSort={onSort} className="px-2" />
+                <SortHeader label="Date" sortKey="date" sort={sort} onSort={onSort} />
+                <SortHeader label="Location" sortKey="location" sort={sort} onSort={onSort} />
+                <SortHeader label="Registrations" sortKey="registrations" sort={sort} onSort={onSort} />
+                <SortHeader label="Budget" sortKey="budget" sort={sort} onSort={onSort} />
+                <SortHeader label="Status" sortKey="status" sort={sort} onSort={onSort} />
+                <SortHeader label="Owner" sortKey="owner" sort={sort} onSort={onSort} />
                 <th scope="col" className="px-3 py-3"><span className="sr-only">Actions</span></th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {filtered.map((event) => (
+              {sorted.map((event) => (
                 <tr key={event.id} className="hover:bg-slate-50">
                   <td className="px-4 py-3">
                     <input type="checkbox" aria-label={`Select ${event.title}`} checked={selected.has(event.id)} onChange={() => toggle(event.id)} className="h-4 w-4 accent-brand-600" />
@@ -356,7 +449,7 @@ export function EventsDirectory({ events, ownerNames }: { events: EventListItem[
         </div>
       ) : (
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
-          {filtered.map((event) => (
+          {sorted.map((event) => (
             <article key={event.id} className="flex flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-card">
               <Link href={`/events/${event.id}`} className="flex-1 hover:bg-slate-50">
                 {event.image_url ? (
