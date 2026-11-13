@@ -19,7 +19,16 @@ type Draft = { name: string; amount: string };
  * The event's costs, kept on its line in a budget. Items edited here are the same items the
  * Budgets page shows, so a change in either place shows in the other.
  */
-export function EventBudgetStep({ eventId, onTotal }: { eventId: string | null; onTotal: (total: number | null) => void }) {
+export function EventBudgetStep({
+  eventId,
+  onTotal,
+  onSaved,
+}: {
+  eventId: string | null;
+  onTotal: (total: number | null) => void;
+  /** Called after every change, so a page showing the totals elsewhere can refresh them. */
+  onSaved?: () => void;
+}) {
   const [data, setData] = useState<EventBudget | null>(null);
   const [loadError, setLoadError] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -47,6 +56,7 @@ export function EventBudgetStep({ eventId, onTotal }: { eventId: string | null; 
       const result = await action().catch(() => ({ error: "That didn't save. Please try again." }));
       if (result.error) setError(result.error);
       await reload();
+      onSaved?.();
     });
   }
 
