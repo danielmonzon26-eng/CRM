@@ -648,6 +648,7 @@ export type Database = {
           review_note?: string | null;
           event_id?: string | null;
           event_days_before?: number | null;
+          auto_days_before?: number | null;
         };
         Update: Partial<Database["public"]["Tables"]["social_posts"]["Insert"]>;
         Relationships: [];
