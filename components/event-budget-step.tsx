@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState, useTransition } from "react";
 import Link from "next/link";
 import { ExternalLink, Link2, Plus, Trash2, Unlink, Wallet } from "lucide-react";
 import { deleteBudgetItem, saveBudgetItem } from "@/app/actions/budgets";
-import { createEventBudgetLine, deleteEventMarketingItem, loadEventBudget, saveMarketingItem, setEventBudgetLine, setEventSetAside, type EventBudget } from "@/app/actions/event-budget";
+import { createEventBudgetLine, deleteEventMarketingItem, loadEventBudget, moveEventBudgetLine, saveMarketingItem, setEventBudgetLine, setEventSetAside, type EventBudget } from "@/app/actions/event-budget";
 import { buttonClass } from "@/components/ui/button";
 import { formatMoney } from "@/lib/budgets/money";
 import { EVENT_COST_PRESETS } from "@/lib/budgets/event-presets";
@@ -84,7 +84,7 @@ export function EventBudgetStep({
   return (
     <div className="space-y-3">
       {data.linked ? (
-        <LinkedLine linked={data.linked} pending={pending} run={run} eventId={eventId} eventDay={data.eventDay} marketingItems={data.marketingItems} />
+        <LinkedLine linked={data.linked} pending={pending} run={run} eventId={eventId} eventDay={data.eventDay} marketingItems={data.marketingItems} otherLines={data.unlinkedLines} />
       ) : (
         <SetUp data={data} eventId={eventId} pending={pending} run={run} />
       )}
@@ -102,6 +102,7 @@ export function LinkedLine({
   eventId,
   eventDay,
   marketingItems,
+  otherLines = [],
   pending,
   run,
 }: {
@@ -109,6 +110,8 @@ export function LinkedLine({
   eventId: string;
   eventDay: string | null;
   marketingItems: EventBudget["marketingItems"];
+  /** Event lines not linked to anything, which the event can move to. */
+  otherLines?: EventBudget["unlinkedLines"];
   pending: boolean;
   run: (action: () => Promise<{ error?: string }>) => void;
 }) {
@@ -129,11 +132,9 @@ export function LinkedLine({
           <span aria-hidden="true" className="mt-0.5 flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-50 text-emerald-700">
             <Wallet className="h-4 w-4" strokeWidth={2} />
           </span>
-          <div>
-            <p className="text-sm font-medium text-slate-900">
-              In {linked.budgetName} · {linked.section}
-            </p>
-            <p className="text-xs text-slate-500">Changes here show on the Budgets page, and changes there show here.</p>
+          <div className="min-w-0">
+            <LineSwitcher linked={linked} otherLines={otherLines} eventId={eventId} pending={pending} run={run} />
+            <p className="mt-1 text-xs text-slate-500">Changes here show on the Budgets page, and changes there show here.</p>
           </div>
         </div>
         <div className="flex gap-1.5">
@@ -799,5 +800,67 @@ function SetAside({
         <p className="mt-1 text-xs text-amber-800">Enter what the budget sets aside for this event to see how the costs compare.</p>
       )}
     </section>
+  );
+}
+
+/**
+ * The budget line the event is on, as a dropdown: picking another line moves the event there
+ * with its costs, marketing items and spending. Only event lines nobody else uses are offered.
+ */
+function LineSwitcher({
+  linked,
+  otherLines,
+  eventId,
+  pending,
+  run,
+}: {
+  linked: NonNullable<EventBudget["linked"]>;
+  otherLines: EventBudget["unlinkedLines"];
+  eventId: string;
+  pending: boolean;
+  run: (action: () => Promise<{ error?: string }>) => void;
+}) {
+  const byBudget = new Map<string, { name: string; lines: EventBudget["unlinkedLines"] }>();
+  for (const l of otherLines) {
+    const group = byBudget.get(l.budgetId) ?? { name: l.budgetName, lines: [] };
+    group.lines.push(l);
+    byBudget.set(l.budgetId, group);
+  }
+  const label = (l: { name: string; section: string; amount: number }) => `${l.name} · ${l.section} · ${formatMoney(l.amount)}`;
+
+  return (
+    <label className="block text-xs font-medium uppercase tracking-wide text-slate-500">
+      Budget line
+      <select
+        value={linked.lineId}
+        disabled={pending || otherLines.length === 0}
+        onChange={(e) => {
+          const to = otherLines.find((l) => l.id === e.target.value);
+          if (!to) return;
+          const ok = window.confirm(
+            `Move this event's costs, marketing items and spending to "${to.name}" in ${to.budgetName}? The old line stays in its budget, empty.`,
+          );
+          if (ok) run(() => moveEventBudgetLine(eventId, to.id));
+          else e.target.value = linked.lineId;
+        }}
+        title={otherLines.length === 0 ? "No other event lines to move to. Add one under Budgets." : undefined}
+        className={`${INPUT} mt-1 block w-full max-w-md py-1.5 font-normal normal-case tracking-normal disabled:bg-slate-50 disabled:text-slate-700`}
+      >
+        <optgroup label={linked.budgetName}>
+          <option value={linked.lineId}>
+            {linked.lineName} · {linked.section} · {formatMoney(linked.amount)} (current)
+          </option>
+        </optgroup>
+        {[...byBudget.entries()].map(([id, g]) => (
+          <optgroup key={id} label={`Move to a line in ${g.name}`}>
+            {g.lines.map((l) => (
+              <option key={l.id} value={l.id}>
+                {label(l)}
+              </option>
+            ))}
+          </optgroup>
+        ))}
+      </select>
+    </label>
   );
 }

@@ -1306,6 +1306,10 @@ export type Database = {
         Args: Record<string, never>;
         Returns: { industries: string[]; communities: string[] };
       };
+      move_event_budget_line: {
+        Args: { p_event_id: string; p_to_line: string };
+        Returns: undefined;
+      };
       budget_add_line: {
         Args: { p_budget_id: string; p_kind: string; p_section: string; p_name: string; p_plan_month?: string | null };
         Returns: string;

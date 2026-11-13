@@ -11,6 +11,7 @@ type Result = { error?: string };
 export type EventBudget = {
   linked: {
     lineId: string;
+    lineName: string;
     budgetId: string;
     budgetName: string;
     section: string;
@@ -44,7 +45,7 @@ export type EventBudget = {
   }[];
   budgets: { id: string; name: string; periodLabel: string | null; sections: string[] }[];
   defaultBudgetId: string | null;
-  unlinkedLines: { id: string; name: string; amount: number; budgetName: string }[];
+  unlinkedLines: { id: string; name: string; amount: number; budgetId: string; budgetName: string; section: string }[];
 };
 
 function revalidate(eventId: string, lineId?: string) {
@@ -61,7 +62,7 @@ function revalidate(eventId: string, lineId?: string) {
 export async function loadEventBudget(eventId: string): Promise<EventBudget> {
   const supabase = await createClient();
   const [{ data: line }, budgets, defaultBudgetId, { data: allLines }, { data: event }] = await Promise.all([
-    supabase.from("budget_lines").select("id, budget_id, section, plan_month, amount, planned_amount").eq("event_id", eventId).maybeSingle(),
+    supabase.from("budget_lines").select("id, budget_id, section, name, plan_month, amount, planned_amount").eq("event_id", eventId).maybeSingle(),
     getBudgetList(),
     getSelectedBudgetId(),
     supabase.from("budget_lines").select("id, budget_id, kind, section, name, amount, event_id"),
@@ -84,6 +85,7 @@ export async function loadEventBudget(eventId: string): Promise<EventBudget> {
     for (const e of expenses ?? []) if (e.item_id) spentByItem.set(e.item_id, (spentByItem.get(e.item_id) ?? 0) + Number(e.amount));
     linked = {
       lineId: line.id,
+      lineName: line.name,
       budgetId: line.budget_id,
       budgetName: budgetName.get(line.budget_id) ?? "Budget",
       section: line.section,
@@ -124,7 +126,7 @@ export async function loadEventBudget(eventId: string): Promise<EventBudget> {
     defaultBudgetId,
     unlinkedLines: (allLines ?? [])
       .filter((l) => l.kind === "event" && !l.event_id)
-      .map((l) => ({ id: l.id, name: l.name, amount: Number(l.amount), budgetName: budgetName.get(l.budget_id) ?? "Budget" })),
+      .map((l) => ({ id: l.id, name: l.name, amount: Number(l.amount), budgetId: l.budget_id, budgetName: budgetName.get(l.budget_id) ?? "Budget", section: l.section })),
   };
 }
 
@@ -230,6 +232,28 @@ export async function setEventBudgetLine(eventId: string, lineId: string | null)
   const { data: line, error } = await supabase.from("budget_lines").update({ event_id: null }).eq("event_id", eventId).select("id").maybeSingle();
   if (error) return { error: "The line wasn't unlinked. Please try again." };
   revalidate(eventId, line?.id);
+  return {};
+}
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/**
+ * Moves the event to another event line, with its costs, marketing items and spending.
+ * The old line stays in its budget, empty.
+ */
+export async function moveEventBudgetLine(eventId: string, lineId: string): Promise<Result> {
+  if (!UUID.test(eventId) || !UUID.test(lineId)) return { error: "Choose a line from the list." };
+  const supabase = await createClient();
+  const { data: from } = await supabase.from("budget_lines").select("id").eq("event_id", eventId).maybeSingle();
+  const { error } = await supabase.rpc("move_event_budget_line", { p_event_id: eventId, p_to_line: lineId });
+  if (error) {
+    if (error.code === "23505") return { error: "That line is already linked to another event. Pick another one." };
+    if (error.code === "P0002") return { error: error.message };
+    if (error.code === "42501") return { error: "You don't have permission to change budgets." };
+    return { error: "The event wasn't moved. Please try again." };
+  }
+  revalidate(eventId, lineId);
+  if (from?.id) revalidatePath(`/budgets/lines/${from.id}`);
   return {};
 }
 
