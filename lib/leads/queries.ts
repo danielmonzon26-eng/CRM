@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import type { ActivityType, LeadEngagement, LeadStatus, UserRole } from "@/lib/supabase/types";
 import type { QuickEditRecord } from "@/lib/leads/quick-edit";
 import type { ScoreReason } from "@/lib/leads/scoring";
+import { personName } from "@/lib/team/names";
 
 /**
  * Reads here use the session-scoped server client (lib/supabase/server.ts), so RLS
@@ -18,7 +19,8 @@ export async function getTeamMembers(): Promise<TeamMember[]> {
   if (error) throw error;
   // Alphabetical by name (email when there's no name), for every people dropdown.
   return data
-    .map((p) => ({ id: p.id, email: p.email, fullName: p.full_name, role: p.role }))
+    // fullName is never empty: without a saved name, one is made from the email.
+    .map((p) => ({ id: p.id, email: p.email, fullName: personName(p.full_name, p.email), role: p.role }))
     .sort((a, b) => (a.fullName?.trim() || a.email || "").localeCompare(b.fullName?.trim() || b.email || ""));
 }
 

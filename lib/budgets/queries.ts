@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { fetchAllPages } from "@/lib/supabase/paginate";
 import { addCents, fromCents, sumMoney } from "@/lib/budgets/money";
 import type { Database } from "@/lib/supabase/types";
+import { personName } from "@/lib/team/names";
 
 type ExpenseRow = Database["public"]["Tables"]["budget_expenses"]["Row"];
 
@@ -362,7 +363,7 @@ export async function getBudgetChanges(filter: { budgetId?: string; lineId?: str
   if (profilesError) throw profilesError;
 
   const lineById = new Map(lines.map((l) => [l.id, l]));
-  const nameById = new Map(profiles.map((p) => [p.id, p.full_name ?? p.email]));
+  const nameById = new Map(profiles.map((p) => [p.id, personName(p.full_name, p.email)]));
 
   return changes
     // An event line's months and totals follow its items, so those rows only repeat the item change.

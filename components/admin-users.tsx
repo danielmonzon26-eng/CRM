@@ -2,11 +2,12 @@
 
 import { useEffect, useRef, useState, useTransition } from "react";
 import { Check, Copy, Mail, UserPlus } from "lucide-react";
-import { addUser, createUserLink, giveAdminAccess, setUserAccess } from "@/app/actions/team";
+import { addUser, createUserLink, giveAdminAccess, setUserAccess, setUserName } from "@/app/actions/team";
 import { buttonClass } from "@/components/ui/button";
 import { useFeedback } from "@/components/ui/feedback";
 import { getInitials } from "@/lib/text";
 import type { AdminUser, UserStatus } from "@/lib/team/users";
+import { personName } from "@/lib/team/names";
 
 const STATUS: Record<Exclude<UserStatus, "unknown">, { label: string; className: string }> = {
   active: { label: "Active", className: "bg-emerald-50 text-emerald-800" },
@@ -61,9 +62,9 @@ export function AdminUsers({ users, currentUserId, canManage }: { users: AdminUs
 }
 
 function UserRow({ user, isSelf, canManage, onLink }: { user: AdminUser; isSelf: boolean; canManage: boolean; onLink: (link: SharedLink) => void }) {
-  const { confirm, toast } = useFeedback();
+  const { confirm, toast, promptText } = useFeedback();
   const [isPending, startTransition] = useTransition();
-  const name = user.fullName ?? user.email ?? "Unnamed user";
+  const name = personName(user.fullName, user.email, "Unnamed user");
   const status = user.status === "unknown" ? null : STATUS[user.status];
 
   function run(action: () => Promise<{ error?: string }>, success: string) {
@@ -120,6 +121,18 @@ function UserRow({ user, isSelf, canManage, onLink }: { user: AdminUser; isSelf:
       </div>
 
       <div className="flex flex-wrap items-center gap-1.5 sm:ml-auto">
+        <button
+          type="button"
+          disabled={isPending}
+          aria-label={`Edit the name for ${name}`}
+          onClick={async () => {
+            const next = await promptText({ title: user.fullName ? `Edit ${name}'s name` : "Add their name", label: "First and last name", confirmLabel: "Save name" });
+            if (next !== null) run(() => setUserName(user.id, next), "Name saved.");
+          }}
+          className={buttonClass(user.fullName ? "ghost" : "secondary", "sm")}
+        >
+          {user.fullName ? "Edit name" : "Add name"}
+        </button>
         {user.role !== "admin" && user.status !== "removed" && (
           <button type="button" disabled={isPending} onClick={() => run(() => giveAdminAccess(user.id), `${name} now has admin access.`)} className={buttonClass("secondary", "sm")}>
             Give admin access

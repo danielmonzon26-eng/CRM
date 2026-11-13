@@ -4,6 +4,7 @@ import { getDiscoveryCalls } from "@/lib/discovery/queries";
 import { getEventRegistrationsForLead } from "@/lib/events/queries";
 import { getEmailsForAddresses, getMeetingsForAddresses } from "@/lib/outlook/queries";
 import type { NoteKind } from "@/lib/supabase/types";
+import { personName } from "@/lib/team/names";
 
 /** Filter groups in the Activity Centre. */
 export type TimelineCategory = "notes" | "calls" | "email" | "proposals" | "stage" | "events" | "discovery" | "tasks" | "system";
@@ -111,7 +112,7 @@ export async function getActivityTimeline(
   const calls = callsResult.ok ? callsResult.value : [];
   const registrations = registrationsResult.ok ? registrationsResult.value : [];
 
-  const nameOf = new Map((profilesResult.data ?? []).map((p) => [p.id, p.full_name ?? p.email ?? "Someone"]));
+  const nameOf = new Map((profilesResult.data ?? []).map((p) => [p.id, personName(p.full_name, p.email, "Someone")]));
   const who = (id: string | null) => (id ? nameOf.get(id) ?? "Someone" : null);
 
   const notes: LeadNote[] = (notesResult.data ?? []).map((n) => ({
