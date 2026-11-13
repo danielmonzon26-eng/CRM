@@ -22,7 +22,7 @@ const MAX_FILE_BYTES = 50 * 1024 * 1024;
 type ActionResult = { error?: string };
 
 function revalidateDealPaths(dealId: string, leadId: string | null, companyId: string) {
-  revalidatePath("/crm");
+  revalidatePath("/crm", "layout");
   revalidatePath("/leads");
   revalidatePath(`/deals/${dealId}`);
   revalidatePath(`/companies/${companyId}`);

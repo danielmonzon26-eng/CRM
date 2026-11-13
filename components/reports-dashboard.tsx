@@ -18,7 +18,7 @@ export function ReportsDashboard({ d }: { d: Data }) {
           value={money(d.pipeline.openValue)}
           label="Open proposals"
           detail={`${d.pipeline.openCount} open · ${money(d.pipeline.weightedValue)} weighted`}
-          href="/crm"
+          href="/crm/proposals"
         />
         <Kpi
           icon={Trophy}
@@ -26,7 +26,7 @@ export function ReportsDashboard({ d }: { d: Data }) {
           value={d.pipeline.winRate === null ? "—" : `${d.pipeline.winRate}%`}
           label="Win rate"
           detail={`${d.pipeline.closedWonCount} accepted · ${d.pipeline.closedLostCount} declined`}
-          href="/crm"
+          href="/crm/proposals"
         />
         <Kpi
           icon={CalendarCheck}
