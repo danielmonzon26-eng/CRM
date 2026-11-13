@@ -445,7 +445,7 @@ export function ItemRow({
   return (
     <tr className={`align-top ${!item ? "bg-brand-50/30" : ""}`}>
       {renderGroups(cells, hide)}
-      <td className="px-2 py-2">
+      <td className="px-2 py-3.5">
         <div className="flex items-center justify-end gap-1">
           <span className="w-4" aria-live="polite">
             {(pending || state === "saving") && <Loader2 className="h-4 w-4 animate-spin text-slate-400" strokeWidth={2} aria-label="Saving" />}
@@ -590,7 +590,7 @@ export function PostRow({ post, hide }: { post: PostItem; hide?: ItemColumn[] })
     ),
     due: (
       <>
-          <span className={`block px-2 py-2 text-sm ${late ? "font-medium text-rose-700" : ""}`}>{post.dayKey ? `${shortDay(post.dayKey)}${post.timeLabel ? ` · ${post.timeLabel}` : ""}` : "Not scheduled"}</span>
+          <span className={`block whitespace-nowrap px-2 py-2 text-[13px] ${late ? "font-medium text-rose-700" : ""}`}>{post.dayKey ? `${shortDay(post.dayKey)}${post.timeLabel ? ` · ${post.timeLabel}` : ""}` : "Not scheduled"}</span>
       </>
     ),
     amount: (
@@ -605,7 +605,7 @@ export function PostRow({ post, hide }: { post: PostItem; hide?: ItemColumn[] })
     ),
     assigned: (
       <>
-          <span className="block px-2 py-2 text-sm text-slate-400">{post.createdByName ?? "—"}</span>
+          <span className="block truncate px-2 py-2 text-[13px] text-slate-500" title={post.createdByName ?? undefined}>{post.createdByName ?? "—"}</span>
       </>
     ),
     status: (
@@ -620,7 +620,7 @@ export function PostRow({ post, hide }: { post: PostItem; hide?: ItemColumn[] })
   return (
     <tr className="align-top text-slate-700">
       {renderGroups(cells, hide)}
-      <td className="px-2 py-2 text-right">
+      <td className="px-2 py-3.5 text-right">
         <Link href={`/marketing/posts/${post.id}`} aria-label={`Open ${post.title}`} className="inline-flex rounded-md p-1 text-slate-400 hover:bg-slate-100 hover:text-brand-700">
           <ExternalLink className="h-4 w-4" strokeWidth={2} />
         </Link>
@@ -639,10 +639,10 @@ const GROUPS: { keys: ItemColumn[]; width: number | null; right?: boolean }[] = 
   { keys: ["stream"], width: 108 },
   { keys: ["type"], width: 172 },
   { keys: ["description"], width: null },
-  { keys: ["event"], width: 160 },
-  { keys: ["due"], width: 152 },
+  { keys: ["event"], width: 184 },
+  { keys: ["due"], width: 172 },
   { keys: ["amount"], width: 80, right: true },
-  { keys: ["assigned"], width: 124 },
+  { keys: ["assigned"], width: 152 },
   { keys: ["status"], width: 116 },
 ];
 const LABELS: Record<ItemColumn, string> = {
@@ -669,7 +669,7 @@ function visibleGroups(hide: ItemColumn[] = []) {
 /** A row's cells, laid out in the shared columns (paired fields stacked). */
 function renderGroups(cells: Partial<Record<ItemColumn, React.ReactNode>>, hide: ItemColumn[] = []) {
   return visibleGroups(hide).map((g) => (
-    <td key={g.keys.join("-")} className="px-2 py-1.5">
+    <td key={g.keys.join("-")} className="px-2 py-3">
       <div className="space-y-1.5">
         {g.keys.map((k) => (
           <Fragment key={k}>{cells[k]}</Fragment>
