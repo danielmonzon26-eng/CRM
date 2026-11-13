@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRight, Briefcase, Building2, CalendarClock, Handshake, ListChecks, Trophy, Users } from "lucide-react";
+import { ArrowRight, Briefcase, Building2, CalendarClock, Handshake, ListChecks, Plus, Trophy, Users } from "lucide-react";
 import { BarRow, Kpi, money, Panel, PanelEmpty } from "@/components/ui/dashboard";
 import { buttonClass } from "@/components/ui/button";
 import type { CrmDashboard } from "@/lib/crm/dashboard";
@@ -74,7 +74,13 @@ export function CrmDashboardView({ d, today }: { d: CrmDashboard; today: string 
             ))}
           </div>
           <div className="border-t border-slate-100">
-            <p className="px-4 pb-1 pt-3 text-xs font-semibold uppercase tracking-wide text-slate-500">Next steps due</p>
+            <div className="flex items-center justify-between gap-3 px-4 pb-1 pt-3">
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Next steps due</p>
+              <Link href="/leads?status=pitch_meeting" className={buttonClass("primary", "sm")} title="Pick the lead on the Leads page, then choose Create proposal">
+                <Plus className="h-3.5 w-3.5" strokeWidth={2.5} />
+                Start proposal
+              </Link>
+            </div>
             {d.nextSteps.length === 0 ? (
               <PanelEmpty icon={CalendarClock}>No next steps with a due date.</PanelEmpty>
             ) : (

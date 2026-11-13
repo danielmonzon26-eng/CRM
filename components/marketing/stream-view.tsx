@@ -4,12 +4,19 @@ import { useState } from "react";
 import Link from "next/link";
 import { AlertTriangle, ArrowUpRight, Plus } from "lucide-react";
 import { AddMarketingItemButton } from "@/components/marketing/add-item-dialog";
-import { ItemRow, ItemTableHead, PostRow } from "@/components/marketing/planner-table";
+import { ItemRow, ItemTableHead, itemTableMinWidth, PostRow, type ItemColumn } from "@/components/marketing/planner-table";
 import { money } from "@/components/ui/dashboard";
 import type { MarketingStream } from "@/lib/budgets/marketing-items";
 import type { ItemOptions } from "@/lib/marketing/items-queries";
 import type { PostItem } from "@/lib/marketing/queries";
 import type { StreamGroup } from "@/lib/marketing/streams";
+
+/** Columns each tab leaves out because the group heading already says it. */
+const HIDE: Record<MarketingStream, ItemColumn[]> = {
+  catapult: ["stream", "event", "line"],
+  event: ["stream", "event", "line"],
+  sponsorship: ["stream"],
+};
 
 const INTRO: Record<MarketingStream, string> = {
   catapult: "Catapult's own marketing, grouped by the budget line that pays for it.",
@@ -31,7 +38,7 @@ export function StreamView({
   options: ItemOptions;
   today: string;
   extra?: React.ReactNode;
-  /** Social Planner posts to list under the items (the Catapult tab shows them all). */
+  /** Social Planner posts: Catapult's own on the Catapult tab, each event's in its group on the Event tab. */
   posts?: PostItem[];
 }) {
   const total = groups.reduce((s, g) => s + g.items.reduce((t, i) => t + i.amount, 0), 0);
@@ -52,25 +59,27 @@ export function StreamView({
           {stream === "event" ? "No upcoming events." : "Nothing here yet. Use Add item to plan the first one."}
         </p>
       ) : (
-        groups.map((g) => <Group key={g.key} group={g} options={options} today={today} />)
+        groups.map((g) => (
+          <Group key={g.key} group={g} options={options} today={today} hide={HIDE[stream]} posts={stream === "event" ? (posts ?? []).filter((p) => p.event?.id === g.key) : []} />
+        ))
       )}
-      {posts && <SocialPosts posts={posts} />}
+      {posts && stream === "catapult" && <SocialPosts posts={posts.filter((p) => !p.event)} hide={HIDE.catapult} />}
     </div>
   );
 }
 
 /** Every Social Planner post: upcoming first, past ones folded away. */
-function SocialPosts({ posts }: { posts: PostItem[] }) {
+function SocialPosts({ posts, hide }: { posts: PostItem[]; hide: ItemColumn[] }) {
   const byDate = (a: PostItem, b: PostItem) => (a.scheduledAt ?? "9999").localeCompare(b.scheduledAt ?? "9999");
   const upcoming = posts.filter((p) => !p.isPast).sort(byDate);
   const past = posts.filter((p) => p.isPast).sort((a, b) => byDate(b, a));
   const table = (list: PostItem[]) => (
     <div className="overflow-x-auto">
-      <table className="w-full min-w-[1780px] table-fixed text-sm">
-        <ItemTableHead />
+      <table className="w-full table-fixed text-sm" style={{ minWidth: itemTableMinWidth(hide) }}>
+        <ItemTableHead hide={hide} />
         <tbody className="divide-y divide-slate-100">
           {list.map((p) => (
-            <PostRow key={p.id} post={p} />
+            <PostRow key={p.id} post={p} hide={hide} />
           ))}
         </tbody>
       </table>
@@ -81,7 +90,7 @@ function SocialPosts({ posts }: { posts: PostItem[] }) {
       <header className="flex flex-wrap items-start justify-between gap-3 border-b border-slate-100 px-5 py-3">
         <div>
           <h2 id="social-posts-title" className="text-lg font-semibold text-slate-900">
-            Social Planner posts
+            Catapult social posts
           </h2>
           <p className="text-xs text-slate-500">
             {upcoming.length} coming up{past.length ? ` · ${past.length} past` : ""}. Written and approved in the Social Planner.
@@ -103,7 +112,7 @@ function SocialPosts({ posts }: { posts: PostItem[] }) {
   );
 }
 
-function Group({ group, options, today }: { group: StreamGroup; options: ItemOptions; today: string }) {
+function Group({ group, options, today, hide, posts }: { group: StreamGroup; options: ItemOptions; today: string; hide: ItemColumn[]; posts: PostItem[] }) {
   const [adding, setAdding] = useState<string[]>([]);
   const line = group.line;
   const marketing = group.items.reduce((s, i) => s + i.amount, 0);
@@ -167,16 +176,19 @@ function Group({ group, options, today }: { group: StreamGroup; options: ItemOpt
           {group.warning}
         </p>
       )}
-      {(group.items.length > 0 || adding.length > 0) && (
+      {(group.items.length > 0 || adding.length > 0 || posts.length > 0) && (
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[1780px] table-fixed text-sm">
-            <ItemTableHead />
+          <table className="w-full table-fixed text-sm" style={{ minWidth: itemTableMinWidth(hide) }}>
+            <ItemTableHead hide={hide} />
             <tbody className="divide-y divide-slate-100">
               {adding.map((k) => (
-                <ItemRow key={k} item={null} options={options} today={today} defaults={group.defaults} onDone={() => setAdding(adding.filter((x) => x !== k))} />
+                <ItemRow key={k} item={null} options={options} today={today} defaults={group.defaults} hide={hide} onDone={() => setAdding(adding.filter((x) => x !== k))} />
               ))}
               {group.items.map((i) => (
-                <ItemRow key={i.id} item={i} options={options} today={today} />
+                <ItemRow key={i.id} item={i} options={options} today={today} hide={hide} />
+              ))}
+              {posts.map((p) => (
+                <PostRow key={`p-${p.id}`} post={p} hide={hide} />
               ))}
             </tbody>
           </table>
