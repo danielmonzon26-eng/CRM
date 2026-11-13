@@ -21,6 +21,8 @@ export type MarketingItemInput = {
   timing: string | null;
   deliveryOn: string | null;
   status: string;
+  /** The team member it's assigned to; left out, it doesn't change. */
+  assignedTo?: string | null;
 };
 
 function revalidate(eventId?: string | null) {
@@ -35,7 +37,7 @@ export async function saveMarketingItem(input: MarketingItemInput): Promise<{ er
   if (!isMarketingStream(input.stream)) return { error: "Choose Catapult, Event or Sponsorship." };
   if (!isMarketingCategory(input.type)) return { error: "Choose the item: Social, Online Advertising, Production or Creative." };
   if (!isMarketingStatus(input.status)) return { error: "Choose a status." };
-  for (const id of [input.id, input.eventId, input.sponsorId, input.budgetLineId]) if (id && !UUID.test(id)) return { error: "Choose from the lists." };
+  for (const id of [input.id, input.eventId, input.sponsorId, input.budgetLineId, input.assignedTo]) if (id && !UUID.test(id)) return { error: "Choose from the lists." };
   if (input.stream === "event" && !input.eventId) return { error: "Choose the event." };
   if (input.stream === "sponsorship" && !input.sponsorId) return { error: "Choose the sponsor." };
   // Everything is paid from somewhere, so budgets always show what's allocated.
@@ -59,6 +61,7 @@ export async function saveMarketingItem(input: MarketingItemInput): Promise<{ er
     delivery_timing: timing,
     delivery_on: timing === "custom" ? input.deliveryOn : null,
     status: input.status,
+    ...(input.assignedTo !== undefined ? { assigned_to: input.assignedTo || null } : {}),
   };
   const supabase = await createClient();
   if (input.id) {
@@ -81,6 +84,39 @@ export async function deleteMarketingItem(id: string): Promise<{ error?: string 
   if (error) return { error: "That wasn't deleted. Please try again." };
   revalidate(data?.[0]?.event_id);
   return {};
+}
+
+/**
+ * Copies a marketing item: same stream, item, event, timing, amount, budget line and
+ * person, marked "(copy)" and Planned. Its budget cost is added in the database.
+ */
+export async function duplicateMarketingItem(id: string): Promise<{ error?: string; id?: string }> {
+  if (!(await getCurrentUser())) return { error: "Sign in first." };
+  if (!UUID.test(id)) return { error: "That item wasn't found." };
+  const supabase = await createClient();
+  const { data: item, error } = await supabase.from("marketing_items").select("*").eq("id", id).maybeSingle();
+  if (error || !item) return { error: "That item wasn't found." };
+  const base = item.description.trim();
+  const { data, error: insertError } = await supabase
+    .from("marketing_items")
+    .insert({
+      stream: item.stream,
+      item_type: item.item_type,
+      description: (base ? `${base} (copy)` : "").slice(0, 200),
+      event_id: item.event_id,
+      sponsor_company_id: item.sponsor_company_id,
+      amount: item.amount,
+      budget_line_id: item.budget_line_id,
+      delivery_timing: item.delivery_timing,
+      delivery_on: item.delivery_on,
+      status: "planned",
+      assigned_to: item.assigned_to,
+    })
+    .select("id")
+    .single();
+  if (insertError || !data) return { error: "That wasn't copied. Please try again." };
+  revalidate(item.event_id);
+  return { id: data.id };
 }
 
 /** Sponsor companies for the Sponsorship dropdown, searched by name. */

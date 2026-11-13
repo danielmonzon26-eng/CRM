@@ -22,21 +22,27 @@ export type MarketingItem = {
   event: { id: string; title: string; day: string; whenLabel: string } | null;
   sponsor: { id: string; name: string } | null;
   budgetLine: { id: string; name: string; budgetId: string; budgetName: string } | null;
+  /** The team member it's assigned to. */
+  assigneeId: string | null;
 };
 
 export type ItemOptions = {
   events: { id: string; title: string; day: string; whenLabel: string; lineId: string | null }[];
   lines: { id: string; name: string; budgetName: string; section: string; eventId: string | null }[];
   sponsors: { id: string; name: string }[];
+  /** Team members it can be assigned to. */
+  members: { id: string; name: string }[];
 };
 
 const TYPE_LABEL: Record<string, string> = { social: "Social", online_advertising: "Online Advertising", production: "Production", creative: "Creative", event_materials: "Event Materials", onsite_advertising: "Onsite Advertising", newsletter: "Newsletter/eBlast" };
 
-/** Every marketing item, optionally only one event's. */
-export async function getMarketingItems(options: { eventId?: string } = {}): Promise<MarketingItem[]> {
+/** Every marketing item, optionally only one event's or one person's. */
+export async function getMarketingItems(options: { eventId?: string; assigneeId?: string | "unassigned" } = {}): Promise<MarketingItem[]> {
   const supabase = await createClient();
   let query = supabase.from("marketing_items").select("*");
   if (options.eventId) query = query.eq("event_id", options.eventId);
+  if (options.assigneeId === "unassigned") query = query.is("assigned_to", null);
+  else if (options.assigneeId) query = query.eq("assigned_to", options.assigneeId);
   const { data: items, error } = await query.order("created_at");
   if (error) throw error;
   if (!items?.length) return [];
@@ -80,6 +86,7 @@ export async function getMarketingItems(options: { eventId?: string } = {}): Pro
         event: ev && day ? { id: ev.id, title: ev.title, day, whenLabel: eventDayFormat.format(new Date(ev.starts_at)) } : null,
         sponsor: i.sponsor_company_id ? sponsorById.get(i.sponsor_company_id) ?? null : null,
         budgetLine: line ? { id: line.id, name: line.name, budgetId: line.budget_id, budgetName: budgetName.get(line.budget_id) ?? "Budget" } : null,
+        assigneeId: i.assigned_to,
       };
     })
     .sort((a, b) => (a.due ?? "9999").localeCompare(b.due ?? "9999") || a.name.localeCompare(b.name));
@@ -96,6 +103,8 @@ export async function getItemOptions(now = new Date()): Promise<ItemOptions> {
     supabase.from("marketing_items").select("sponsor_company_id").not("sponsor_company_id", "is", null),
   ]);
   for (const e of [eventsError, linesError, budgetsError, usedError]) if (e) throw e;
+  const { data: people, error: peopleError } = await supabase.from("profiles").select("id, email, full_name").order("full_name");
+  if (peopleError) throw peopleError;
   const budgetName = new Map((budgets ?? []).map((b) => [b.id, b.name]));
   const sponsorIds = [...new Set((used ?? []).map((u) => u.sponsor_company_id!))];
   const { data: sponsors } = sponsorIds.length ? await supabase.from("companies").select("id, name").in("id", sponsorIds) : { data: [] };
@@ -109,5 +118,6 @@ export async function getItemOptions(now = new Date()): Promise<ItemOptions> {
     })),
     lines: (lines ?? []).map((l) => ({ id: l.id, name: l.name, budgetName: budgetName.get(l.budget_id) ?? "Budget", section: l.section, eventId: l.event_id })),
     sponsors: (sponsors ?? []).map((c) => ({ id: c.id, name: c.name })),
+    members: (people ?? []).map((p) => ({ id: p.id, name: p.full_name?.trim() || p.email || "Team member" })).sort((a, b) => a.name.localeCompare(b.name)),
   };
 }

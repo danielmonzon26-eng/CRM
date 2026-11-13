@@ -16,7 +16,10 @@ export async function getTeamMembers(): Promise<TeamMember[]> {
   const supabase = await createClient();
   const { data, error } = await supabase.from("profiles").select("id, email, full_name, role").order("email");
   if (error) throw error;
-  return data.map((p) => ({ id: p.id, email: p.email, fullName: p.full_name, role: p.role }));
+  // Alphabetical by name (email when there's no name), for every people dropdown.
+  return data
+    .map((p) => ({ id: p.id, email: p.email, fullName: p.full_name, role: p.role }))
+    .sort((a, b) => (a.fullName?.trim() || a.email || "").localeCompare(b.fullName?.trim() || b.email || ""));
 }
 
 /** Current values for the quick edit popup, including the primary contact the Leads table shows. */

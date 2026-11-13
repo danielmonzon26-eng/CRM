@@ -25,7 +25,7 @@ const AUTOSAVE_DELAY_MS = 1500;
 
 const STEPS = ["Details", "Schedule", "Registration", "Budget & Marketing", "Review"];
 const PROGRAMS = ["Apex Forum", "Apex Summit", "Catapult Event", "Elevate IP"];
-const EVENT_TYPES = ["Panel", "Workshop", "Guest Speaker"];
+const EVENT_TYPES = ["Guest Speaker", "Panel", "Workshop"];
 const FORMAT_OPTIONS = (["in_person", "online", "hybrid"] as const).map((f) => [f, FORMAT_LABELS[f]] as const);
 
 /** "YYYY-MM-DDTHH:mm" split into its date and time, for separate inputs. */

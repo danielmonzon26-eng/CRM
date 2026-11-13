@@ -45,7 +45,7 @@ export const WORK_TABS: NavLink[] = [
   { href: "/marketing", label: "Marketing", icon: Megaphone, badge: "approvals" },
   { href: "/budgets", label: "Budgets", icon: Wallet },
   { href: "/reports", label: "Reports", icon: BarChart3 },
-  { href: "/tasks", label: "Tasks", icon: CheckSquare2, badge: "tasks" },
+  { href: "/tasks", label: "Assignments", icon: CheckSquare2, badge: "tasks" },
 ];
 
 export const TEAM_LINK: NavLink = { href: "/admin", label: "Admin", icon: ShieldCheck };

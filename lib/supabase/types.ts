@@ -571,6 +571,7 @@ export type Database = {
           created_by: string | null;
           created_at: string;
           updated_at: string;
+          assigned_to: string | null;
         };
         Insert: {
           id?: string;
@@ -584,6 +585,7 @@ export type Database = {
           delivery_timing?: string | null;
           delivery_on?: string | null;
           status?: "planned" | "in_progress" | "done";
+          assigned_to?: string | null;
         };
         Update: Partial<Database["public"]["Tables"]["marketing_items"]["Insert"]>;
         Relationships: [];

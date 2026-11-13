@@ -18,13 +18,13 @@ function isOverdue(task: TaskListRow): boolean {
   return !task.completedAt && !!task.dueAt && new Date(task.dueAt).getTime() < Date.now();
 }
 
-export function TaskList({ tasks, showCompany = false }: { tasks: TaskListRow[]; showCompany?: boolean }) {
+export function TaskList({ tasks, showCompany = false, memberNames }: { tasks: TaskListRow[]; showCompany?: boolean; memberNames?: Record<string, string> }) {
   const [isPending, startTransition] = useTransition();
 
   if (tasks.length === 0) {
     return (
       <div className="rounded-lg border border-dashed border-slate-200 px-4 py-6 text-center text-sm text-slate-400">
-        No tasks.
+        No assignments.
       </div>
     );
   }
@@ -65,6 +65,11 @@ export function TaskList({ tasks, showCompany = false }: { tasks: TaskListRow[];
                 {task.dueAt && (
                   <span className={overdue ? "font-medium text-rose-600" : ""}>
                     Due {new Date(task.dueAt).toLocaleDateString("en-CA", { timeZone: EVENT_TIME_ZONE, month: "short", day: "numeric", year: "numeric" })}
+                  </span>
+                )}
+                {memberNames && (
+                  <span className={task.assignedTo ? "font-medium text-slate-700" : ""}>
+                    {task.assignedTo ? memberNames[task.assignedTo] ?? "Team member" : "Unassigned"}
                   </span>
                 )}
                 {showCompany && task.companyName && <span>· {task.companyName}</span>}

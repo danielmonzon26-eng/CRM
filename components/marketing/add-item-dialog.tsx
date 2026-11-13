@@ -60,6 +60,7 @@ function AddItemDialog({ options, defaults = {}, onClose }: { options: ItemOptio
     timing: defaults.eventId ? "2_weeks" : "custom",
     deliveryOn: "",
     status: "planned",
+    assignedTo: null,
     ...defaults,
   });
   const set = (patch: Partial<ItemDraft>) => setV((x) => ({ ...x, ...patch }));
@@ -188,6 +189,18 @@ function AddItemDialog({ options, defaults = {}, onClose }: { options: ItemOptio
               </label>
             )}
           </div>
+
+          <label className={LABEL}>
+            Assigned to
+            <select value={v.assignedTo ?? ""} onChange={(e) => set({ assignedTo: e.target.value || null })} className={FIELD}>
+              <option value="">Unassigned</option>
+              {options.members.map((m) => (
+                <option key={m.id} value={m.id}>
+                  {m.name}
+                </option>
+              ))}
+            </select>
+          </label>
 
           <label className={LABEL}>
             Budget line <span className="text-brand-600">*</span>
