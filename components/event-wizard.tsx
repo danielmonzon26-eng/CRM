@@ -23,7 +23,7 @@ const LABEL = "text-sm font-medium text-slate-700";
 const CARD = "space-y-4 rounded-xl border border-slate-200 bg-white p-5 shadow-card";
 const AUTOSAVE_DELAY_MS = 1500;
 
-const STEPS = ["Details", "Schedule", "Registration", "Budget & marketing", "Review"];
+const STEPS = ["Details", "Schedule", "Registration", "Budget & Marketing", "Review"];
 const PROGRAMS = ["Apex Forum", "Apex Summit", "Catapult Event", "Elevate IP"];
 const EVENT_TYPES = ["Panel", "Workshop", "Guest Speaker"];
 const FORMAT_OPTIONS = (["in_person", "online", "hybrid"] as const).map((f) => [f, FORMAT_LABELS[f]] as const);
@@ -601,7 +601,7 @@ export function EventWizard({
 
           {step === 3 && (
             <section className={CARD}>
-              <StepHeading title="Budget & marketing" question="What will it cost, and which budget pays for it?" />
+              <StepHeading title="Budget & Marketing" question="What will it cost, and which budget pays for it?" />
               <EventBudgetStep eventId={eventId} onTotal={onBudgetTotal} />
               <div className="grid gap-4 sm:grid-cols-2">
                 {!budgetLinked && (
