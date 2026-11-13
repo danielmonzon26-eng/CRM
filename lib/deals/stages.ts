@@ -50,3 +50,46 @@ export function effectiveProbability(stage: DealStage, probability: number | nul
   if (stage === "accepted" || stage === "declined") return DEAL_STAGE_META[stage].defaultProbability;
   return probability ?? DEAL_STAGE_META[stage].defaultProbability;
 }
+
+/** Roles in the buying committee. A proposal with no decision maker named is flagged. */
+export const COMMITTEE_ROLES = [
+  ["decision_maker", "Decision maker", "Signs off and controls the budget"],
+  ["champion", "Champion", "Wants this to happen and pushes it inside"],
+  ["finance", "Finance", "Approves the spend"],
+  ["technical", "Technical", "Checks it will work for them"],
+  ["end_user", "End user", "Will use what we deliver"],
+  ["blocker", "Blocker", "Against it, or has a reason to slow it"],
+  ["other", "Other", "Involved some other way"],
+] as const;
+export type CommitteeRole = (typeof COMMITTEE_ROLES)[number][0];
+export const COMMITTEE_LABELS: Record<string, string> = Object.fromEntries(COMMITTEE_ROLES.map(([k, l]) => [k, l]));
+
+export const DECLINED_BY = [
+  ["them", "They declined"],
+  ["us", "We declined"],
+] as const;
+export type DeclinedBy = (typeof DECLINED_BY)[number][0];
+
+/** Reasons for each side. Keys are stored; never change one, add new ones instead. */
+export const DECLINED_REASONS: Record<DeclinedBy, readonly (readonly [string, string])[]> = {
+  them: [
+    ["price", "Price too high"],
+    ["timing", "Not the right time"],
+    ["no_budget", "No budget"],
+    ["chose_another", "Chose another provider"],
+    ["no_decision", "Couldn't get a decision"],
+    ["went_quiet", "Went quiet"],
+    ["other", "Other"],
+  ],
+  us: [
+    ["not_a_fit", "Not a fit for us"],
+    ["capacity", "No capacity to take it on"],
+    ["other", "Other"],
+  ],
+};
+export const DECLINED_REASON_LABELS: Record<string, string> = Object.fromEntries(
+  [...DECLINED_REASONS.them, ...DECLINED_REASONS.us].map(([k, l]) => [k, l])
+);
+export function isDeclinedReason(by: string, reason: string): boolean {
+  return by in DECLINED_REASONS && DECLINED_REASONS[by as DeclinedBy].some(([k]) => k === reason);
+}

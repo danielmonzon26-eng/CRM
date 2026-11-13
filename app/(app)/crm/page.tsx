@@ -16,6 +16,7 @@ export default async function ProposalsPage({ searchParams }: { searchParams: Pr
     clientType: params.clientType ?? "",
     work: params.work ?? "",
     payment: params.payment ?? "",
+    committee: params.committee ?? "",
   };
 
   return (

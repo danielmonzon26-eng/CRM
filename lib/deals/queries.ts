@@ -26,6 +26,10 @@ export type DealListRow = {
   closedAt: string | null;
   staffIds: string[];
   fileCount: number;
+  hasDecisionMaker: boolean;
+  committeeSize: number;
+  declinedBy: "them" | "us" | null;
+  declinedReason: string | null;
 };
 
 export type ProposalRow = DealListRow & { clientType: string | null };
@@ -78,21 +82,24 @@ export async function getDealsBoard(): Promise<DealListRow[]> {
     supabase
       .from("deals")
       .select(
-        "id, name, stage, amount, currency, expected_close_date, probability, next_step, next_step_due_date, company_id, primary_contact_id, lead_id, owner, created_at, work_types, payment, sent_on, accepted_on, closed_at"
+        "id, name, stage, amount, currency, expected_close_date, probability, next_step, next_step_due_date, company_id, primary_contact_id, lead_id, owner, created_at, work_types, payment, sent_on, accepted_on, closed_at, declined_by, declined_reason"
       )
       .order("created_at", { ascending: false })
       .range(from, to)
   );
   if (deals.length === 0) return [];
 
-  const [names, staff, files] = await Promise.all([
+  const [names, staff, files, people] = await Promise.all([
     attachCompanyAndContactNames(
       supabase,
       deals.map((d) => ({ id: d.id, companyId: d.company_id, primaryContactId: d.primary_contact_id }))
     ),
     fetchAllPages((from, to) => supabase.from("deal_staff").select("deal_id, user_id").range(from, to)),
     fetchAllPages((from, to) => supabase.from("deal_files").select("deal_id").range(from, to)),
+    fetchAllPages((from, to) => supabase.from("deal_people").select("deal_id, role").range(from, to)),
   ]);
+  const committeeByDeal = new Map<string, string[]>();
+  for (const p of people) committeeByDeal.set(p.deal_id, [...(committeeByDeal.get(p.deal_id) ?? []), p.role]);
   const staffByDeal = new Map<string, string[]>();
   for (const s of staff) staffByDeal.set(s.deal_id, [...(staffByDeal.get(s.deal_id) ?? []), s.user_id]);
   const filesByDeal = new Map<string, number>();
@@ -123,6 +130,10 @@ export async function getDealsBoard(): Promise<DealListRow[]> {
       closedAt: d.closed_at,
       staffIds: staffByDeal.get(d.id) ?? [],
       fileCount: filesByDeal.get(d.id) ?? 0,
+      hasDecisionMaker: (committeeByDeal.get(d.id) ?? []).includes("decision_maker"),
+      committeeSize: (committeeByDeal.get(d.id) ?? []).length,
+      declinedBy: d.declined_by,
+      declinedReason: d.declined_reason,
     };
   });
 }
@@ -152,13 +163,15 @@ export type PipelineForecast = {
   closedWonCount: number;
   closedWonValue: number;
   closedLostCount: number;
+  /** Of the declined proposals, how many we turned down ourselves. */
+  declinedByUsCount: number;
 };
 
 export async function getPipelineForecast(): Promise<PipelineForecast> {
   const supabase = await createClient();
 
   const deals = await fetchAllPages((from, to) =>
-    supabase.from("deals").select("stage, amount, probability").range(from, to)
+    supabase.from("deals").select("stage, amount, probability, declined_by").range(from, to)
   );
 
   let openCount = 0;
@@ -167,6 +180,7 @@ export async function getPipelineForecast(): Promise<PipelineForecast> {
   let closedWonCount = 0;
   let closedWonValue = 0;
   let closedLostCount = 0;
+  let declinedByUsCount = 0;
 
   for (const d of deals) {
     if (d.stage === "accepted") {
@@ -174,6 +188,7 @@ export async function getPipelineForecast(): Promise<PipelineForecast> {
       closedWonValue += d.amount;
     } else if (d.stage === "declined") {
       closedLostCount++;
+      if (d.declined_by === "us") declinedByUsCount++;
     } else if (OPEN_DEAL_STAGES.includes(d.stage)) {
       openCount++;
       openValue += d.amount;
@@ -181,7 +196,7 @@ export async function getPipelineForecast(): Promise<PipelineForecast> {
     }
   }
 
-  return { openCount, openValue, weightedValue, closedWonCount, closedWonValue, closedLostCount };
+  return { openCount, openValue, weightedValue, closedWonCount, closedWonValue, closedLostCount, declinedByUsCount };
 }
 
 export type DealFile = { id: string; fileName: string; sizeBytes: number | null; createdAt: string; uploadedBy: string | null; url: string | null };
@@ -211,6 +226,10 @@ export type DealDetail = {
   acceptedOn: string | null;
   staffIds: string[];
   files: DealFile[];
+  declinedBy: "them" | "us" | null;
+  declinedReason: string | null;
+  /** Everyone at the company, with their role on this proposal if they have one. */
+  people: { contactId: string; name: string; title: string | null; email: string | null; role: string | null }[];
 };
 
 export async function getDealDetail(dealId: string): Promise<DealDetail | null> {
@@ -219,14 +238,21 @@ export async function getDealDetail(dealId: string): Promise<DealDetail | null> 
   if (error) throw error;
   if (!deal) return null;
 
-  const [{ data: company }, { data: contact }, { data: staff }, { data: files }] = await Promise.all([
+  const [{ data: company }, { data: contact }, { data: staff }, { data: files }, { data: committee, error: committeeError }, { data: companyContacts, error: contactsError }] = await Promise.all([
     supabase.from("companies").select("name").eq("id", deal.company_id).maybeSingle(),
     deal.primary_contact_id
       ? supabase.from("contacts").select("full_name").eq("id", deal.primary_contact_id).maybeSingle()
       : Promise.resolve({ data: null }),
     supabase.from("deal_staff").select("user_id").eq("deal_id", dealId),
     supabase.from("deal_files").select("*").eq("deal_id", dealId).order("created_at", { ascending: false }),
+    supabase.from("deal_people").select("contact_id, role").eq("deal_id", dealId),
+    deal.lead_id
+      ? supabase.from("contacts").select("id, full_name, title, email").eq("lead_id", deal.lead_id).order("is_primary", { ascending: false }).order("full_name")
+      : Promise.resolve({ data: [], error: null }),
   ]);
+  if (committeeError) throw committeeError;
+  if (contactsError) throw contactsError;
+  const roleOf = new Map((committee ?? []).map((p) => [p.contact_id, p.role]));
 
   // Signed links last an hour, long enough to open the file from the page.
   const signed = files?.length
@@ -258,6 +284,9 @@ export async function getDealDetail(dealId: string): Promise<DealDetail | null> 
     sentOn: deal.sent_on,
     acceptedOn: deal.accepted_on,
     staffIds: (staff ?? []).map((s) => s.user_id),
+    declinedBy: deal.declined_by,
+    declinedReason: deal.declined_reason,
+    people: (companyContacts ?? []).map((c) => ({ contactId: c.id, name: c.full_name, title: c.title, email: c.email, role: roleOf.get(c.id) ?? null })),
     files: (files ?? []).map((f) => ({
       id: f.id,
       fileName: f.file_name,

@@ -3,7 +3,8 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { CalendarDays, FileText, GripVertical, MoreHorizontal, Paperclip, SearchX } from "lucide-react";
-import { updateDealStage } from "@/app/actions/deals";
+import { updateDealStage, type DeclineDetails } from "@/app/actions/deals";
+import { DeclineDialog } from "@/components/decline-dialog";
 import { ProgramChips } from "@/components/lead-badges";
 import { PaymentBadge, StaffAvatars } from "@/components/proposal-fields";
 import { buttonClass } from "@/components/ui/button";
@@ -12,14 +13,14 @@ import { FilterSelect, SearchField } from "@/components/ui/filter-controls";
 import { EmptyState } from "@/components/ui/page";
 import { formatMoney } from "@/lib/budgets/money";
 import type { ProposalRow } from "@/lib/deals/queries";
-import { DEAL_STAGES, DEAL_STAGE_META, OPEN_DEAL_STAGES, PAYMENT_LABELS } from "@/lib/deals/stages";
+import { DEAL_STAGES, DEAL_STAGE_META, DECLINED_REASON_LABELS, OPEN_DEAL_STAGES, PAYMENT_LABELS } from "@/lib/deals/stages";
 import { CLIENT_TYPES, LEAD_PROGRAMS, clientTypeLabel } from "@/lib/leads/classification";
 import type { DealStage } from "@/lib/supabase/types";
 
 const MAX_CARD_PROGRAMS = 2;
 
 type Sort = "closing" | "largest" | "newest";
-export type ProposalBoardFilters = { q: string; staff: string; clientType: string; work: string; payment: string };
+export type ProposalBoardFilters = { q: string; staff: string; clientType: string; work: string; payment: string; committee: string };
 
 const SORTERS: Record<Sort, (a: ProposalRow, b: ProposalRow) => number> = {
   closing: (a, b) => a.expectedCloseDate.localeCompare(b.expectedCloseDate),
@@ -77,7 +78,7 @@ function ProposalCard({
         {proposal.stage === "accepted"
           ? `Accepted ${proposal.acceptedOn ? formatDay(proposal.acceptedOn) : ""}`
           : proposal.stage === "declined"
-            ? `Declined ${proposal.closedAt ? formatDay(proposal.closedAt.slice(0, 10)) : ""}`
+            ? `Declined${proposal.declinedBy === "us" ? " by us" : ""}${proposal.declinedReason ? `: ${DECLINED_REASON_LABELS[proposal.declinedReason] ?? proposal.declinedReason}` : ""}`
             : proposal.stage === "sent" && proposal.sentOn
               ? `Sent ${formatDay(proposal.sentOn)}${overdue ? " · decision overdue" : ""}`
               : `${overdue ? "Decision overdue: " : "Decision by "}${formatDay(proposal.expectedCloseDate)}`}
@@ -89,6 +90,11 @@ function ProposalCard({
         </div>
       )}
       <div className="relative z-10 mt-2.5 flex items-center justify-end gap-1.5">
+        {!proposal.hasDecisionMaker && (proposal.stage === "in_development" || proposal.stage === "sent") && (
+          <span title="Name the decision maker on the proposal page" className="rounded bg-amber-50 px-1.5 py-0.5 text-[10px] font-semibold text-amber-800">
+            No decision maker
+          </span>
+        )}
         <PaymentBadge payment={proposal.payment} />
         {proposal.fileCount > 0 && (
           <span title={`${proposal.fileCount} file${proposal.fileCount === 1 ? "" : "s"}`} className="flex items-center gap-0.5 text-[11px] text-slate-500">
@@ -130,6 +136,7 @@ export function ProposalsBoard({
   const [overStage, setOverStage] = useState<DealStage | null>(null);
 
   useEffect(() => setLocal(proposals), [proposals]);
+  const [declining, setDeclining] = useState<ProposalRow | null>(null);
 
   function setFilter(patch: Partial<ProposalBoardFilters>) {
     const next = { ...filters, ...patch };
@@ -152,18 +159,26 @@ export function ProposalsBoard({
         if (filters.clientType && p.clientType !== filters.clientType) return false;
         if (filters.work && !p.workTypes.includes(filters.work)) return false;
         if (filters.payment && (filters.payment === "none" ? p.payment !== null : p.payment !== filters.payment)) return false;
+        if (filters.committee === "no_decision_maker" && (p.hasDecisionMaker || p.stage === "accepted" || p.stage === "declined")) return false;
         return true;
       })
       .sort(SORTERS[sort]);
   }, [local, filters, sort]);
 
-  async function move(proposal: ProposalRow, to: DealStage) {
+  async function move(proposal: ProposalRow, to: DealStage, decline?: DeclineDetails) {
     if (proposal.stage === to) return;
+    // Declined asks who declined and why first.
+    if (to === "declined" && !decline) {
+      setDeclining(proposal);
+      return;
+    }
     const before = local;
     // Moves immediately, and puts the card back if saving fails.
-    setLocal((current) => current.map((p) => (p.id === proposal.id ? { ...p, stage: to } : p)));
+    setLocal((current) =>
+      current.map((p) => (p.id === proposal.id ? { ...p, stage: to, declinedBy: decline?.by ?? null, declinedReason: decline?.reason ?? null } : p))
+    );
     try {
-      await updateDealStage(proposal.id, to);
+      await updateDealStage(proposal.id, to, decline);
       toast(`${proposal.name} moved to ${DEAL_STAGE_META[to].label}`);
     } catch {
       setLocal(before);
@@ -182,7 +197,7 @@ export function ProposalsBoard({
     );
   }
 
-  const hasFilters = Boolean(filters.q || filters.staff || filters.clientType || filters.work || filters.payment);
+  const hasFilters = Boolean(filters.q || filters.staff || filters.clientType || filters.work || filters.payment || filters.committee);
 
   return (
     <div>
@@ -191,6 +206,7 @@ export function ProposalsBoard({
         <FilterSelect label="Client type" value={filters.clientType} onChange={(clientType) => setFilter({ clientType })} options={CLIENT_TYPES.map(([value, label]) => ({ value: value as string, label }))} />
         <FilterSelect label="Work" value={filters.work} onChange={(work) => setFilter({ work })} options={LEAD_PROGRAMS.map(([value, label]) => ({ value: value as string, label }))} />
         <FilterSelect label="Staff" value={filters.staff} allLabel="Anyone" onChange={(staff) => setFilter({ staff })} options={[{ value: "none", label: "No staff yet" }, ...members.map((m) => ({ value: m.id, label: m.name }))]} />
+        <FilterSelect label="Committee" value={filters.committee} allLabel="Any" onChange={(committee) => setFilter({ committee })} options={[{ value: "no_decision_maker", label: "No decision maker named" }]} />
         <FilterSelect label="Paid" value={filters.payment} allLabel="Any" onChange={(payment) => setFilter({ payment })} options={[{ value: "paid", label: PAYMENT_LABELS.paid }, { value: "unpaid", label: PAYMENT_LABELS.unpaid }, { value: "none", label: "Not set" }]} />
         <FilterSelect label="Sort" required value={sort} onChange={(value) => setSort(value as Sort)} options={[{ value: "closing", label: "Closing soonest" }, { value: "largest", label: "Largest" }, { value: "newest", label: "Newest" }]} />
       </div>
@@ -200,7 +216,7 @@ export function ProposalsBoard({
           icon={SearchX}
           title="No proposals match"
           description="Try a different search or remove a filter."
-          action={hasFilters ? <button type="button" onClick={() => setFilter({ q: "", staff: "", clientType: "", work: "", payment: "" })} className={buttonClass("secondary")}>Clear filters</button> : undefined}
+          action={hasFilters ? <button type="button" onClick={() => setFilter({ q: "", staff: "", clientType: "", work: "", payment: "", committee: "" })} className={buttonClass("secondary")}>Clear filters</button> : undefined}
         />
       ) : (
         <div className="relative -mx-4 overflow-x-auto px-4 pb-3 sm:mx-0 sm:px-0">
@@ -262,6 +278,17 @@ export function ProposalsBoard({
             })}
           </div>
         </div>
+      )}
+      {declining && (
+        <DeclineDialog
+          proposalName={declining.name}
+          onCancel={() => setDeclining(null)}
+          onConfirm={(details) => {
+            const proposal = declining;
+            setDeclining(null);
+            void move(proposal, "declined", details);
+          }}
+        />
       )}
     </div>
   );
