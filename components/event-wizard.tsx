@@ -13,13 +13,26 @@ import { uploadEventBanner } from "@/lib/events/upload";
 import { getMissingForPublish, type EventInput } from "@/lib/events/validation";
 
 const INPUT =
-  "mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm focus:border-brand-400 focus:outline-none focus:ring-2 focus:ring-brand-100";
+  "mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-brand-600 focus:outline-none focus:ring-2 focus:ring-brand-100";
 const LABEL = "text-sm font-medium text-slate-700";
 const CARD = "space-y-4 rounded-xl border border-slate-200 bg-white p-5 shadow-card";
 const AUTOSAVE_DELAY_MS = 1500;
 
 const STEPS = ["Details", "Schedule", "Registration", "Budget", "Review"];
 const PROGRAMS = ["Apex Forum", "Apex Summit", "Catapult Event", "Elevate IP"];
+const EVENT_TYPES = ["Panel", "Workshop", "Guest Speaker"];
+const FORMAT_OPTIONS = (["in_person", "online", "hybrid"] as const).map((f) => [f, FORMAT_LABELS[f]] as const);
+
+/** "YYYY-MM-DDTHH:mm" split into its date and time, for separate inputs. */
+function splitDateTime(value: string): [string, string] {
+  const [date = "", time = ""] = value.split("T");
+  return [date, time.slice(0, 5)];
+}
+
+/** Joins a date and time back into one value; a date alone gets 9:00 a.m. */
+function joinDateTime(date: string, time: string): string {
+  return date ? `${date}T${time || "09:00"}` : "";
+}
 
 function toInput(event?: EventRow): EventInput {
   return {
@@ -258,16 +271,38 @@ export function EventWizard({
                   <datalist id="programs">{PROGRAMS.map((p) => <option key={p} value={p} />)}</datalist>
                 </div>
                 <div>
-                  <label className={LABEL} htmlFor="eventType">Event type</label>
-                  <input id="eventType" placeholder="e.g. Workshop or breakfast" value={values.eventType} onChange={(e) => set("eventType", e.target.value)} className={INPUT} />
+                  <label className={LABEL} htmlFor="ownerId">Event owner</label>
+                  <select id="ownerId" value={values.ownerId} onChange={(e) => set("ownerId", e.target.value)} className={INPUT}>
+                    <option value="">Unassigned</option>
+                    {members.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
+                  </select>
                 </div>
               </div>
-              <div>
-                <label className={LABEL} htmlFor="ownerId">Event owner</label>
-                <select id="ownerId" value={values.ownerId} onChange={(e) => set("ownerId", e.target.value)} className={INPUT}>
-                  <option value="">Unassigned</option>
-                  {members.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
-                </select>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div>
+                  <label className={LABEL} htmlFor="eventType">Event type</label>
+                  <select id="eventType" value={values.eventType} onChange={(e) => set("eventType", e.target.value)} className={INPUT}>
+                    <option value="">Choose a type</option>
+                    {EVENT_TYPES.map((t) => (
+                      <option key={t} value={t}>
+                        {t}
+                      </option>
+                    ))}
+                    {/* An older event's own wording stays selectable, so nothing is lost. */}
+                    {values.eventType && !EVENT_TYPES.includes(values.eventType) && <option value={values.eventType}>{values.eventType}</option>}
+                  </select>
+                </div>
+                <div>
+                  <label className={LABEL} htmlFor="format">Format</label>
+                  <select id="format" value={values.format} onChange={(e) => set("format", e.target.value as EventInput["format"])} className={INPUT}>
+                    {FORMAT_OPTIONS.map(([value, label]) => (
+                      <option key={value} value={value}>
+                        {label}
+                      </option>
+                    ))}
+                  </select>
+                  <p className="mt-1 text-xs text-slate-500">You&apos;ll add the venue or the join link on the next step.</p>
+                </div>
               </div>
               <div>
                 <label className={LABEL} htmlFor="description">Description</label>
@@ -310,25 +345,56 @@ export function EventWizard({
           {step === 1 && (
             <section className={CARD}>
               <StepHeading title="Schedule" question="When and where is it?" />
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div>
-                  <label className={LABEL} htmlFor="startsAt">Starts <span className="text-brand-600">*</span></label>
-                  <input id="startsAt" type="datetime-local" value={values.startsAt} onChange={(e) => set("startsAt", e.target.value)} className={INPUT} />
-                </div>
-                <div>
-                  <label className={LABEL} htmlFor="endsAt">Ends</label>
-                  <input id="endsAt" type="datetime-local" value={values.endsAt} onChange={(e) => set("endsAt", e.target.value)} className={INPUT} />
-                </div>
-              </div>
-              <p className="text-xs text-slate-500">Times are in Calgary time.</p>
-              <div>
-                <label className={LABEL} htmlFor="format">Format</label>
-                <select id="format" value={values.format} onChange={(e) => set("format", e.target.value as EventInput["format"])} className={INPUT}>
-                  <option value="in_person">In person</option>
-                  <option value="online">Online / livestream</option>
-                  <option value="hybrid">In person + livestream</option>
-                </select>
-              </div>
+              {(() => {
+                const [startDate, startTime] = splitDateTime(values.startsAt);
+                const [endDate, endTime] = splitDateTime(values.endsAt);
+                return (
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <fieldset>
+                      <legend className={LABEL}>
+                        Starts <span className="text-brand-600">*</span>
+                      </legend>
+                      <div className="grid grid-cols-[1fr_130px] gap-2">
+                        <input id="startsAt" aria-label="Start date" type="date" value={startDate} onChange={(e) => set("startsAt", joinDateTime(e.target.value, startTime))} className={INPUT} />
+                        <input
+                          aria-label="Start time"
+                          type="time"
+                          step={900}
+                          value={startTime}
+                          disabled={!startDate}
+                          onChange={(e) => set("startsAt", joinDateTime(startDate, e.target.value))}
+                          className={`${INPUT} disabled:bg-slate-50`}
+                        />
+                      </div>
+                    </fieldset>
+                    <fieldset>
+                      <legend className={LABEL}>Ends</legend>
+                      <div className="grid grid-cols-[1fr_130px] gap-2">
+                        <input
+                          id="endsAt"
+                          aria-label="End date"
+                          type="date"
+                          min={startDate || undefined}
+                          value={endDate}
+                          onChange={(e) => set("endsAt", e.target.value ? joinDateTime(e.target.value, endTime || startTime) : "")}
+                          className={INPUT}
+                        />
+                        <input
+                          aria-label="End time"
+                          type="time"
+                          step={900}
+                          value={endTime}
+                          disabled={!startDate}
+                          // An end time on its own is on the start date.
+                          onChange={(e) => set("endsAt", e.target.value ? joinDateTime(endDate || startDate, e.target.value) : "")}
+                          className={`${INPUT} disabled:bg-slate-50`}
+                        />
+                      </div>
+                    </fieldset>
+                  </div>
+                );
+              })()}
+              <p className="text-xs text-slate-500">Times are in Calgary time. Leave the end blank if it isn&apos;t set yet.</p>
               {values.format !== "online" && (
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div>

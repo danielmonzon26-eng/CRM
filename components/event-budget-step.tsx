@@ -11,7 +11,7 @@ import { EVENT_COST_PRESETS } from "@/lib/budgets/event-presets";
 
 // No width here: each use sets its own, so flex rows lay out side by side.
 const INPUT =
-  "rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm focus:border-brand-400 focus:outline-none focus:ring-2 focus:ring-brand-100";
+  "rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-brand-600 focus:outline-none focus:ring-2 focus:ring-brand-100";
 
 type Draft = { name: string; amount: string };
 
@@ -245,17 +245,7 @@ function LinkedLine({
           className="flex flex-wrap gap-2"
         >
           <input aria-label="New cost" placeholder="Cost, e.g. Ad spend" value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} className={`${INPUT} min-w-0 flex-1`} />
-          <input
-            aria-label="Planned amount"
-            placeholder="$"
-            type="number"
-            min={0}
-            step="0.01"
-            inputMode="decimal"
-            value={draft.amount}
-            onChange={(e) => setDraft({ ...draft, amount: e.target.value })}
-            className={`${INPUT} w-32`}
-          />
+          <MoneyField label="Planned amount" value={draft.amount} onChange={(amount) => setDraft({ ...draft, amount })} />
           <button type="submit" disabled={pending || !draft.name.trim()} className={buttonClass("secondary")}>
             <Plus className="h-4 w-4" strokeWidth={2} />
             Add cost
@@ -354,16 +344,10 @@ function SetUp({
                   onChange={(e) => setRows(rows.map((r, j) => (j === i ? { ...r, name: e.target.value } : r)))}
                   className={`${INPUT} min-w-0 flex-1`}
                 />
-                <input
-                  aria-label={`Planned for ${row.name || "this cost"}`}
-                  placeholder="$"
-                  type="number"
-                  min={0}
-                  step="0.01"
-                  inputMode="decimal"
+                <MoneyField
+                  label={`Planned for ${row.name || "this cost"}`}
                   value={row.amount}
-                  onChange={(e) => setRows(rows.map((r, j) => (j === i ? { ...r, amount: e.target.value } : r)))}
-                  className={`${INPUT} w-32`}
+                  onChange={(amount) => setRows(rows.map((r, j) => (j === i ? { ...r, amount } : r)))}
                 />
                 <button
                   type="button"
@@ -433,5 +417,27 @@ function SetUp({
         </form>
       )}
     </div>
+  );
+}
+
+/** A dollar amount with the $ inside the field and the number right-aligned. */
+function MoneyField({ label, value, onChange }: { label: string; value: string; onChange: (value: string) => void }) {
+  return (
+    <span className="relative block w-36 shrink-0">
+      <span aria-hidden="true" className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-sm text-slate-400">
+        $
+      </span>
+      <input
+        aria-label={label}
+        type="number"
+        min={0}
+        step="0.01"
+        inputMode="decimal"
+        placeholder="0.00"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className={`${INPUT} w-full pl-7 text-right tabular-nums`}
+      />
+    </span>
   );
 }
