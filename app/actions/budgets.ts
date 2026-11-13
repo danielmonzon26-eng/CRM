@@ -428,6 +428,22 @@ export async function renameBudget(budgetId: string, name: string): Promise<Budg
   return refreshAfter(error);
 }
 
+/** The budget's overall total, the money there is to allocate. Blank clears it. */
+export async function setBudgetTotal(budgetId: string, amount: string): Promise<BudgetActionResult> {
+  const text = amount.replace(/[$,\s]/g, "");
+  const value = text === "" ? null : Number(text);
+  if (value !== null && (!Number.isFinite(value) || value < 0)) return { error: "Enter the total as an amount, like 15000." };
+  if (value !== null && value > 999_999_999) return { error: "That total is too large." };
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("budgets")
+    .update({ total_amount: value === null ? null : Math.round(value * 100) / 100 })
+    .eq("id", budgetId)
+    .select("id")
+    .single();
+  return refreshAfter(error);
+}
+
 export async function addEventRevenue(input: {
   eventId: string;
   source: string;

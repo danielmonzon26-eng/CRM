@@ -115,6 +115,20 @@ function AddItemRow({ lineId, colSpan }: { lineId: string; colSpan: number }) {
   );
 }
 
+/** How much of a budget is spent or committed, as a short bar and a percentage. */
+export function UsedBar({ plan, spent }: { plan: number; spent: number }) {
+  const percent = plan > 0 ? Math.round((spent / plan) * 100) : spent > 0 ? 100 : 0;
+  const tone = percent > 100 ? "bg-rose-500" : percent >= 90 ? "bg-amber-500" : "bg-accent-500";
+  return (
+    <div className="flex items-center gap-2" title={`${percent}% of this budget used`}>
+      <div className="h-1.5 w-20 overflow-hidden rounded-full bg-slate-100">
+        <div className={`h-full rounded-full ${tone}`} style={{ width: `${Math.min(percent, 100)}%` }} />
+      </div>
+      <span className={`w-10 text-right text-xs tabular-nums ${percent > 100 ? "font-medium text-rose-700" : "text-slate-500"}`}>{percent}%</span>
+    </div>
+  );
+}
+
 /** A budget line in a table. Opening it shows its items or months, all editable where they sit. */
 export function BudgetLineRows({
   line,
@@ -124,6 +138,7 @@ export function BudgetLineRows({
   figures,
   defaultOpen = false,
   filtered = false,
+  showUsed = false,
 }: {
   line: LineSummary;
   items: ItemSummary[];
@@ -133,11 +148,15 @@ export function BudgetLineRows({
   defaultOpen?: boolean;
   /** A period is selected, so the line's figures and its items cover different spans. */
   filtered?: boolean;
+  /** Adds a "Used" column with a progress bar, after Remaining. */
+  showUsed?: boolean;
 }) {
   const { toast, confirm } = useFeedback();
   const [open, setOpen] = useState(defaultOpen);
   const [isPending, startTransition] = useTransition();
   const toggleRef = useRef<HTMLButtonElement>(null);
+  const columns = showUsed ? 7 : 6;
+  const usedCell = showUsed ? <td /> : null;
 
   // Spending recorded on the line without choosing an item, so the rows still add up to the line.
   const looseCommitted = fromCents(addCents([line.committed]) - addCents(items.map((i) => i.committed)));
@@ -181,6 +200,11 @@ export function BudgetLineRows({
           {figures.remaining < 0 && <AlertTriangle className="mr-1 inline h-3.5 w-3.5" strokeWidth={2} aria-label="Over budget" />}
           {formatMoney(figures.remaining)}
         </td>
+        {showUsed && (
+          <td className="px-3 py-2.5">
+            <UsedBar plan={figures.plan} spent={figures.committed + figures.actual} />
+          </td>
+        )}
         <td className="whitespace-nowrap px-3 py-1.5 text-right">
           <AddExpense line={line} items={items} />
           <Link href={`/budgets/lines/${line.id}`} title="Open full line" aria-label={`Open ${line.name}`} className={`${ICON_BUTTON} inline-block align-middle`}>
@@ -193,7 +217,7 @@ export function BudgetLineRows({
         <>
           {filtered && items.length > 0 && (
             <tr className="border-t border-slate-100 bg-slate-50/60">
-              <td colSpan={6} className="py-1.5 pl-[52px] pr-3 text-xs text-slate-500">Items below cover this whole line, not only the selected period.</td>
+              <td colSpan={columns} className="py-1.5 pl-[52px] pr-3 text-xs text-slate-500">Items below cover this whole line, not only the selected period.</td>
             </tr>
           )}
           {items.map((item) => (
@@ -208,6 +232,7 @@ export function BudgetLineRows({
               <td className="px-3 py-1 text-right tabular-nums text-slate-600">{formatMoney(item.committed)}</td>
               <td className="px-3 py-1 text-right tabular-nums text-slate-600">{formatMoney(item.actual)}</td>
               <td className={`px-3 py-1 text-right tabular-nums ${item.remaining < 0 ? "font-medium text-rose-700" : "text-slate-700"}`}>{formatMoney(item.remaining)}</td>
+              {usedCell}
               <td className="px-3 py-1 text-right">
                 <button
                   type="button"
@@ -236,10 +261,10 @@ export function BudgetLineRows({
               <td />
               <td className="px-3 py-2 text-right tabular-nums">{formatMoney(looseCommitted)}</td>
               <td className="px-3 py-2 text-right tabular-nums">{formatMoney(looseActual)}</td>
-              <td colSpan={2} />
+              <td colSpan={columns - 4} />
             </tr>
           )}
-          <AddItemRow lineId={line.id} colSpan={6} />
+          <AddItemRow lineId={line.id} colSpan={columns} />
         </>
       )}
 
@@ -258,6 +283,7 @@ export function BudgetLineRows({
             <td className="px-3 py-1 text-right tabular-nums text-slate-600">{formatMoney(committed)}</td>
             <td className="px-3 py-1 text-right tabular-nums text-slate-600">{formatMoney(actual)}</td>
             <td className="px-3 py-1 text-right tabular-nums text-slate-700">{formatMoney(fromCents(addCents([plan]) - addCents([committed, actual])))}</td>
+            {usedCell}
             <td />
           </tr>
         );

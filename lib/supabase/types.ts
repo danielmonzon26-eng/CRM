@@ -809,6 +809,7 @@ export type Database = {
           start_month: string | null;
           end_month: string | null;
           notes: string | null;
+          total_amount: number | null;
           created_by: string | null;
           created_at: string;
           updated_at: string;
@@ -821,6 +822,7 @@ export type Database = {
           start_month?: string | null;
           end_month?: string | null;
           notes?: string | null;
+          total_amount?: number | null;
           created_by?: string | null;
         };
         Update: Partial<Database["public"]["Tables"]["budgets"]["Insert"]>;
