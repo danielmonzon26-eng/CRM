@@ -23,6 +23,7 @@ import {
 } from "@/lib/budgets/marketing-items";
 import type { ItemOptions, MarketingItem } from "@/lib/marketing/items-queries";
 import type { PostItem } from "@/lib/marketing/queries";
+import { DateInput } from "@/components/ui/date-input";
 
 const CELL =
   "w-full rounded-md border border-transparent bg-transparent px-2 py-1.5 text-sm text-slate-900 hover:border-slate-200 focus:border-brand-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-100";
@@ -338,9 +339,8 @@ function ItemRow({ item, options, today, onDone }: { item: MarketingItem | null;
             </select>
           )}
           {(!draft.eventId || draft.timing === "custom") && (
-            <input
+            <DateInput
               aria-label="Due date"
-              type="date"
               value={draft.deliveryOn ?? ""}
               onChange={(e) => change({ timing: e.target.value ? "custom" : null, deliveryOn: e.target.value })}
               className={`${CELL} min-w-0`}

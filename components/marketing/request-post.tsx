@@ -7,6 +7,7 @@ import { MessageSquarePlus } from "lucide-react";
 import { savePost } from "@/app/actions/marketing";
 import { buttonClass } from "@/components/ui/button";
 import { useFeedback } from "@/components/ui/feedback";
+import { DateInput } from "@/components/ui/date-input";
 
 const FIELD =
   "mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-brand-600 focus:outline-none focus:ring-2 focus:ring-brand-100";
@@ -100,7 +101,7 @@ export function RequestPostDialog({ date = "", onClose }: { date?: string; onClo
           </label>
           <label className={LABEL}>
             Date
-            <input type="date" value={day} onChange={(e) => setDay(e.target.value)} className={FIELD} />
+            <DateInput value={day} onChange={(e) => setDay(e.target.value)} className={FIELD} />
             <span className="mt-1 block text-xs font-normal text-slate-500">Optional. It&apos;s set for 9:00 a.m.; change the time when writing it.</span>
           </label>
           {error && (

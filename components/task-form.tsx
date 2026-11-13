@@ -5,6 +5,7 @@ import { Plus } from "lucide-react";
 import { createTask } from "@/app/actions/tasks";
 import { fromDateTimeInput } from "@/lib/events/format";
 import type { TaskType } from "@/lib/supabase/types";
+import { DateInput } from "@/components/ui/date-input";
 
 export function TaskForm({
   leadId,
@@ -61,9 +62,10 @@ export function TaskForm({
         <option value="email">Email</option>
         <option value="meeting">Meeting</option>
       </select>
-      <input
-        type="date"
+      <DateInput
         name="dueAt"
+        aria-label="Due date"
+        placeholder="Due date"
         className="rounded-md border border-slate-200 bg-white px-2.5 py-1.5 text-sm focus:border-brand-400 focus:outline-none focus:ring-1 focus:ring-brand-200"
       />
       <button

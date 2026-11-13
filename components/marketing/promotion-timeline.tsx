@@ -12,6 +12,7 @@ import { useFeedback } from "@/components/ui/feedback";
 import { PLATFORMS, POST_STATUS_META } from "@/lib/marketing/constants";
 import type { Promotion, PromotionEvent } from "@/lib/marketing/promotion-queries";
 import { addDays, dailySpend, daysBetween, PROMOTION_STATUS_META, type SuggestedPromotion } from "@/lib/marketing/promotions";
+import { DateInput } from "@/components/ui/date-input";
 
 const FIELD =
   "mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-brand-600 focus:outline-none focus:ring-2 focus:ring-brand-100";
@@ -390,11 +391,11 @@ function PromotionDialog({ event, promotion, today, onClose }: { event: Promotio
           <div className="grid gap-3 sm:grid-cols-2">
             <label className={LABEL}>
               Starts
-              <input type="date" required value={v.startsOn} onChange={(e) => set({ startsOn: e.target.value })} className={FIELD} />
+              <DateInput required value={v.startsOn} onChange={(e) => set({ startsOn: e.target.value })} className={FIELD} />
             </label>
             <label className={LABEL}>
               Ends
-              <input type="date" required min={v.startsOn} value={v.endsOn} onChange={(e) => set({ endsOn: e.target.value })} className={FIELD} />
+              <DateInput required min={v.startsOn} value={v.endsOn} onChange={(e) => set({ endsOn: e.target.value })} className={FIELD} />
             </label>
             <label className={LABEL}>
               Budget ($)

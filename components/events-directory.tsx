@@ -32,6 +32,7 @@ import {
   isEventOver,
 } from "@/lib/events/format";
 import type { EventListItem } from "@/lib/events/queries";
+import { DateInput } from "@/components/ui/date-input";
 
 const TABS = ["All events", "Upcoming", "Drafts", "Published", "Completed", "Archived"] as const;
 type Tab = (typeof TABS)[number];
@@ -238,11 +239,11 @@ export function EventsDirectory({ events, ownerNames }: { events: EventListItem[
         <FilterSelect label="Status" value={filters.status} onChange={(value) => setFilter("status", value)} options={[{ value: "draft", label: "Draft" }, { value: "published", label: "Published" }, { value: "cancelled", label: "Cancelled" }]} />
         <label className="flex items-center gap-1.5 text-xs text-slate-500">
           From
-          <input type="date" value={filters.from} onChange={(e) => setFilter("from", e.target.value)} className={SELECT} />
+          <DateInput value={filters.from} onChange={(e) => setFilter("from", e.target.value)} className={SELECT} />
         </label>
         <label className="flex items-center gap-1.5 text-xs text-slate-500">
           To
-          <input type="date" value={filters.to} onChange={(e) => setFilter("to", e.target.value)} className={SELECT} />
+          <DateInput value={filters.to} onChange={(e) => setFilter("to", e.target.value)} className={SELECT} />
         </label>
         <div className="flex rounded-lg border border-slate-200 bg-white p-0.5">
           <button type="button" aria-label="Table view" aria-pressed={view === "table"} onClick={() => setView("table")} className={`rounded-md p-1.5 ${view === "table" ? "bg-brand-50 text-brand-700" : "text-slate-500 hover:text-slate-900"}`}>

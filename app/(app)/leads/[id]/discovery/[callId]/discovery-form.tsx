@@ -22,6 +22,7 @@ import {
   type BlockStatus,
   type BmcBlock,
 } from "@/lib/discovery/questionnaire";
+import { DateInput } from "@/components/ui/date-input";
 
 const FIELD =
   "w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-brand-600 focus:outline-none focus:ring-2 focus:ring-brand-100";
@@ -180,7 +181,7 @@ export function DiscoveryForm({
             </div>
             <label className="block text-sm font-medium text-slate-700">
               Date
-              <input type="date" required value={state.callDate} onChange={(e) => e.target.value && change({ callDate: e.target.value })} className={`${FIELD} mt-1`} />
+              <DateInput required value={state.callDate} onChange={(e) => e.target.value && change({ callDate: e.target.value })} className={`${FIELD} mt-1`} />
             </label>
           </div>
           <label className="mt-4 flex items-start gap-2 text-sm text-slate-700">
