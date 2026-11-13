@@ -146,7 +146,7 @@ export function MarketingOverview({ d }: { d: MarketingDashboard }) {
           )}
         </Panel>
 
-        <Panel title="Initiatives" subtitle="Active and upcoming" href="/marketing/initiatives">
+        <Panel title="Initiatives" subtitle="Active and upcoming" href="/marketing/social/initiatives">
           {d.initiatives.length === 0 ? (
             <PanelEmpty icon={Target}>No active initiatives. Create one to group a campaign&apos;s posts.</PanelEmpty>
           ) : (
@@ -156,7 +156,7 @@ export function MarketingOverview({ d }: { d: MarketingDashboard }) {
                 return (
                   <BarRow
                     key={i.id}
-                    href={`/marketing/initiatives/${i.id}`}
+                    href={`/marketing/social/initiatives/${i.id}`}
                     label={
                       <>
                         {i.name}{" "}

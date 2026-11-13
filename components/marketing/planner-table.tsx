@@ -35,11 +35,16 @@ const fmtDay = (day: string | null) => (day ? dueFormat.format(new Date(`${day}T
 
 type Row = { kind: "item"; item: MarketingItem } | { kind: "post"; post: PostItem } | { kind: "new"; key: string };
 
-type Draft = Omit<MarketingItemInput, "id"> & { sponsorName: string };
+export type ItemDraft = Omit<MarketingItemInput, "id"> & { sponsorName: string };
+type Draft = ItemDraft;
 
-function draftOf(item: MarketingItem | null, options: ItemOptions): Draft {
+function draftOf(item: MarketingItem | null, options: ItemOptions, defaults: Partial<Draft> = {}): Draft {
   if (!item) {
-    return { stream: "catapult", type: "social", description: "", eventId: null, sponsorId: null, sponsorName: "", amount: "", budgetLineId: null, timing: "custom", deliveryOn: "", status: "planned" };
+    const base: Draft = { stream: "catapult", type: "social", description: "", eventId: null, sponsorId: null, sponsorName: "", amount: "", budgetLineId: null, timing: "custom", deliveryOn: "", status: "planned" };
+    const d = { ...base, ...defaults };
+    // An event item starts on the event's own budget line and "2 weeks before".
+    const ev = d.eventId ? options.events.find((e) => e.id === d.eventId) : undefined;
+    return { ...d, budgetLineId: d.budgetLineId ?? ev?.lineId ?? null, timing: d.eventId && !defaults.timing ? "2_weeks" : d.timing };
   }
   return {
     stream: item.stream,
@@ -149,32 +154,7 @@ export function PlannerTable({ items, posts, options, today }: { items: Marketin
 
       <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-card">
         <table className="w-full min-w-[1240px] table-fixed text-sm">
-          <colgroup>
-            <col className="w-[8.5rem]" />
-            <col className="w-44" />
-            <col />
-            <col className="w-52" />
-            <col className="w-48" />
-            <col className="w-24" />
-            <col className="w-52" />
-            <col className="w-32" />
-            <col className="w-14" />
-          </colgroup>
-          <thead className="border-b border-slate-200 bg-slate-50 text-left text-xs font-medium uppercase tracking-wide text-slate-500">
-            <tr>
-              <th scope="col" className="px-3 py-2.5">Stream</th>
-              <th scope="col" className="px-3 py-2.5">Marketing item</th>
-              <th scope="col" className="px-3 py-2.5">Description</th>
-              <th scope="col" className="px-3 py-2.5">Event or sponsor</th>
-              <th scope="col" className="px-3 py-2.5">Due</th>
-              <th scope="col" className="px-3 py-2.5 text-right">Amount</th>
-              <th scope="col" className="px-3 py-2.5">Budget line</th>
-              <th scope="col" className="px-3 py-2.5">Status</th>
-              <th scope="col" className="px-3 py-2.5">
-                <span className="sr-only">Actions</span>
-              </th>
-            </tr>
-          </thead>
+          <ItemTableHead />
           <tbody className="divide-y divide-slate-100">
             {adding.map((key) => (
               <ItemRow key={key} item={null} options={options} today={today} onDone={() => setAdding(adding.filter((k) => k !== key))} />
@@ -200,11 +180,24 @@ export function PlannerTable({ items, posts, options, today }: { items: Marketin
   );
 }
 
-function ItemRow({ item, options, today, onDone }: { item: MarketingItem | null; options: ItemOptions; today: string; onDone?: () => void }) {
+export function ItemRow({
+  item,
+  options,
+  today,
+  onDone,
+  defaults,
+}: {
+  item: MarketingItem | null;
+  options: ItemOptions;
+  today: string;
+  onDone?: () => void;
+  /** Starting values for a new row, e.g. the stream and event of the section it's added in. */
+  defaults?: Partial<Draft>;
+}) {
   const router = useRouter();
   const { confirm, toast } = useFeedback();
-  const [draft, setDraft] = useState<Draft>(() => draftOf(item, options));
-  const saved = useRef(JSON.stringify(draftOf(item, options)));
+  const [draft, setDraft] = useState<Draft>(() => draftOf(item, options, defaults));
+  const saved = useRef(JSON.stringify(draftOf(item, options, defaults)));
   const [state, setState] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
@@ -215,7 +208,7 @@ function ItemRow({ item, options, today, onDone }: { item: MarketingItem | null;
   function save(next: Draft) {
     if (JSON.stringify(next) === saved.current) return;
     // A new row waits until it has enough to be saved.
-    if (!item && ((next.stream === "event" && !next.eventId) || (next.stream === "sponsorship" && !next.sponsorId))) return;
+    if (!item && ((next.stream === "event" && !next.eventId) || (next.stream === "sponsorship" && !next.sponsorId) || !next.budgetLineId)) return;
     if (next.timing === "custom" && !next.deliveryOn) return;
     setState("saving");
     startTransition(async () => {
@@ -374,9 +367,9 @@ function ItemRow({ item, options, today, onDone }: { item: MarketingItem | null;
           aria-label="Budget line"
           value={draft.budgetLineId ?? ""}
           onChange={(e) => change({ budgetLineId: e.target.value || null })}
-          className={`${CELL} ${!draft.budgetLineId && Number(draft.amount) > 0 ? "text-amber-700" : ""}`}
+          className={`${CELL} ${!draft.budgetLineId ? "text-amber-700" : ""}`}
         >
-          <option value="">Not budgeted</option>
+          <option value="">Choose the budget line</option>
           {Object.entries(byBudget).map(([budget, lines]) => (
             <optgroup key={budget} label={budget}>
               {lines.map((l) => (
@@ -433,7 +426,7 @@ function ItemRow({ item, options, today, onDone }: { item: MarketingItem | null;
   );
 }
 
-function SponsorField({
+export function SponsorField({
   value,
   known,
   onPick,
@@ -519,5 +512,39 @@ function PostRow({ post }: { post: PostItem }) {
         </Link>
       </td>
     </tr>
+  );
+}
+
+/** Column widths and headings shared by every item table. */
+export function ItemTableHead() {
+  return (
+    <>
+    <colgroup>
+      <col className="w-[8.5rem]" />
+      <col className="w-44" />
+      <col />
+      <col className="w-52" />
+      <col className="w-48" />
+      <col className="w-24" />
+      <col className="w-52" />
+      <col className="w-32" />
+      <col className="w-14" />
+    </colgroup>
+    <thead className="border-b border-slate-200 bg-slate-50 text-left text-xs font-medium uppercase tracking-wide text-slate-500">
+      <tr>
+        <th scope="col" className="px-3 py-2.5">Stream</th>
+        <th scope="col" className="px-3 py-2.5">Marketing item</th>
+        <th scope="col" className="px-3 py-2.5">Description</th>
+        <th scope="col" className="px-3 py-2.5">Event or sponsor</th>
+        <th scope="col" className="px-3 py-2.5">Due</th>
+        <th scope="col" className="px-3 py-2.5 text-right">Amount</th>
+        <th scope="col" className="px-3 py-2.5">Budget line</th>
+        <th scope="col" className="px-3 py-2.5">Status</th>
+        <th scope="col" className="px-3 py-2.5">
+          <span className="sr-only">Actions</span>
+        </th>
+      </tr>
+    </thead>
+    </>
   );
 }

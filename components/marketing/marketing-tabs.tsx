@@ -2,17 +2,18 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { CalendarRange, LayoutDashboard, MessageSquareText, Rocket, Target } from "lucide-react";
+import { Building2, CalendarRange, Handshake, LayoutDashboard, MessageSquareText, Ticket } from "lucide-react";
 
 const TABS = [
   { href: "/marketing", label: "Overview", icon: LayoutDashboard },
   { href: "/marketing/planner", label: "Planner", icon: CalendarRange },
+  { href: "/marketing/catapult", label: "Catapult", icon: Building2 },
+  { href: "/marketing/event", label: "Event", icon: Ticket },
+  { href: "/marketing/sponsorship", label: "Sponsorship", icon: Handshake },
   { href: "/marketing/social", label: "Social", icon: MessageSquareText },
-  { href: "/marketing/promotion", label: "Promotion", icon: Rocket },
-  { href: "/marketing/initiatives", label: "Initiatives", icon: Target },
 ];
 
-/** Marketing's sections. Social (posts, approvals, channels) is one of them. */
+/** Marketing's sections: the planner, the three streams (Catapult, Event, Sponsorship) and Social. */
 export function MarketingTabs({ waitingCount }: { waitingCount: number }) {
   const pathname = usePathname();
   return (
@@ -23,7 +24,9 @@ export function MarketingTabs({ waitingCount }: { waitingCount: number }) {
             ? pathname === "/marketing"
             : tab.href === "/marketing/social"
               ? pathname.startsWith("/marketing/social") || pathname.startsWith("/marketing/posts")
-              : pathname.startsWith(tab.href);
+              : tab.href === "/marketing/event"
+                ? pathname.startsWith("/marketing/event") || pathname.startsWith("/marketing/promotion")
+                : pathname.startsWith(tab.href);
         const Icon = tab.icon;
         return (
           <Link
