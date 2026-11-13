@@ -119,10 +119,7 @@ export async function registerForEvent(input: RegisterInput): Promise<RegisterRe
 
   // Saves the answers on the registration just made (or held for payment).
   if (data.ticket_code && Object.keys(checked.answers).length > 0) {
-    const { error: answersError } = await createAdminClient()
-      .from("event_registrations")
-      .update({ answers: checked.answers })
-      .eq("ticket_code", data.ticket_code);
+    const { error: answersError } = await supabase.rpc("save_registration_answers", { p_ticket: data.ticket_code, p_answers: checked.answers });
     if (answersError) console.error("saving registration answers failed", answersError.message);
   }
 
