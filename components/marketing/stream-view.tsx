@@ -66,7 +66,7 @@ function SocialPosts({ posts }: { posts: PostItem[] }) {
   const past = posts.filter((p) => p.isPast).sort((a, b) => byDate(b, a));
   const table = (list: PostItem[]) => (
     <div className="overflow-x-auto">
-      <table className="w-full min-w-[1680px] table-fixed text-sm">
+      <table className="w-full min-w-[1780px] table-fixed text-sm">
         <ItemTableHead />
         <tbody className="divide-y divide-slate-100">
           {list.map((p) => (
@@ -169,7 +169,7 @@ function Group({ group, options, today }: { group: StreamGroup; options: ItemOpt
       )}
       {(group.items.length > 0 || adding.length > 0) && (
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[1680px] table-fixed text-sm">
+          <table className="w-full min-w-[1780px] table-fixed text-sm">
             <ItemTableHead />
             <tbody className="divide-y divide-slate-100">
               {adding.map((k) => (
