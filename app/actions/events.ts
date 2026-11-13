@@ -262,6 +262,33 @@ export async function setEventsArchived(ids: string[], archived: boolean): Promi
   return {};
 }
 
+/**
+ * Deletes an event for good, but only while nobody has registered (including the waitlist
+ * and cancelled sign-ups): an event with registrations should be archived instead. Its
+ * tasks, files, feedback and revenue go with it; its budget line stays in the budget,
+ * unlinked, and social posts nobody has written yet are removed.
+ */
+export async function deleteEvent(id: string): Promise<ActionResult> {
+  if (!/^[0-9a-f-]{36}$/i.test(id)) return { error: "That event wasn't found." };
+  const supabase = await createClient();
+  const { count, error: countError } = await supabase.from("event_registrations").select("id", { count: "exact", head: true }).eq("event_id", id);
+  if (countError) return { error: "The event wasn't deleted. Please try again." };
+  if ((count ?? 0) > 0) return { error: "This event has registrations, so it can't be deleted. Archive it instead." };
+
+  const { error: postsError } = await supabase.from("social_posts").delete().eq("event_id", id).eq("status", "requested");
+  if (postsError) return { error: "The event wasn't deleted. Please try again." };
+  const { data, error } = await supabase.from("events").delete().eq("id", id).select("id");
+  if (error) return { error: error.code === "23503" ? "Something still depends on this event, so it wasn't deleted. Archive it instead." : "The event wasn't deleted. Please try again." };
+  if (!data?.length) return { error: "That event wasn't found. It may already be deleted." };
+
+  revalidatePath("/");
+  revalidatePath("/events");
+  revalidatePath("/calendar");
+  revalidatePath("/budgets", "layout");
+  revalidatePath("/marketing", "layout");
+  return {};
+}
+
 export async function saveEventTemplate(name: string, input: EventInput): Promise<ActionResult> {
   const trimmed = name.trim();
   if (!trimmed) return { error: "Name the template." };
