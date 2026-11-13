@@ -14,7 +14,7 @@ const LABELS: Record<string, string> = {
   tasks: "Tasks",
   team: "Team",
   budgets: "Budgets",
-  items: "Line items",
+  items: "Budget",
   analysis: "Cost & revenue",
   lines: "Budget line",
   reports: "Reports",

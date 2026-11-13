@@ -117,7 +117,7 @@ function RowDetails({ row }: { row: AnalysisRow }) {
           </Link>
         </h3>
         {items.length === 0 ? (
-          <p className="mt-2 text-sm text-slate-600">No items yet. Add them from the Line items tab.</p>
+          <p className="mt-2 text-sm text-slate-600">No items yet. Add them from the Budget tab.</p>
         ) : (
           <ul className="mt-1 divide-y divide-slate-200 text-sm">
             {items.map((item) => (
@@ -354,7 +354,7 @@ export function BudgetAnalysisView({
       </div>
 
       {rows.length === 0 ? (
-        <EmptyState icon={Scale} title="No event lines in this budget" description="Add an event line on the Line items tab to compare its costs with its revenue." action={<Link href="/budgets/items" className={buttonClass("secondary")}>Go to Line items</Link>} />
+        <EmptyState icon={Scale} title="No event lines in this budget" description="Add an event line on the Budget tab to compare its costs with its revenue." action={<Link href="/budgets/items" className={buttonClass("secondary")}>Go to Budget</Link>} />
       ) : (
         <>
           {unlinked > 0 && (

@@ -4,13 +4,14 @@ import { useMemo, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AlertTriangle, CalendarPlus, CalendarRange, CheckCircle2, ChevronDown, Download, Link2Off, Pencil, Plus, Search, Trash2, Wallet, X } from "lucide-react";
-import { addBudgetLine, addBudgetQuarter, deleteEmptyBudget, renameBudget, setLineMonth } from "@/app/actions/budgets";
+import { addBudgetLine, addBudgetQuarter, deleteEmptyBudget, renameBudget, setBudgetTotal, setLineMonth } from "@/app/actions/budgets";
 import { BudgetHistory } from "@/components/budget-history";
 import { EditableMoney } from "@/components/budget-editable";
 import { BudgetLineRows, UsedBar, type EventOption } from "@/components/budget-line-rows";
 import { buttonClass } from "@/components/ui/button";
 import { useFeedback } from "@/components/ui/feedback";
 import { FilterSelect, SearchField } from "@/components/ui/filter-controls";
+import { Gauge } from "@/components/ui/gauge";
 import { EmptyState } from "@/components/ui/page";
 import { monthLabel } from "@/lib/budgets/history";
 import { addCents, formatMoney, fromCents, sumMoney } from "@/lib/budgets/money";
@@ -108,14 +109,129 @@ function SpendBar({ actual, committed, plan }: { actual: number; committed: numb
   );
 }
 
-function Legend({ color, label, value, tone = "text-slate-900" }: { color: string; label: string; value: string; tone?: string }) {
+/** Inline editor for the budget's overall total. */
+export function TotalField({ budget }: { budget: BudgetOverview }) {
+  const { toast } = useFeedback();
+  const [editing, setEditing] = useState(false);
+  const [value, setValue] = useState(budget.total === null ? "" : String(budget.total));
+  const [isPending, startTransition] = useTransition();
+  function save(next: string) {
+    startTransition(async () => {
+      const result = await setBudgetTotal(budget.id, next);
+      if (result.error) toast(result.error, "error");
+      else {
+        toast("Total budget saved");
+        setEditing(false);
+      }
+    });
+  }
+  if (!editing) {
+    return (
+      <button type="button" onClick={() => setEditing(true)} className="group inline-flex items-center gap-1.5 text-left" aria-label="Change the total budget">
+        <span className={`text-2xl font-semibold tabular-nums tracking-tight ${budget.total === null ? "text-slate-400" : "text-slate-900"}`}>
+          {budget.total === null ? "Not set" : formatMoney(budget.total)}
+        </span>
+        <Pencil className="h-3.5 w-3.5 text-slate-400 group-hover:text-slate-700" strokeWidth={2} />
+      </button>
+    );
+  }
+  return (
+    <form
+      className="flex flex-wrap items-center gap-2"
+      onSubmit={(e) => {
+        e.preventDefault();
+        save(value);
+      }}
+    >
+      <span className="relative">
+        <span aria-hidden="true" className="pointer-events-none absolute inset-y-0 left-2.5 flex items-center text-sm text-slate-400">$</span>
+        <input
+          autoFocus
+          aria-label="Total budget"
+          inputMode="decimal"
+          value={value}
+          onChange={(e) => setValue(e.target.value)}
+          placeholder="15000"
+          className="w-36 rounded-lg border border-slate-300 py-1.5 pl-6 pr-2 text-right text-base font-semibold tabular-nums focus:border-brand-600 focus:outline-none focus:ring-2 focus:ring-brand-100"
+        />
+      </span>
+      <button type="submit" disabled={isPending} className={buttonClass("primary", "sm")}>Save</button>
+      <button type="button" onClick={() => setEditing(false)} className={buttonClass("ghost", "sm")}>Cancel</button>
+      {budget.total === null && budget.approved > 0 && (
+        <button type="button" onClick={() => save(String(budget.approved))} className="text-xs font-medium text-brand-700 hover:underline">
+          Use {formatMoney(budget.approved)} (what&apos;s allocated)
+        </button>
+      )}
+    </form>
+  );
+}
+
+/**
+ * The dashboard's gauges: how much of the total is allocated to lines, and how much of what's
+ * allocated is committed and spent. Below them, the money in figures.
+ */
+function BudgetGauges({
+  budget,
+  period,
+  periodName,
+}: {
+  budget: BudgetOverview;
+  period: { plan: number; committed: number; actual: number; remaining: number; percent: number };
+  periodName: string | null;
+}) {
+  const allocated = budget.approved;
+  const total = budget.total;
+  const allocatedPct = total && total > 0 ? Math.round((allocated / total) * 100) : total === 0 && allocated > 0 ? 101 : null;
+  const unallocated = total === null ? null : fromCents(addCents([total]) - addCents([allocated]));
+  const paidPct = period.plan > 0 ? Math.round((period.actual / period.plan) * 100) : period.actual > 0 ? 101 : 0;
+  const scope = periodName ? ` · ${periodName}` : "";
+  const figures: { label: string; value: React.ReactNode; tone?: string }[] = [
+    { label: "Total budget", value: <TotalField budget={budget} /> },
+    { label: "Allocated", value: formatMoney(allocated) },
+    {
+      label: unallocated !== null && unallocated < 0 ? "Over-allocated" : "Unallocated",
+      value: unallocated === null ? "—" : formatMoney(Math.abs(unallocated)),
+      tone: unallocated === null ? "text-slate-400" : unallocated < 0 ? "text-rose-700" : "text-emerald-700",
+    },
+    { label: `Committed${scope}`, value: formatMoney(period.committed) },
+    { label: `Spent${scope}`, value: formatMoney(period.actual) },
+    {
+      label: period.remaining < 0 ? `Over budget${scope}` : `Left to spend${scope}`,
+      value: formatMoney(Math.abs(period.remaining)),
+      tone: period.remaining < 0 ? "text-rose-700" : "text-slate-900",
+    },
+  ];
   return (
     <div>
-      <p className="flex items-center gap-1.5 text-xs font-medium text-slate-500">
-        <span className="h-2.5 w-2.5 rounded-sm" style={{ backgroundColor: color }} />
-        {label}
-      </p>
-      <p className={`mt-0.5 text-lg font-semibold tabular-nums tracking-tight ${tone}`}>{value}</p>
+      <div className="grid gap-6 rounded-xl bg-slate-50/80 p-5 sm:grid-cols-3">
+        <Gauge percent={allocatedPct} label="Allocated" tone={allocatedPct === null ? undefined : allocatedPct > 100 ? "#e11d48" : "#ff6729"}>
+          {total === null
+            ? "Set the total budget to see this"
+            : `${formatMoney(allocated)} of ${formatMoney(total)}${unallocated !== null && unallocated < 0 ? ` · over by ${formatMoney(-unallocated)}` : ""}`}
+        </Gauge>
+        <Gauge percent={period.percent} label="Committed and spent">
+          {formatMoney(period.committed + period.actual)} of {formatMoney(period.plan)} allocated{scope}
+        </Gauge>
+        <Gauge percent={paidPct} label="Spent" tone={paidPct > 100 ? "#e11d48" : "#0d9488"}>
+          {formatMoney(period.actual)} paid of {formatMoney(period.plan)}{scope}
+        </Gauge>
+      </div>
+      <dl className="mt-5 grid grid-cols-2 gap-x-6 gap-y-4 sm:grid-cols-3 xl:grid-cols-6">
+        {figures.map((f) => (
+          <div key={f.label} className="min-w-0">
+            <dt className="text-xs font-medium uppercase tracking-wide text-slate-500">{f.label}</dt>
+            <dd className={`mt-1 text-2xl font-semibold tabular-nums tracking-tight ${f.tone ?? "text-slate-900"}`}>{f.value}</dd>
+          </div>
+        ))}
+      </dl>
+      <div className="mt-5">
+        <SpendBar actual={period.actual} committed={period.committed} plan={period.plan} />
+        <div className="mt-2 flex flex-wrap gap-4 text-xs text-slate-500">
+          <span className="inline-flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-sm" style={{ backgroundColor: SPENT_COLOR }} />Spent</span>
+          <span className="inline-flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-sm" style={{ backgroundColor: COMMITTED_COLOR }} />Committed</span>
+          <span className="inline-flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-sm" style={{ backgroundColor: REMAINING_COLOR }} />Left to spend</span>
+        </div>
+      </div>
     </div>
   );
 }
@@ -338,29 +454,7 @@ export function BudgetOverviewView({ budget, changes, events }: { budget: Budget
         <>
           {/* Summary */}
           <section aria-label={`Summary for ${periodName}`} className={`${CARD} p-5 sm:p-6`}>
-            <div className="flex flex-wrap items-end justify-between gap-4">
-              <div>
-                <p className="text-sm font-medium text-slate-500">Budget for {isAll ? "the whole budget" : periodName}</p>
-                <p className="mt-1 text-4xl font-semibold tabular-nums tracking-tight text-slate-900">{formatMoney(periodTotals.plan)}</p>
-              </div>
-              <div className="text-right">
-                <p className={`text-3xl font-semibold tabular-nums tracking-tight ${periodTotals.percent > 100 ? "text-rose-700" : "text-slate-900"}`}>{periodTotals.percent}%</p>
-                <p className="text-sm text-slate-500">used</p>
-              </div>
-            </div>
-            <div className="mt-5">
-              <SpendBar actual={periodTotals.actual} committed={periodTotals.committed} plan={periodTotals.plan} />
-            </div>
-            <div className="mt-5 grid grid-cols-2 gap-4 sm:grid-cols-3">
-              <Legend color={SPENT_COLOR} label="Spent" value={formatMoney(periodTotals.actual)} />
-              <Legend color={COMMITTED_COLOR} label="Committed" value={formatMoney(periodTotals.committed)} />
-              <Legend
-                color={periodTotals.remaining < 0 ? "#E11D48" : REMAINING_COLOR}
-                label={periodTotals.remaining < 0 ? "Over budget" : "Remaining"}
-                value={formatMoney(Math.abs(periodTotals.remaining))}
-                tone={periodTotals.remaining < 0 ? "text-rose-700" : "text-emerald-700"}
-              />
-            </div>
+            <BudgetGauges budget={budget} period={periodTotals} periodName={isAll ? null : periodName} />
             <div className="mt-5 flex flex-wrap gap-2 border-t border-slate-100 pt-4">
               {overCount + nearCount + unlinkedCount === 0 ? (
                 <p className="flex items-center gap-2 text-sm text-emerald-700">

@@ -52,6 +52,9 @@ export type BudgetOverview = {
   months: string[];
   lines: LineSummary[];
   itemsByLine: Record<string, ItemSummary[]>;
+  /** The budget's overall total, the money there is to allocate; null until it's set. */
+  total: number | null;
+  /** The sum of every line's amount: what's been allocated from the total. */
   approved: number;
   committed: number;
   actual: number;
@@ -210,6 +213,7 @@ export async function getBudgetOverview(budgetId?: string): Promise<BudgetOvervi
     sourceFile: budget.source_file,
     months,
     lines: summaries,
+    total: budget.total_amount === null ? null : Number(budget.total_amount),
     itemsByLine: Object.fromEntries(lines.map((line) => [line.id, items.filter((i) => i.line_id === line.id).map((i) => summarizeItem(i, expenses))])),
     approved,
     committed,

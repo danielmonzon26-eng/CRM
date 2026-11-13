@@ -29,7 +29,7 @@ export default async function BudgetsPage() {
           <BudgetOverviewView key={overview.id} budget={overview} changes={changes} events={events} />
         </>
       ) : (
-        <EmptyState icon={Wallet} title="No budgets yet" description="Create a budget, choose its quarters, and add its line items." action={<NewBudget />} />
+        <EmptyState icon={Wallet} title="No budgets yet" description="Create a budget, choose its quarters, and add its lines." action={<NewBudget />} />
       )}
     </Page>
   );
