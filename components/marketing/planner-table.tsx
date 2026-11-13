@@ -157,7 +157,7 @@ export function PlannerTable({ items, posts, options, today }: { items: Marketin
       </p>
 
       <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-card">
-        <table className="w-full min-w-[1680px] table-fixed text-sm">
+        <table className="w-full min-w-[1780px] table-fixed text-sm">
           <ItemTableHead />
           <tbody className="divide-y divide-slate-100">
             {adding.map((key) => (
@@ -571,15 +571,15 @@ export function ItemTableHead() {
     <>
     {/* Wide enough that every dropdown shows its whole choice, e.g. "Onsite Advertising". */}
     <colgroup>
-      <col className="w-36" />
+      <col className="w-32" />
+      <col className="w-48" />
+      <col className="w-80" />
       <col className="w-56" />
-      <col className="min-w-[14rem]" />
+      <col className="w-48" />
+      <col className="w-24" />
       <col className="w-60" />
-      <col className="w-52" />
-      <col className="w-28" />
-      <col className="w-72" />
-      <col className="w-44" />
       <col className="w-40" />
+      <col className="w-36" />
       <col className="w-20" />
     </colgroup>
     <thead className="border-b border-slate-200 bg-slate-50 text-left text-xs font-medium uppercase tracking-wide text-slate-500">
