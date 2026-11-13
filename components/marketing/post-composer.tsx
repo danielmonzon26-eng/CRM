@@ -3,13 +3,13 @@
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Check, CheckCircle2, Circle, Globe, ImagePlus, Loader2, MessageSquareWarning, RefreshCw, Trash2, Undo2, X } from "lucide-react";
+import { ArrowLeft, Check, CheckCircle2, Circle, Globe, ImagePlus, Loader2, MessageSquareWarning, RefreshCw, Sparkles, Trash2, Undo2, X } from "lucide-react";
 import { deletePost, savePost, setPostStatus, type PostInput } from "@/app/actions/marketing";
 import { PlatformIcon } from "@/components/marketing/platform-icon";
 import { PostStatusPill } from "@/components/marketing/status-pill";
 import { buttonClass } from "@/components/ui/button";
 import { useFeedback } from "@/components/ui/feedback";
-import { countHashtags, IMAGE_TYPES, INSTAGRAM_HASHTAG_LIMIT, MAX_IMAGE_BYTES, PLATFORMS, PLATFORM_META, readinessIssues } from "@/lib/marketing/constants";
+import { autoRequestLabel, countHashtags, IMAGE_TYPES, INSTAGRAM_HASHTAG_LIMIT, MAX_IMAGE_BYTES, PLATFORMS, PLATFORM_META, readinessIssues } from "@/lib/marketing/constants";
 import type { Channel, PostItem } from "@/lib/marketing/queries";
 import { uploadPostImage } from "@/lib/marketing/upload";
 import type { SocialPlatform } from "@/lib/supabase/types";
@@ -456,6 +456,18 @@ function StatusBanner({ post, isAdmin, contentChanged }: { post: PostItem | null
           </span>
         )}
       </div>
+      {post.event && post.autoDaysBefore && (
+        <p className="flex items-start gap-2 rounded-lg border border-violet-200 bg-violet-50 px-4 py-2.5 text-sm text-violet-900">
+          <Sparkles aria-hidden="true" className="mt-0.5 h-4 w-4 shrink-0" strokeWidth={2} />
+          <span>
+            Requested automatically, {autoRequestLabel(post.autoDaysBefore)}{" "}
+            <Link href={`/events/${post.event.id}`} className="font-medium underline">
+              {post.event.title}
+            </Link>
+            . It moves if the event&apos;s date changes. Add channels and an image, then submit it.
+          </span>
+        </p>
+      )}
       {post.status === "requested" && post.reviewNote && (
         <p className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-4 py-2.5 text-sm text-amber-900">
           <MessageSquareWarning aria-hidden="true" className="mt-0.5 h-4 w-4 shrink-0" strokeWidth={2} />

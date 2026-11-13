@@ -557,6 +557,8 @@ export type Database = {
           image_path: string | null;
           image_name: string | null;
           review_note: string | null;
+          event_id: string | null;
+          auto_days_before: number | null;
           created_by: string | null;
           submitted_at: string | null;
           approved_by: string | null;

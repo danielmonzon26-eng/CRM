@@ -95,3 +95,11 @@ export const PHASE_META = {
   finished: { label: "Finished", pill: "bg-slate-100 text-slate-600" },
   undated: { label: "No dates", pill: "bg-slate-100 text-slate-600" },
 } as const;
+
+/** "2 weeks before", "1 week before" or "1 day before", for an automatic request. */
+export function autoRequestLabel(days: number | null): string | null {
+  if (days === 14) return "2 weeks before";
+  if (days === 7) return "1 week before";
+  if (days === 1) return "1 day before";
+  return null;
+}

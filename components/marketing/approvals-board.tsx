@@ -3,12 +3,12 @@
 import { useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { AlertTriangle, Check, ImageIcon, MessageSquareWarning, Undo2 } from "lucide-react";
+import { AlertTriangle, Check, ImageIcon, MessageSquareWarning, Sparkles, Undo2 } from "lucide-react";
 import { setPostStatus } from "@/app/actions/marketing";
 import { PlatformIcons } from "@/components/marketing/platform-icon";
 import { buttonClass } from "@/components/ui/button";
 import { useFeedback } from "@/components/ui/feedback";
-import { POST_STATUSES, POST_STATUS_META, readinessIssues } from "@/lib/marketing/constants";
+import { autoRequestLabel, POST_STATUSES, POST_STATUS_META, readinessIssues } from "@/lib/marketing/constants";
 import type { PostItem } from "@/lib/marketing/queries";
 import type { SocialPostStatus } from "@/lib/supabase/types";
 
@@ -120,6 +120,14 @@ function PostCard({ post, isAdmin }: { post: PostItem; isAdmin: boolean }) {
           </span>
           {post.initiative && <span className="truncate">{post.initiative.name}</span>}
         </div>
+        {post.event && post.autoDaysBefore && (
+          <p className="mt-1.5 inline-flex max-w-full items-center gap-1 rounded-full bg-violet-50 px-2 py-0.5 text-[11px] font-medium text-violet-800">
+            <Sparkles aria-hidden="true" className="h-3 w-3 shrink-0" strokeWidth={2} />
+            <span className="truncate">
+              Auto · {autoRequestLabel(post.autoDaysBefore)} {post.event.title}
+            </span>
+          </p>
+        )}
         {post.status === "requested" && post.reviewNote && (
           <p className="mt-2 flex items-start gap-1.5 rounded-md bg-amber-50 px-2 py-1.5 text-xs text-amber-900">
             <MessageSquareWarning aria-hidden="true" className="mt-px h-3.5 w-3.5 shrink-0" strokeWidth={2} />

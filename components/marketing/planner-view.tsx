@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { CalendarPlus, ChevronLeft, ChevronRight, ImageIcon, Plus } from "lucide-react";
 import { PlatformIcon, PlatformIcons } from "@/components/marketing/platform-icon";
+import { RequestPostDialog } from "@/components/marketing/request-post";
 import { PostStatusPill } from "@/components/marketing/status-pill";
 import { buttonClass } from "@/components/ui/button";
 import { PLATFORMS, POST_STATUSES, POST_STATUS_META } from "@/lib/marketing/constants";
@@ -38,6 +39,8 @@ export function PlannerView({
   const [platforms, setPlatforms] = useState<SocialPlatform[]>([]);
   const [statuses, setStatuses] = useState<SocialPostStatus[]>([]);
   const [expanded, setExpanded] = useState<string | null>(null);
+  // The day a request is being made for ("" for no date); null when the popup is closed.
+  const [requestDay, setRequestDay] = useState<string | null>(null);
 
   const matches = (p: PostItem) =>
     (platforms.length === 0 || p.platforms.some((x) => platforms.includes(x))) && (statuses.length === 0 || statuses.includes(p.status));
@@ -156,13 +159,14 @@ export function PlannerView({
                       {d.isToday && <span className="sr-only"> (today)</span>}
                     </span>
                     {!d.isPast && (
-                      <Link
-                        href={`/marketing/posts/new?date=${d.key}`}
-                        aria-label={`New post on ${d.key}`}
+                      <button
+                        type="button"
+                        onClick={() => setRequestDay(d.key)}
+                        aria-label={`Request a post on ${d.key}`}
                         className="flex h-6 w-6 items-center justify-center rounded-md text-slate-400 opacity-0 transition-opacity hover:bg-slate-100 hover:text-brand-700 focus-visible:opacity-100 group-hover:opacity-100"
                       >
                         <Plus className="h-3.5 w-3.5" strokeWidth={2.25} />
-                      </Link>
+                      </button>
                     )}
                   </div>
                   <ul className="space-y-1">
@@ -218,9 +222,9 @@ export function PlannerView({
               <h3 id="unscheduled-title" className="text-sm font-semibold text-slate-900">
                 Not scheduled yet ({unscheduledVisible.length})
               </h3>
-              <Link href="/marketing/posts/new" className="text-xs font-medium text-brand-700 hover:underline">
+              <button type="button" onClick={() => setRequestDay("")} className="text-xs font-medium text-brand-700 hover:underline">
                 Add
-              </Link>
+              </button>
             </header>
             {unscheduledVisible.length === 0 ? (
               <p className="px-4 py-5 text-sm text-slate-500">Posts without a date land here, so ideas don&apos;t get lost.</p>
@@ -247,13 +251,14 @@ export function PlannerView({
             </ul>
           </section>
           {posts.length === 0 && unscheduled.length === 0 && (
-            <Link href="/marketing/posts/new" className={`${buttonClass("secondary")} w-full`}>
+            <button type="button" onClick={() => setRequestDay("")} className={`${buttonClass("secondary")} w-full`}>
               <CalendarPlus className="h-4 w-4" strokeWidth={2} />
-              Plan your first post
-            </Link>
+              Request your first post
+            </button>
           )}
         </aside>
       </div>
+      {requestDay !== null && <RequestPostDialog date={requestDay} onClose={() => setRequestDay(null)} />}
     </div>
   );
 }
