@@ -6,6 +6,7 @@ import { ChevronRight } from "lucide-react";
 
 const LABELS: Record<string, string> = {
   crm: "CRM",
+  proposals: "Proposals",
   leads: "Leads",
   companies: "Companies",
   "import-industries": "Import industries",

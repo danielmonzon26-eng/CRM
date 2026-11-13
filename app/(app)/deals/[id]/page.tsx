@@ -35,7 +35,7 @@ export default async function DealDetailPage({ params }: { params: Promise<{ id:
 
   return (
     <main className="mx-auto max-w-[1400px] px-4 py-6 sm:px-6 lg:px-8">
-      <Link href="/crm" className="inline-flex items-center gap-1 text-sm text-slate-500 hover:text-slate-900">
+      <Link href="/crm/proposals" className="inline-flex items-center gap-1 text-sm text-slate-500 hover:text-slate-900">
         <ArrowLeft className="h-3.5 w-3.5" strokeWidth={2} />
         Back to proposals
       </Link>

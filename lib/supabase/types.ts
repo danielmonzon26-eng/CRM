@@ -1403,6 +1403,7 @@ export type Database = {
       mark_all_emails_seen: { Args: Record<string, never>; Returns: number };
       get_registration_questions: { Args: { p_slug: string }; Returns: unknown };
       save_registration_answers: { Args: { p_ticket: string; p_answers: unknown }; Returns: boolean };
+      crm_dashboard: { Args: Record<string, never>; Returns: unknown };
     };
     Enums: Record<string, never>;
   };

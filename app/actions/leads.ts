@@ -29,7 +29,7 @@ export async function exportLeadsBatch(
 }
 
 function revalidateLeadLists() {
-  revalidatePath("/crm");
+  revalidatePath("/crm", "layout");
   revalidatePath("/leads");
 }
 
@@ -246,7 +246,7 @@ export async function bulkUpdateLeads(
   }
 
   revalidatePath("/");
-  revalidatePath("/crm");
+  revalidatePath("/crm", "layout");
   revalidatePath("/leads");
   return { updated: data.length };
 }
@@ -272,7 +272,7 @@ export async function updateLeadStatus(leadId: string, status: LeadStatus): Prom
   });
 
   revalidatePath("/");
-  revalidatePath("/crm");
+  revalidatePath("/crm", "layout");
   revalidatePath("/leads");
   revalidatePath("/companies", "layout");
   revalidatePath(`/leads/${leadId}`);
@@ -348,7 +348,7 @@ export async function assignLead(leadId: string, assigneeId: string | null) {
   });
 
   revalidatePath("/");
-  revalidatePath("/crm");
+  revalidatePath("/crm", "layout");
   revalidatePath(`/leads/${leadId}`);
 }
 

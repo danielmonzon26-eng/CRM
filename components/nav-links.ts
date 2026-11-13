@@ -7,6 +7,7 @@ import {
   CheckSquare2,
   Handshake,
   Home,
+  LayoutDashboard,
   ListChecks,
   Mail,
   Megaphone,
@@ -34,10 +35,11 @@ export const EVENT_TABS: NavLink[] = [
 export const CRM_TAB: NavLink = { href: "/crm", label: "CRM", icon: Briefcase };
 
 export const CRM_LINKS: NavLink[] = [
-  { href: "/crm", label: "Proposals", icon: Handshake },
+  { href: "/crm", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/crm/proposals", label: "Proposals", icon: Handshake },
   { href: "/leads", label: "Leads", icon: ListChecks },
-  { href: "/companies", label: "Companies", icon: Building2 },
   { href: "/contacts", label: "Contacts", icon: Users },
+  { href: "/companies", label: "Companies", icon: Building2 },
   { href: "/communication", label: "Communication", icon: Mail, badge: "mail" },
 ];
 
@@ -51,7 +53,9 @@ export const WORK_TABS: NavLink[] = [
 export const TEAM_LINK: NavLink = { href: "/admin", label: "Admin", icon: ShieldCheck };
 
 export function isActive(pathname: string, href: string): boolean {
-  if (href === "/crm" && (pathname === "/deals" || pathname.startsWith("/deals/"))) return true;
+  // The CRM dashboard is only itself; proposal pages (and old /deals links) light up Proposals.
+  if (href === "/crm") return pathname === "/crm";
+  if (href === "/crm/proposals" && (pathname === "/deals" || pathname.startsWith("/deals/"))) return true;
   return href === "/" ? pathname === "/" : pathname === href || pathname.startsWith(`${href}/`);
 }
 

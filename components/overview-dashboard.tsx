@@ -203,7 +203,7 @@ export function OverviewDashboard({ data, firstName }: { data: DashboardData; fi
             value={kpis.openDeals.toLocaleString()}
             label="Open proposals"
             detail={`${money(kpis.openDealValue)} open`}
-            href="/crm"
+            href="/crm/proposals"
           />
           <Kpi
             icon={Wallet}
