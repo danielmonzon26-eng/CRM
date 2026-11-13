@@ -9,7 +9,7 @@
 create table if not exists public.marketing_items (
   id uuid primary key default gen_random_uuid(),
   stream text not null check (stream in ('catapult', 'event', 'sponsorship')),
-  item_type text not null check (item_type in ('social', 'online_advertising', 'production', 'creative')),
+  item_type text not null check (item_type in ('social', 'online_advertising', 'production', 'creative', 'event_materials', 'onsite_advertising')),
   description text not null default '',
   event_id uuid references public.events (id) on delete set null,
   sponsor_company_id uuid references public.companies (id) on delete set null,
@@ -42,7 +42,7 @@ grant select, insert, update, delete on public.marketing_items to authenticated;
 -- The 0036 categories that aren't types any more read as their nearest type.
 alter table public.budget_items drop constraint if exists budget_items_marketing_category_check;
 alter table public.budget_items add constraint budget_items_marketing_category_check
-  check (marketing_category is null or marketing_category in ('creative', 'social', 'online_advertising', 'sponsorship', 'advertising', 'production'));
+  check (marketing_category is null or marketing_category in ('creative', 'social', 'online_advertising', 'sponsorship', 'advertising', 'production', 'event_materials', 'onsite_advertising'));
 
 create or replace function public.marketing_item_label(p_type text)
 returns text language sql immutable set search_path = '' as $$
