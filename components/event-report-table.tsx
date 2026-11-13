@@ -133,7 +133,7 @@ export function EventReportTable({ rows }: { rows: EventReportRow[] }) {
       </div>
 
       <div className="relative overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-card">
-        <table className="w-full min-w-[1180px] text-left text-sm">
+        <table className="w-full text-left text-sm">
           <thead className="text-xs uppercase tracking-wide text-slate-500">
             <tr className="border-b border-slate-100">
               <th scope="col" rowSpan={2} className="px-5 py-2.5 align-bottom font-medium">Event</th>

@@ -187,7 +187,7 @@ export function CompaniesWorkspace({ companies, initial }: { companies: CompanyL
       ) : (
         <>
           <div className="relative overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-card">
-            <table className="w-full min-w-[920px] text-left text-sm">
+            <table className="w-full text-left text-sm">
               <thead className="border-b border-slate-200 bg-slate-50 text-xs text-slate-500">
                 <tr>
                   <SortHeader label="Company" sort="name" />

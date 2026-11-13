@@ -583,7 +583,7 @@ export function BudgetOverviewView({ budget, changes, events }: { budget: Budget
         ) : (
           <div className={CARD}>
             <div className="relative overflow-x-auto">
-              <table className="w-full min-w-[860px] text-left text-sm">
+              <table className="w-full text-left text-sm">
                 <thead className="border-b border-slate-100 text-xs uppercase tracking-wide text-slate-500">
                   <tr>
                     <th scope="col" className="px-5 py-3 font-medium">Line</th>
@@ -653,7 +653,7 @@ export function BudgetOverviewView({ budget, changes, events }: { budget: Budget
           <div className="border-t border-slate-100">
             <p className="px-5 pt-3 text-xs text-slate-500">Click any general line&apos;s amount to change it. Totals update automatically. To edit an event line, open it in the table above and click an item.</p>
             <div className="relative overflow-x-auto">
-              <table className="w-full min-w-[720px] text-left text-sm">
+              <table className="w-full text-left text-sm">
                 <thead className="text-xs uppercase tracking-wide text-slate-500">
                   <tr>
                     <th scope="col" className="px-5 py-2.5 font-medium">Line</th>

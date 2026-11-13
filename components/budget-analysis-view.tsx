@@ -300,7 +300,7 @@ export function BudgetAnalysisView({
         </header>
         {/* Focusable so the keyboard can scroll it, since nothing inside can take focus. */}
         <div tabIndex={0} role="region" aria-label="Revenue and cost by quarter" className="relative overflow-x-auto">
-          <table className="w-full min-w-[980px] text-left text-sm">
+          <table className="w-full text-left text-sm">
             <thead className="text-xs uppercase tracking-wide text-slate-500">
               <tr>
                 <th scope="col" className="px-5 py-2.5 font-medium">Quarter</th>
@@ -429,7 +429,7 @@ export function BudgetAnalysisView({
               </button>
             </header>
             <div className="relative overflow-x-auto">
-              <table className="w-full min-w-[920px] text-left text-sm">
+              <table className="w-full text-left text-sm">
                 <thead className="text-xs text-slate-500">
                   <tr>
                     <SortHeader label="Event line" sortKey="name" sort={sort} onSort={onSort} align="left" />
