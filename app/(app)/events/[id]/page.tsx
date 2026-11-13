@@ -2,6 +2,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { CalendarDays, MapPin, MonitorPlay, Users } from "lucide-react";
 import { getEventDetail } from "@/lib/events/queries";
+import { calgaryDateKey } from "@/lib/events/format";
+import { getChannels, getPosts } from "@/lib/marketing/queries";
 import { STATUS_LABELS, STATUS_STYLES, formatEventWhen } from "@/lib/events/format";
 import { getEventRevenueEntries } from "@/lib/events/queries";
 import { getLineDetailForEvent } from "@/lib/budgets/queries";
@@ -64,6 +66,16 @@ export default async function EventWorkspacePage({
   const { event } = detail;
   const active = TABS.some(([value]) => value === tab) ? tab : "overview";
   const counts = getCounts(detail, tasks);
+  // The event's social plan sits on the Budget tab; it's a bonus if it can't load.
+  const social =
+    active === "budget"
+      ? await Promise.all([getPosts({ eventId: id }).catch(() => []), getChannels().catch(() => [])]).then(([posts, channels]) => ({
+          posts,
+          channels,
+          eventDay: calgaryDateKey(event.starts_at),
+          today: calgaryDateKey(new Date()),
+        }))
+      : null;
   const landingUrl = `${await getSiteUrl()}/register/${event.slug}`;
 
   return (
@@ -146,7 +158,7 @@ export default async function EventWorkspacePage({
         )}
         {active === "agenda" && <AgendaTab detail={detail} />}
         {active === "speakers" && <SpeakersTab detail={detail} />}
-        {active === "budget" && <BudgetTab detail={detail} line={line} revenue={revenue} report={report[0] ?? null} />}
+        {active === "budget" && <BudgetTab detail={detail} line={line} revenue={revenue} report={report[0] ?? null} social={social} />}
         {active === "tasks" && <TasksTab eventId={event.id} tasks={tasks} />}
         {active === "communications" && <CommunicationsTab detail={detail} />}
         {active === "files" && <FilesTab detail={detail} />}

@@ -18,6 +18,8 @@ import {
 } from "lucide-react";
 import { DeleteRevenueButton, RevenueForm } from "@/components/budget-controls";
 import { EventBudgetEditor } from "@/components/event-budget-editor";
+import { EventSocialPlan } from "@/components/marketing/event-social-plan";
+import type { Channel, PostItem } from "@/lib/marketing/queries";
 import { TaskForm } from "@/components/task-form";
 import { TaskList } from "@/components/task-list";
 import { buttonClass } from "@/components/ui/button";
@@ -318,11 +320,13 @@ export function BudgetTab({
   line,
   revenue,
   report,
+  social,
 }: {
   detail: EventDetail;
   line: LineDetail | null;
   revenue: EventRevenueEntry[];
   report: EventReportRow | null;
+  social?: { posts: PostItem[]; channels: Channel[]; eventDay: string; today: string } | null;
 }) {
   const { event } = detail;
   const ticketEstimate = report?.revenue.ticketsEstimated ?? 0;
@@ -363,6 +367,8 @@ export function BudgetTab({
           <EventBudgetEditor eventId={event.id} />
         </div>
       </section>
+
+      {social && <EventSocialPlan eventId={event.id} eventDay={social.eventDay} posts={social.posts} channels={social.channels} today={social.today} />}
 
       <section className={CARD}>
         <h2 className="border-b border-slate-100 px-5 py-3.5 font-semibold text-slate-900">Revenue</h2>
