@@ -520,7 +520,7 @@ export function SponsorField({
   );
 }
 
-function PostRow({ post }: { post: PostItem }) {
+export function PostRow({ post }: { post: PostItem }) {
   const late = post.isPast && post.status !== "approved";
   return (
     <tr className="align-top bg-slate-50/60 text-slate-700">

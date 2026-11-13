@@ -4,10 +4,11 @@ import { useState } from "react";
 import Link from "next/link";
 import { AlertTriangle, ArrowUpRight, Plus } from "lucide-react";
 import { AddMarketingItemButton } from "@/components/marketing/add-item-dialog";
-import { ItemRow, ItemTableHead } from "@/components/marketing/planner-table";
+import { ItemRow, ItemTableHead, PostRow } from "@/components/marketing/planner-table";
 import { money } from "@/components/ui/dashboard";
 import type { MarketingStream } from "@/lib/budgets/marketing-items";
 import type { ItemOptions } from "@/lib/marketing/items-queries";
+import type { PostItem } from "@/lib/marketing/queries";
 import type { StreamGroup } from "@/lib/marketing/streams";
 
 const INTRO: Record<MarketingStream, string> = {
@@ -17,7 +18,22 @@ const INTRO: Record<MarketingStream, string> = {
 };
 
 /** A stream's marketing: groups with their budget, what's allocated, and editable items. */
-export function StreamView({ stream, groups, options, today, extra }: { stream: MarketingStream; groups: StreamGroup[]; options: ItemOptions; today: string; extra?: React.ReactNode }) {
+export function StreamView({
+  stream,
+  groups,
+  options,
+  today,
+  extra,
+  posts,
+}: {
+  stream: MarketingStream;
+  groups: StreamGroup[];
+  options: ItemOptions;
+  today: string;
+  extra?: React.ReactNode;
+  /** Social Planner posts to list under the items (the Catapult tab shows them all). */
+  posts?: PostItem[];
+}) {
   const total = groups.reduce((s, g) => s + g.items.reduce((t, i) => t + i.amount, 0), 0);
   const count = groups.reduce((s, g) => s + g.items.length, 0);
   return (
@@ -38,7 +54,52 @@ export function StreamView({ stream, groups, options, today, extra }: { stream: 
       ) : (
         groups.map((g) => <Group key={g.key} group={g} options={options} today={today} />)
       )}
+      {posts && <SocialPosts posts={posts} />}
     </div>
+  );
+}
+
+/** Every Social Planner post: upcoming first, past ones folded away. */
+function SocialPosts({ posts }: { posts: PostItem[] }) {
+  const byDate = (a: PostItem, b: PostItem) => (a.scheduledAt ?? "9999").localeCompare(b.scheduledAt ?? "9999");
+  const upcoming = posts.filter((p) => !p.isPast).sort(byDate);
+  const past = posts.filter((p) => p.isPast).sort((a, b) => byDate(b, a));
+  const table = (list: PostItem[]) => (
+    <div className="overflow-x-auto">
+      <table className="w-full min-w-[1680px] table-fixed text-sm">
+        <ItemTableHead />
+        <tbody className="divide-y divide-slate-100">
+          {list.map((p) => (
+            <PostRow key={p.id} post={p} />
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+  return (
+    <section aria-labelledby="social-posts-title" className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-card">
+      <header className="flex flex-wrap items-start justify-between gap-3 border-b border-slate-100 px-5 py-3">
+        <div>
+          <h2 id="social-posts-title" className="font-semibold text-slate-900">
+            Social Planner posts
+          </h2>
+          <p className="text-xs text-slate-500">
+            {upcoming.length} coming up{past.length ? ` · ${past.length} past` : ""}. Written and approved in the Social Planner.
+          </p>
+        </div>
+        <Link href="/marketing/social" className="inline-flex items-center gap-1 text-sm font-medium text-brand-700 hover:underline">
+          Open the Social Planner
+          <ArrowUpRight className="h-3.5 w-3.5" strokeWidth={2} />
+        </Link>
+      </header>
+      {upcoming.length > 0 ? table(upcoming) : <p className="px-5 py-6 text-sm text-slate-500">No posts coming up.</p>}
+      {past.length > 0 && (
+        <details className="border-t border-slate-100">
+          <summary className="cursor-pointer px-5 py-2.5 text-sm font-medium text-slate-600 hover:text-slate-900">Past posts ({past.length})</summary>
+          {table(past)}
+        </details>
+      )}
+    </section>
   );
 }
 
