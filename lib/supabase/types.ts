@@ -519,6 +519,41 @@ export type Database = {
         Update: Partial<Database["public"]["Tables"]["marketing_channels"]["Insert"]>;
         Relationships: [];
       };
+      marketing_promotions: {
+        Row: {
+          id: string;
+          event_id: string;
+          post_id: string | null;
+          kind: "boost" | "ad";
+          name: string;
+          platforms: SocialPlatform[];
+          starts_on: string;
+          ends_on: string;
+          amount: number;
+          spent: number;
+          status: "planned" | "running" | "done";
+          suggested: boolean;
+          created_by: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          event_id: string;
+          post_id?: string | null;
+          kind?: "boost" | "ad";
+          name: string;
+          platforms?: SocialPlatform[];
+          starts_on: string;
+          ends_on: string;
+          amount?: number;
+          spent?: number;
+          status?: "planned" | "running" | "done";
+          suggested?: boolean;
+        };
+        Update: Partial<Database["public"]["Tables"]["marketing_promotions"]["Insert"]>;
+        Relationships: [];
+      };
       marketing_initiatives: {
         Row: {
           id: string;

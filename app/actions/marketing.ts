@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { getCurrentUser } from "@/lib/auth/session";
 import { fromDateTimeInput } from "@/lib/events/format";
 import { isPlatform, readinessIssues } from "@/lib/marketing/constants";
+import { getPromotionTimeline } from "@/lib/marketing/promotion-queries";
 import { createClient } from "@/lib/supabase/server";
 import type { SocialPlatform, SocialPostStatus } from "@/lib/supabase/types";
 
@@ -259,6 +260,108 @@ export async function saveChannel(input: { id: string | null; platform: string; 
     ? await supabase.from("marketing_channels").update(values).eq("id", input.id)
     : await supabase.from("marketing_channels").insert(values);
   if (error) return { error: error.code === "23505" ? "There's already a channel with that name on this platform." : SAVE_FAILED };
+  revalidate();
+  return {};
+}
+
+export type PromotionInput = {
+  id: string | null;
+  eventId: string;
+  kind: "boost" | "ad";
+  name: string;
+  postId: string | null;
+  platforms: string[];
+  startsOn: string;
+  endsOn: string;
+  amount: string;
+  spent: string;
+  status: "planned" | "running" | "done";
+};
+
+const DAY = /^\d{4}-\d{2}-\d{2}$/;
+
+function money(value: string): number | null {
+  const n = value.trim() === "" ? 0 : Number(value);
+  return Number.isFinite(n) && n >= 0 ? Math.round(n * 100) / 100 : null;
+}
+
+export async function savePromotion(input: PromotionInput): Promise<Result> {
+  const user = await getCurrentUser();
+  if (!user) return { error: "Sign in first." };
+  if (!UUID.test(input.eventId) || (input.id && !UUID.test(input.id)) || (input.postId && !UUID.test(input.postId))) return { error: "That wasn't found. Refresh and try again." };
+  const name = input.name.trim();
+  if (!name) return { error: "Name it, e.g. Boost: 2 weeks to go." };
+  if (!["boost", "ad"].includes(input.kind)) return { error: "Choose Boost a post or Run an ad." };
+  if (!["planned", "running", "done"].includes(input.status)) return { error: "Choose a status." };
+  if (input.kind === "boost" && !input.postId) return { error: "Choose the post to boost, or switch to Run an ad." };
+  if (!DAY.test(input.startsOn) || !DAY.test(input.endsOn)) return { error: "Choose the start and end dates." };
+  if (input.endsOn < input.startsOn) return { error: "The end date is before the start date." };
+  const amount = money(input.amount);
+  const spent = money(input.spent);
+  if (amount === null || spent === null) return { error: "Enter amounts in dollars, or leave them blank." };
+  const platforms = [...new Set(input.platforms)].filter(isPlatform);
+
+  const values = {
+    event_id: input.eventId,
+    kind: input.kind,
+    name: name.slice(0, 200),
+    post_id: input.kind === "boost" ? input.postId : null,
+    platforms,
+    starts_on: input.startsOn,
+    ends_on: input.endsOn,
+    amount,
+    spent,
+    status: input.status,
+  };
+  const supabase = await createClient();
+  if (input.id) {
+    const { data, error } = await supabase.from("marketing_promotions").update({ ...values, suggested: false }).eq("id", input.id).select("id");
+    if (error) return { error: SAVE_FAILED };
+    if (!data?.length) return { error: "That promotion wasn't found. It may have been deleted." };
+  } else {
+    const { error } = await supabase.from("marketing_promotions").insert(values);
+    if (error) return { error: SAVE_FAILED };
+  }
+  revalidate();
+  return {};
+}
+
+export async function deletePromotion(id: string): Promise<Result> {
+  const user = await getCurrentUser();
+  if (!user) return { error: "Sign in first." };
+  if (!UUID.test(id)) return { error: "That promotion wasn't found." };
+  const supabase = await createClient();
+  const { error } = await supabase.from("marketing_promotions").delete().eq("id", id);
+  if (error) return { error: "That wasn't deleted. Please try again." };
+  revalidate();
+  return {};
+}
+
+/** Saves the suggested plan for an event, worked out again here so it matches the budget now. */
+export async function applySuggestedPromotions(eventId: string): Promise<Result> {
+  const user = await getCurrentUser();
+  if (!user) return { error: "Sign in first." };
+  if (!UUID.test(eventId)) return { error: "That event wasn't found." };
+  const timeline = await getPromotionTimeline(new Date(), eventId).catch(() => null);
+  const event = timeline?.events[0];
+  if (!event) return { error: "That event isn't published and upcoming." };
+  if (event.promotions.length) return { error: "This event already has a plan. Edit it on the timeline." };
+  if (!event.suggestions.length) return { error: "There's no ad budget to plan with. Add an Ad spend cost on the event's Budget tab." };
+  const supabase = await createClient();
+  const { error } = await supabase.from("marketing_promotions").insert(
+    event.suggestions.map((s) => ({
+      event_id: eventId,
+      kind: s.kind,
+      name: s.name,
+      post_id: s.postId,
+      platforms: s.platforms,
+      starts_on: s.startsOn,
+      ends_on: s.endsOn,
+      amount: s.amount,
+      suggested: true,
+    })),
+  );
+  if (error) return { error: SAVE_FAILED };
   revalidate();
   return {};
 }
