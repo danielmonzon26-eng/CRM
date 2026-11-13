@@ -88,7 +88,7 @@ export function PostQuickView({ post, onClose }: { post: PostItem; onClose: () =
               <Target aria-hidden="true" className="h-4 w-4 shrink-0 text-slate-400" strokeWidth={2} />
               <dt className="sr-only">Initiative</dt>
               <dd>
-                <Link href={`/marketing/initiatives/${post.initiative.id}`} className="hover:text-brand-700 hover:underline">
+                <Link href={`/marketing/social/initiatives/${post.initiative.id}`} className="hover:text-brand-700 hover:underline">
                   {post.initiative.name}
                 </Link>
               </dd>

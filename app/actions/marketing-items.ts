@@ -38,6 +38,8 @@ export async function saveMarketingItem(input: MarketingItemInput): Promise<{ er
   for (const id of [input.id, input.eventId, input.sponsorId, input.budgetLineId]) if (id && !UUID.test(id)) return { error: "Choose from the lists." };
   if (input.stream === "event" && !input.eventId) return { error: "Choose the event." };
   if (input.stream === "sponsorship" && !input.sponsorId) return { error: "Choose the sponsor." };
+  // Everything is paid from somewhere, so budgets always show what's allocated.
+  if (!input.budgetLineId) return { error: "Choose the budget line that pays for it." };
   const timing = input.timing || null;
   if (timing && !isDeliveryTiming(timing)) return { error: "Choose when it's due." };
   // Without an event, there's nothing to count back from: only a date works.

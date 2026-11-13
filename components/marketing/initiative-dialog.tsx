@@ -79,7 +79,7 @@ function InitiativeDialog({
             if (result.error) return setError(result.error);
             toast(initiative ? "Initiative saved." : "Initiative created.");
             ref.current?.close();
-            if (!initiative && result.id) router.push(`/marketing/initiatives/${result.id}`);
+            if (!initiative && result.id) router.push(`/marketing/social/initiatives/${result.id}`);
             else router.refresh();
           });
         }}

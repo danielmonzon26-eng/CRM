@@ -28,7 +28,7 @@ export function DeleteInitiativeButton({ id, name, postCount }: { id: string; na
           if (result.error) toast(result.error, "error");
           else {
             toast("Initiative deleted.");
-            router.push("/marketing/initiatives");
+            router.push("/marketing/social/initiatives");
           }
         });
       }}
