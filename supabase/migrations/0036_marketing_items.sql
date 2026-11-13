@@ -12,7 +12,7 @@ alter table public.budget_items
 
 alter table public.budget_items drop constraint if exists budget_items_marketing_category_check;
 alter table public.budget_items add constraint budget_items_marketing_category_check
-  check (marketing_category is null or marketing_category in ('creative', 'social', 'online_advertising', 'sponsorship', 'advertising', 'production', 'event_materials', 'onsite_advertising'));
+  check (marketing_category is null or marketing_category in ('creative', 'social', 'online_advertising', 'sponsorship', 'advertising', 'production', 'event_materials', 'onsite_advertising', 'newsletter'));
 
 alter table public.budget_items drop constraint if exists budget_items_delivery_timing_check;
 alter table public.budget_items add constraint budget_items_delivery_timing_check

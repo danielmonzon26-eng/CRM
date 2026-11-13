@@ -30,7 +30,7 @@ export type ItemOptions = {
   sponsors: { id: string; name: string }[];
 };
 
-const TYPE_LABEL: Record<string, string> = { social: "Social", online_advertising: "Online Advertising", production: "Production", creative: "Creative", event_materials: "Event Materials", onsite_advertising: "Onsite Advertising" };
+const TYPE_LABEL: Record<string, string> = { social: "Social", online_advertising: "Online Advertising", production: "Production", creative: "Creative", event_materials: "Event Materials", onsite_advertising: "Onsite Advertising", newsletter: "Newsletter/eBlast" };
 
 /** Every marketing item, optionally only one event's. */
 export async function getMarketingItems(options: { eventId?: string } = {}): Promise<MarketingItem[]> {

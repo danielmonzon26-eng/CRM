@@ -558,7 +558,7 @@ export type Database = {
         Row: {
           id: string;
           stream: "catapult" | "event" | "sponsorship";
-          item_type: "social" | "online_advertising" | "production" | "creative" | "event_materials" | "onsite_advertising";
+          item_type: "social" | "online_advertising" | "production" | "creative" | "event_materials" | "onsite_advertising" | "newsletter";
           description: string;
           event_id: string | null;
           sponsor_company_id: string | null;
@@ -575,7 +575,7 @@ export type Database = {
         Insert: {
           id?: string;
           stream: "catapult" | "event" | "sponsorship";
-          item_type: "social" | "online_advertising" | "production" | "creative" | "event_materials" | "onsite_advertising";
+          item_type: "social" | "online_advertising" | "production" | "creative" | "event_materials" | "onsite_advertising" | "newsletter";
           description?: string;
           event_id?: string | null;
           sponsor_company_id?: string | null;

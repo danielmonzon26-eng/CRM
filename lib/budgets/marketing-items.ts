@@ -21,6 +21,7 @@ export const MARKETING_CATEGORIES = [
   ["creative", "Creative"],
   ["event_materials", "Event Materials"],
   ["onsite_advertising", "Onsite Advertising"],
+  ["newsletter", "Newsletter/eBlast"],
 ] as const;
 
 export type MarketingCategory = (typeof MARKETING_CATEGORIES)[number][0];
@@ -39,6 +40,7 @@ export const MARKETING_CATEGORY_STYLES: Record<string, string> = {
   creative: "bg-fuchsia-50 text-fuchsia-800",
   event_materials: "bg-orange-50 text-orange-800",
   onsite_advertising: "bg-indigo-50 text-indigo-800",
+  newsletter: "bg-lime-50 text-lime-800",
   advertising: "bg-violet-50 text-violet-800",
   sponsorship: "bg-amber-50 text-amber-900",
 };

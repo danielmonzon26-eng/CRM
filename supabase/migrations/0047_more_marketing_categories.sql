@@ -3,11 +3,11 @@
 
 alter table public.marketing_items drop constraint if exists marketing_items_item_type_check;
 alter table public.marketing_items add constraint marketing_items_item_type_check
-  check (item_type in ('social', 'online_advertising', 'production', 'creative', 'event_materials', 'onsite_advertising'));
+  check (item_type in ('social', 'online_advertising', 'production', 'creative', 'event_materials', 'onsite_advertising', 'newsletter'));
 
 alter table public.budget_items drop constraint if exists budget_items_marketing_category_check;
 alter table public.budget_items add constraint budget_items_marketing_category_check
-  check (marketing_category is null or marketing_category in ('creative', 'social', 'online_advertising', 'sponsorship', 'advertising', 'production', 'event_materials', 'onsite_advertising'));
+  check (marketing_category is null or marketing_category in ('creative', 'social', 'online_advertising', 'sponsorship', 'advertising', 'production', 'event_materials', 'onsite_advertising', 'newsletter'));
 
 create or replace function public.marketing_item_label(p_type text)
 returns text language sql immutable set search_path = '' as $$
