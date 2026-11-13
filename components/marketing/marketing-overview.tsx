@@ -1,6 +1,6 @@
 import Link from "next/link";
-import { AlertTriangle, CalendarClock, CheckCircle2, PiggyBank, Play, Receipt, Wallet } from "lucide-react";
-import { BarRow, Kpi, money, Panel, PanelEmpty } from "@/components/ui/dashboard";
+import { AlertTriangle, CalendarClock, Play } from "lucide-react";
+import { BarRow, money, Panel, PanelEmpty } from "@/components/ui/dashboard";
 import type { DashboardEntry, MarketingDashboard } from "@/lib/marketing/dashboard";
 
 const TONE: Record<DashboardEntry["tone"], string> = {
@@ -11,63 +11,115 @@ const TONE: Record<DashboardEntry["tone"], string> = {
   slate: "bg-slate-100 text-slate-700",
 };
 
-const STREAM_BAR: Record<string, string> = { catapult: "bg-brand-500", event: "bg-sky-500", sponsorship: "bg-amber-500" };
 const TYPE_BAR: Record<string, string> = { social: "bg-sky-500", online_advertising: "bg-violet-500", production: "bg-teal-500", creative: "bg-fuchsia-500", event_materials: "bg-orange-500", onsite_advertising: "bg-indigo-500", newsletter: "bg-lime-500" };
 
 const pct = (part: number, whole: number) => (whole > 0 ? Math.round((part / whole) * 100) : 0);
+
+const STREAM_HEX: Record<string, string> = { catapult: "#ff6729", event: "#0ea5e9", sponsorship: "#f59e0b" };
+
+/**
+ * The money at the top of the page: the budget's total from the Budgets report, how much of it
+ * marketing has allocated (split by stream), what's spent, and what's left to allocate.
+ */
+function BudgetSummary({ b }: { b: MarketingDashboard["budget"] }) {
+  const over = b.remaining < 0;
+  const scale = Math.max(b.total, b.allocated, 1);
+  const allocatedPct = pct(b.allocated, b.total);
+  const figures = [
+    { label: "Allocated to marketing", value: money(b.allocated), detail: b.total ? `${allocatedPct}% of the budget` : "Add items with a budget line" },
+    { label: "Spent to date", value: money(b.spent), detail: b.allocated ? `${pct(b.spent, b.allocated)}% of what's allocated` : "Recorded under Budgets" },
+    {
+      label: over ? "Over-allocated" : "Left to allocate",
+      value: money(Math.abs(b.remaining)),
+      detail: b.total ? `${pct(Math.max(b.remaining, 0), b.total)}% of the budget` : "—",
+      tone: over ? "text-rose-700" : "text-emerald-700",
+    },
+    { label: "Marketing items", value: String(b.items.planned + b.items.inProgress + b.items.done), detail: `${b.items.planned} planned · ${b.items.inProgress} in progress · ${b.items.done} done` },
+  ];
+  return (
+    <section aria-labelledby="mk-budget-title" className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-card">
+      <div className="flex flex-wrap items-end justify-between gap-6 bg-gradient-to-br from-slate-50 to-white px-6 py-6">
+        <div>
+          <h2 id="mk-budget-title" className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+            Marketing budget
+          </h2>
+          <p className="mt-1 text-5xl font-semibold tabular-nums tracking-tight text-slate-900">{money(b.total)}</p>
+          <p className="mt-1.5 text-sm text-slate-500">
+            {b.name ? (
+              <>
+                From{" "}
+                <Link href="/budgets" className="font-medium text-brand-700 hover:underline">
+                  {b.name}
+                </Link>
+                {b.totalSet ? "" : " · lines added up. Set the Total budget on the Budgets page to fix it."}
+              </>
+            ) : (
+              <Link href="/budgets" className="font-medium text-brand-700 hover:underline">
+                Set up a budget
+              </Link>
+            )}
+          </p>
+        </div>
+        <div className="text-right">
+          <p className={`text-4xl font-semibold tabular-nums tracking-tight ${over ? "text-rose-700" : "text-slate-900"}`}>{allocatedPct}%</p>
+          <p className="text-sm text-slate-500">allocated</p>
+        </div>
+      </div>
+
+      <div className="px-6 pb-6">
+        <div
+          className={`flex h-4 overflow-hidden rounded-full ${over ? "bg-rose-100" : "bg-slate-100"}`}
+          role="img"
+          aria-label={`${allocatedPct}% of the ${money(b.total)} budget is allocated to marketing${over ? `, over by ${money(-b.remaining)}` : ""}`}
+        >
+          {b.byStream
+            .filter((s) => s.amount > 0)
+            .map((s) => (
+              <span
+                key={s.key}
+                title={`${s.label}: ${money(s.amount)}`}
+                className="h-full border-r-2 border-white transition-[width] duration-500 last:border-r-0"
+                style={{ width: `${(s.amount / scale) * 100}%`, backgroundColor: over ? "#e11d48" : STREAM_HEX[s.key] }}
+              />
+            ))}
+        </div>
+        <ul className="mt-3 flex flex-wrap gap-x-6 gap-y-2 text-sm">
+          {b.byStream.map((s) => (
+            <li key={s.key}>
+              <Link href={`/marketing/${s.key}`} className="inline-flex items-center gap-2 hover:underline">
+                <span aria-hidden="true" className="h-2.5 w-2.5 rounded-sm" style={{ backgroundColor: STREAM_HEX[s.key] }} />
+                <span className="text-slate-600">{s.label}</span>
+                <span className="font-semibold tabular-nums text-slate-900">{money(s.amount)}</span>
+              </Link>
+            </li>
+          ))}
+          <li className="inline-flex items-center gap-2">
+            <span aria-hidden="true" className="h-2.5 w-2.5 rounded-sm bg-slate-200" />
+            <span className="text-slate-600">{over ? "Over by" : "Unallocated"}</span>
+            <span className={`font-semibold tabular-nums ${over ? "text-rose-700" : "text-slate-900"}`}>{money(Math.abs(b.remaining))}</span>
+          </li>
+        </ul>
+
+        <dl className="mt-6 grid grid-cols-2 gap-4 border-t border-slate-100 pt-5 lg:grid-cols-4">
+          {figures.map((f) => (
+            <div key={f.label} className="rounded-xl bg-slate-50/80 p-4">
+              <dt className="text-xs font-medium uppercase tracking-wide text-slate-500">{f.label}</dt>
+              <dd className={`mt-1 text-2xl font-semibold tabular-nums tracking-tight ${f.tone ?? "text-slate-900"}`}>{f.value}</dd>
+              <dd className="mt-0.5 text-xs text-slate-500">{f.detail}</dd>
+            </div>
+          ))}
+        </dl>
+      </div>
+    </section>
+  );
+}
 
 /** The Marketing landing page: the money, then what needs attention, what's running, and what's coming up. */
 export function MarketingOverview({ d }: { d: MarketingDashboard }) {
   const b = d.budget;
   return (
     <div className="space-y-5">
-      <section aria-label="Budget" className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <Kpi icon={Wallet} tone="bg-slate-100 text-slate-700" value={money(b.total)} label="Total budget" detail={b.name ?? "No budget yet"} href="/budgets" />
-        <Kpi
-          icon={PiggyBank}
-          tone="bg-brand-50 text-brand-700"
-          value={money(b.allocated)}
-          label="Allocated to marketing"
-          detail={b.total ? `${pct(b.allocated, b.total)}% of the budget` : "Add items with a budget line"}
-          href="/marketing/planner?view=table"
-        />
-        <Kpi icon={Receipt} tone="bg-violet-50 text-violet-700" value={money(b.spent)} label="Spent to date" detail={b.allocated ? `${pct(b.spent, b.allocated)}% of what's allocated` : "Recorded under Budgets"} href="/budgets" />
-        <Kpi
-          icon={CheckCircle2}
-          tone={b.remaining < 0 ? "bg-rose-50 text-rose-700" : "bg-emerald-50 text-emerald-700"}
-          value={money(b.remaining)}
-          label={b.remaining < 0 ? "Over-allocated" : "Left to allocate"}
-          detail={b.total ? `${pct(Math.max(b.remaining, 0), b.total)}% of the budget` : "—"}
-          href="/budgets"
-          alert={b.remaining < 0}
-        />
-      </section>
-
-      {b.total > 0 && (
-        <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-card">
-          <div className="flex flex-wrap items-baseline justify-between gap-2 text-sm">
-            <span className="font-medium text-slate-800">{b.name}</span>
-            <span className="text-slate-500">
-              {money(b.spent)} spent · {money(Math.max(b.allocated - b.spent, 0))} allocated, not yet spent · {money(Math.max(b.remaining, 0))} free
-            </span>
-          </div>
-          <div className="mt-2 flex h-3 overflow-hidden rounded-full bg-slate-100" role="img" aria-label={`${pct(b.spent, b.total)}% spent, ${pct(Math.max(b.allocated - b.spent, 0), b.total)}% allocated, ${pct(Math.max(b.remaining, 0), b.total)}% free`}>
-            <span className="bg-violet-500" style={{ width: `${Math.min(pct(b.spent, b.total), 100)}%` }} />
-            <span className="bg-brand-400" style={{ width: `${Math.min(pct(Math.max(b.allocated - b.spent, 0), b.total), 100)}%` }} />
-          </div>
-          <p className="mt-1.5 flex flex-wrap gap-4 text-xs text-slate-500">
-            <span className="inline-flex items-center gap-1.5">
-              <span aria-hidden="true" className="h-2 w-2 rounded-full bg-violet-500" /> Spent
-            </span>
-            <span className="inline-flex items-center gap-1.5">
-              <span aria-hidden="true" className="h-2 w-2 rounded-full bg-brand-400" /> Allocated
-            </span>
-            <span className="inline-flex items-center gap-1.5">
-              <span aria-hidden="true" className="h-2 w-2 rounded-full bg-slate-200" /> Free
-            </span>
-          </p>
-        </div>
-      )}
+      <BudgetSummary b={b} />
 
       <div className="grid grid-cols-1 gap-5 xl:grid-cols-3">
         <EntryPanel title="Needs attention" count={d.counts.attention} icon={AlertTriangle} empty="Nothing needs attention." entries={d.attention} accent="text-rose-700" />
@@ -75,23 +127,8 @@ export function MarketingOverview({ d }: { d: MarketingDashboard }) {
         <EntryPanel title="Upcoming" subtitle="Next 30 days" count={d.counts.upcoming} icon={CalendarClock} empty="Nothing due in the next 30 days." entries={d.upcoming} accent="text-slate-700" href="/marketing/planner" />
       </div>
 
-      <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
-        <Panel title="Allocated by stream" subtitle={b.name ? `Share of ${b.name}` : undefined} href="/marketing/planner?view=table" linkLabel="All items">
-          <div className="space-y-0.5 p-3">
-            {b.byStream.map((s) => (
-              <BarRow
-                key={s.key}
-                href={`/marketing/${s.key}`}
-                label={`${s.label} · ${s.count} ${s.count === 1 ? "item" : "items"}`}
-                value={s.amount}
-                max={Math.max(b.total, b.allocated, 1)}
-                valueLabel={`${money(s.amount)}${b.total ? ` · ${pct(s.amount, b.total)}%` : ""}`}
-                barClass={STREAM_BAR[s.key]}
-              />
-            ))}
-          </div>
-        </Panel>
-        <Panel title="Allocated by item" subtitle="Social, advertising, production and creative">
+      <div className="grid grid-cols-1 gap-5">
+        <Panel title="Allocated by item" subtitle="By kind of marketing item">
           <div className="space-y-0.5 p-3">
             {b.byType.map((t) => (
               <BarRow
