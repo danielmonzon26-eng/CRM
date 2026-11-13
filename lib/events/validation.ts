@@ -44,7 +44,13 @@ export function getMissingForPublish(input: EventInput): string[] {
   if (!input.title.trim()) missing.push("Event name");
   if (!input.startsAt) missing.push("Start date and time");
   if (input.format !== "online" && !input.venueName.trim()) missing.push("Venue");
-  if (input.format !== "in_person" && !isWebUrl(input.onlineUrl.trim())) missing.push("Livestream or join link");
   if (input.ticketType === "paid" && !input.ticketPrice.trim()) missing.push("Ticket price");
   return missing;
+}
+
+/** Worth adding, but not needed to publish: the join link can come later. */
+export function getPublishReminders(input: EventInput): string[] {
+  const reminders: string[] = [];
+  if (input.format !== "in_person" && !input.onlineUrl.trim()) reminders.push("Livestream or join link");
+  return reminders;
 }

@@ -10,7 +10,7 @@ import { buttonClass } from "@/components/ui/button";
 import { FORMAT_LABELS, formatEventWhen, fromDateTimeInput, toDateTimeInput } from "@/lib/events/format";
 import type { EventRow, EventTemplate } from "@/lib/events/queries";
 import { uploadEventBanner } from "@/lib/events/upload";
-import { getMissingForPublish, type EventInput } from "@/lib/events/validation";
+import { getMissingForPublish, getPublishReminders, type EventInput } from "@/lib/events/validation";
 
 const INPUT =
   "mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-brand-600 focus:outline-none focus:ring-2 focus:ring-brand-100";
@@ -111,6 +111,7 @@ export function EventWizard({
   const status = event?.status ?? "draft";
   const autosaves = status === "draft";
   const missing = useMemo(() => getMissingForPublish(values), [values]);
+  const reminders = useMemo(() => getPublishReminders(values), [values]);
 
   // Saves run one at a time, so an autosave and a button click can't both create the event.
   const queue = useRef<Promise<unknown>>(Promise.resolve());
@@ -529,12 +530,46 @@ export function EventWizard({
               <section className={CARD}>
                 <StepHeading title="Review" question="Does everything look right? Publish when you're ready." />
                 {missing.length > 0 ? (
-                  <div className="rounded-lg bg-amber-50 p-3 text-sm text-amber-900">
+                  <div className="space-y-3 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
                     <p className="flex items-center gap-2 font-medium">
                       <AlertCircle className="h-4 w-4" strokeWidth={2} />
-                      Needed before publishing
+                      Needed before publishing. Fill {missing.length === 1 ? "it" : "them"} in here:
                     </p>
-                    <ul className="mt-1 list-disc pl-6">{missing.map((m) => <li key={m}>{m}</li>)}</ul>
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      {missing.includes("Event name") && (
+                        <div className="sm:col-span-2">
+                          <label className={LABEL} htmlFor="fix-title">Event name</label>
+                          <input id="fix-title" value={values.title} onChange={(e) => set("title", e.target.value)} className={INPUT} />
+                        </div>
+                      )}
+                      {missing.includes("Start date and time") && (
+                        <fieldset className="sm:col-span-2">
+                          <legend className={LABEL}>Starts</legend>
+                          <div className="grid grid-cols-[1fr_130px] gap-2">
+                            <input aria-label="Start date" type="date" value={splitDateTime(values.startsAt)[0]} onChange={(e) => set("startsAt", joinDateTime(e.target.value, splitDateTime(values.startsAt)[1]))} className={INPUT} />
+                            <input aria-label="Start time" type="time" step={900} value={splitDateTime(values.startsAt)[1]} onChange={(e) => set("startsAt", joinDateTime(splitDateTime(values.startsAt)[0], e.target.value))} className={INPUT} />
+                          </div>
+                        </fieldset>
+                      )}
+                      {missing.includes("Venue") && (
+                        <>
+                          <div>
+                            <label className={LABEL} htmlFor="fix-venue">Venue</label>
+                            <input id="fix-venue" value={values.venueName} onChange={(e) => set("venueName", e.target.value)} className={INPUT} />
+                          </div>
+                          <div>
+                            <label className={LABEL} htmlFor="fix-address">Address</label>
+                            <input id="fix-address" value={values.venueAddress} onChange={(e) => set("venueAddress", e.target.value)} className={INPUT} />
+                          </div>
+                        </>
+                      )}
+                      {missing.includes("Ticket price") && (
+                        <div>
+                          <label className={LABEL} htmlFor="fix-price">Ticket price (CAD)</label>
+                          <input id="fix-price" type="number" min={0} step="0.01" value={values.ticketPrice} onChange={(e) => set("ticketPrice", e.target.value)} className={INPUT} />
+                        </div>
+                      )}
+                    </div>
                   </div>
                 ) : (
                   <p className="flex items-center gap-2 rounded-lg bg-emerald-50 p-3 text-sm font-medium text-emerald-800">
@@ -542,7 +577,24 @@ export function EventWizard({
                     Ready to publish
                   </p>
                 )}
+                {reminders.includes("Livestream or join link") && (
+                  <div className="rounded-lg border border-slate-200 bg-slate-50 p-4 text-sm">
+                    <label className={LABEL} htmlFor="fix-online">
+                      Livestream or join link <span className="font-normal text-slate-500">(optional, add it later if you don&apos;t have it yet)</span>
+                    </label>
+                    <input id="fix-online" type="url" placeholder="https://" value={values.onlineUrl} onChange={(e) => set("onlineUrl", e.target.value)} className={INPUT} />
+                    <p className="mt-1 text-xs text-slate-500">Online registrants get it once it&apos;s added.</p>
+                  </div>
+                )}
                 <SummaryList values={values} members={members} />
+                <div className="flex flex-wrap gap-2 border-t border-slate-100 pt-3">
+                  <span className="self-center text-xs text-slate-500">Change something:</span>
+                  {STEPS.slice(0, 4).map((label, i) => (
+                    <button key={label} type="button" onClick={() => goTo(i)} className={buttonClass("ghost", "sm")}>
+                      Edit {label.toLowerCase()}
+                    </button>
+                  ))}
+                </div>
                 {eventId && slug && (
                   <a href={`/register/${slug}`} target="_blank" rel="noreferrer" className={buttonClass("secondary")}>
                     <ExternalLink className="h-4 w-4" strokeWidth={2} />
