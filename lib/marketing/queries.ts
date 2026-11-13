@@ -33,6 +33,8 @@ export type PostItem = {
   event: { id: string; title: string } | null;
   /** 14, 7 or 1 for an automatic request. */
   autoDaysBefore: number | null;
+  /** 28, 14, 7 or 1 for a post planned from the event's page relative to its date. */
+  eventDaysBefore: number | null;
   createdBy: string | null;
   createdByName: string | null;
   approvedByName: string | null;
@@ -86,13 +88,14 @@ export async function getChannels(includeInactive = false): Promise<Channel[]> {
 }
 
 const POST_COLUMNS =
-  "id, initiative_id, event_id, auto_days_before, title, caption, scheduled_at, status, image_path, image_name, review_note, created_by, submitted_at, approved_by, approved_at, updated_at";
+  "id, initiative_id, event_id, auto_days_before, event_days_before, title, caption, scheduled_at, status, image_path, image_name, review_note, created_by, submitted_at, approved_by, approved_at, updated_at";
 
 type PostRow = {
   id: string;
   initiative_id: string | null;
   event_id: string | null;
   auto_days_before: number | null;
+  event_days_before: number | null;
   title: string;
   caption: string;
   scheduled_at: string | null;
@@ -161,6 +164,7 @@ async function decoratePosts(supabase: Supabase, rows: PostRow[]): Promise<PostI
       initiative: r.initiative_id ? initiativeById.get(r.initiative_id) ?? null : null,
       event: r.event_id ? eventById.get(r.event_id) ?? null : null,
       autoDaysBefore: r.auto_days_before,
+      eventDaysBefore: r.event_days_before,
       createdBy: r.created_by,
       createdByName: r.created_by ? names.get(r.created_by) ?? null : null,
       approvedByName: r.approved_by ? names.get(r.approved_by) ?? null : null,
@@ -173,10 +177,11 @@ async function decoratePosts(supabase: Supabase, rows: PostRow[]): Promise<PostI
 }
 
 /** Posts scheduled in a range (inclusive start, exclusive end), plus every unscheduled post when asked. */
-export async function getPosts(options: { from?: string; to?: string; initiativeId?: string; includeUnscheduled?: boolean } = {}): Promise<PostItem[]> {
+export async function getPosts(options: { from?: string; to?: string; initiativeId?: string; eventId?: string; includeUnscheduled?: boolean } = {}): Promise<PostItem[]> {
   const supabase = await createClient();
   let query = supabase.from("social_posts").select(POST_COLUMNS);
   if (options.initiativeId) query = query.eq("initiative_id", options.initiativeId);
+  if (options.eventId) query = query.eq("event_id", options.eventId);
   if (options.from && options.to) {
     const range = `and(scheduled_at.gte.${options.from},scheduled_at.lt.${options.to})`;
     query = query.or(options.includeUnscheduled ? `${range},scheduled_at.is.null` : range);

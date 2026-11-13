@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { getCurrentUser } from "@/lib/auth/session";
-import { fromDateTimeInput } from "@/lib/events/format";
+import { calgaryDateKey, fromDateTimeInput } from "@/lib/events/format";
 import { isPlatform, readinessIssues } from "@/lib/marketing/constants";
 import { getPromotionTimeline } from "@/lib/marketing/promotion-queries";
 import { createClient } from "@/lib/supabase/server";
@@ -364,4 +364,78 @@ export async function applySuggestedPromotions(eventId: string): Promise<Result>
   if (error) return { error: SAVE_FAILED };
   revalidate();
   return {};
+}
+
+export type EventPostInput = {
+  eventId: string;
+  /** "28", "14", "7", "1" days before the event, or "custom" for a set date. */
+  timing: string;
+  date: string;
+  time: string;
+  topic: string;
+  channelIds: string[];
+};
+
+const TIMINGS: Record<string, number> = { "28": 28, "14": 14, "7": 7, "1": 1 };
+const TIMING_WORDS: Record<number, string> = { 28: "4 weeks before", 14: "2 weeks before", 7: "1 week before", 1: "1 day before" };
+const MAX_PER_TIMING = 2;
+
+/**
+ * Plans a social post from an event's page: what it covers, where it goes and when, relative
+ * to the event (it moves if the event does) or on a set date. It starts as Requested, so it
+ * appears in Social and the Planner to be written and approved. Up to two per timing.
+ */
+export async function scheduleEventPost(input: EventPostInput): Promise<Result> {
+  const user = await getCurrentUser();
+  if (!user) return { error: "Sign in first." };
+  if (!UUID.test(input.eventId)) return { error: "That event wasn't found." };
+  const topic = input.topic.trim();
+  if (!topic) return { error: "Say what the post should cover." };
+  const channelIds = [...new Set(input.channelIds)];
+  if (channelIds.some((c) => !UUID.test(c))) return { error: "Choose channels from the list." };
+  const time = /^\d{2}:\d{2}$/.test(input.time) ? input.time : "09:00";
+  const days = TIMINGS[input.timing] ?? null;
+  if (input.timing !== "custom" && days === null) return { error: "Choose when it should go out." };
+  if (input.timing === "custom" && !/^\d{4}-\d{2}-\d{2}$/.test(input.date)) return { error: "Pick the date it should go out." };
+
+  const supabase = await createClient();
+  const { data: event, error: eventError } = await supabase.from("events").select("starts_at").eq("id", input.eventId).maybeSingle();
+  if (eventError || !event) return { error: "That event wasn't found." };
+
+  if (days !== null) {
+    const { count, error } = await supabase
+      .from("social_posts")
+      .select("id", { count: "exact", head: true })
+      .eq("event_id", input.eventId)
+      .or(`event_days_before.eq.${days},auto_days_before.eq.${days}`);
+    if (error) return { error: SAVE_FAILED };
+    if ((count ?? 0) >= MAX_PER_TIMING) return { error: `There are already two posts ${TIMING_WORDS[days]}. Pick another time, or edit one of those.` };
+  }
+
+  let day = input.date;
+  if (days !== null) {
+    const d = new Date(`${calgaryDateKey(event.starts_at)}T00:00:00Z`);
+    d.setUTCDate(d.getUTCDate() - days);
+    day = d.toISOString().slice(0, 10);
+  }
+  let scheduledAt: string;
+  try {
+    scheduledAt = fromDateTimeInput(`${day}T${time}`);
+  } catch {
+    return { error: "Check the date and time." };
+  }
+
+  const { data: post, error } = await supabase
+    .from("social_posts")
+    .insert({ title: topic.slice(0, 200), caption: "", scheduled_at: scheduledAt, status: "requested", event_id: input.eventId, event_days_before: days })
+    .select("id")
+    .single();
+  if (error || !post) return { error: SAVE_FAILED };
+  if (channelIds.length) {
+    const { error: linkError } = await supabase.from("social_post_channels").insert(channelIds.map((channel_id) => ({ post_id: post.id, channel_id })));
+    if (linkError) return { error: "The post was planned, but its channels didn't save. Add them when you write it.", id: post.id };
+  }
+  revalidate();
+  revalidatePath(`/events/${input.eventId}`);
+  return { id: post.id };
 }

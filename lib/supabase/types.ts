@@ -628,6 +628,7 @@ export type Database = {
           review_note: string | null;
           event_id: string | null;
           auto_days_before: number | null;
+          event_days_before: number | null;
           created_by: string | null;
           submitted_at: string | null;
           approved_by: string | null;
@@ -645,6 +646,8 @@ export type Database = {
           image_path?: string | null;
           image_name?: string | null;
           review_note?: string | null;
+          event_id?: string | null;
+          event_days_before?: number | null;
         };
         Update: Partial<Database["public"]["Tables"]["social_posts"]["Insert"]>;
         Relationships: [];
