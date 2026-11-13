@@ -157,7 +157,7 @@ export function PlannerTable({ items, posts, options, today }: { items: Marketin
       </p>
 
       <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-card">
-        <table className="w-full min-w-[1400px] table-fixed text-sm">
+        <table className="w-full min-w-[1680px] table-fixed text-sm">
           <ItemTableHead />
           <tbody className="divide-y divide-slate-100">
             {adding.map((key) => (
@@ -240,7 +240,8 @@ export function ItemRow({
   }
 
   const linesForEvent = options.lines.filter((l) => !l.eventId || l.eventId === draft.eventId);
-  const byBudget = linesForEvent.reduce<Record<string, ItemOptions["lines"]>>((acc, l) => ((acc[l.budgetName] ??= []).push(l), acc), {});
+  // Grouped by budget and section, so each choice is just the line's name and fits its cell.
+  const byBudget = linesForEvent.reduce<Record<string, ItemOptions["lines"]>>((acc, l) => ((acc[l.section ? `${l.budgetName} · ${l.section}` : l.budgetName] ??= []).push(l), acc), {});
 
   return (
     <tr className={`align-top ${!item ? "bg-brand-50/30" : ""}`}>
@@ -379,7 +380,6 @@ export function ItemRow({
               {lines.map((l) => (
                 <option key={l.id} value={l.id}>
                   {l.name}
-                  {l.section ? ` · ${l.section}` : ""}
                 </option>
               ))}
             </optgroup>
@@ -569,16 +569,17 @@ function PostRow({ post }: { post: PostItem }) {
 export function ItemTableHead() {
   return (
     <>
+    {/* Wide enough that every dropdown shows its whole choice, e.g. "Onsite Advertising". */}
     <colgroup>
-      <col className="w-[8.5rem]" />
+      <col className="w-36" />
+      <col className="w-56" />
+      <col className="min-w-[14rem]" />
+      <col className="w-60" />
+      <col className="w-52" />
+      <col className="w-28" />
+      <col className="w-72" />
       <col className="w-44" />
-      <col />
-      <col className="w-52" />
-      <col className="w-48" />
-      <col className="w-24" />
-      <col className="w-52" />
       <col className="w-40" />
-      <col className="w-32" />
       <col className="w-20" />
     </colgroup>
     <thead className="border-b border-slate-200 bg-slate-50 text-left text-xs font-medium uppercase tracking-wide text-slate-500">

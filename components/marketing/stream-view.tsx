@@ -108,7 +108,7 @@ function Group({ group, options, today }: { group: StreamGroup; options: ItemOpt
       )}
       {(group.items.length > 0 || adding.length > 0) && (
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[1400px] table-fixed text-sm">
+          <table className="w-full min-w-[1680px] table-fixed text-sm">
             <ItemTableHead />
             <tbody className="divide-y divide-slate-100">
               {adding.map((k) => (
