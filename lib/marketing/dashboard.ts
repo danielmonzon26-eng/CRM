@@ -26,8 +26,13 @@ export type DashboardEntry = {
 export type MarketingDashboard = {
   budget: {
     name: string | null;
-    /** The current budget's total. */
+    id: string | null;
+    /** The current budget's total, as set on the Budgets page (or its lines added up when it isn't set). */
     total: number;
+    /** True when the total comes from the Budgets page's Total budget; false when it's the lines added up. */
+    totalSet: boolean;
+    /** Marketing items in the budget, by status. */
+    items: { planned: number; inProgress: number; done: number };
     /** Marketing items booked against lines in that budget. */
     allocated: number;
     /** Committed and actual spending recorded on those items. */
@@ -107,7 +112,9 @@ export async function getMarketingDashboard(now = new Date()): Promise<Marketing
       spent = (expenses ?? []).reduce((s, e) => s + Number(e.amount), 0);
     }
   }
-  const total = overview?.approved ?? 0;
+  // The Budgets page's Total budget is the definitive figure; until it's set, the lines added up.
+  const totalSet = overview?.total != null;
+  const total = overview ? (overview.total ?? overview.approved) : 0;
 
   // ---- Needs attention
   const attention: DashboardEntry[] = [];
@@ -157,8 +164,15 @@ export async function getMarketingDashboard(now = new Date()): Promise<Marketing
 
   return {
     budget: {
+      id: overview?.id ?? null,
       name: overview?.name ?? null,
       total,
+      totalSet,
+      items: {
+        planned: inBudget.filter((i) => i.status === "planned").length,
+        inProgress: inBudget.filter((i) => i.status === "in_progress").length,
+        done: inBudget.filter((i) => i.status === "done").length,
+      },
       allocated,
       spent,
       remaining: total - allocated,
