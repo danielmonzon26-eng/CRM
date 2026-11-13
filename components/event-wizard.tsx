@@ -10,6 +10,8 @@ import { buttonClass } from "@/components/ui/button";
 import { FORMAT_LABELS, formatEventWhen, fromDateTimeInput, toDateTimeInput } from "@/lib/events/format";
 import type { EventRow, EventTemplate } from "@/lib/events/queries";
 import { uploadEventBanner } from "@/lib/events/upload";
+import { RegistrationQuestionsEditor } from "@/components/registration-questions-editor";
+import { parseQuestions } from "@/lib/events/questions";
 import { getMissingForPublish, getPublishReminders, normalizeWebUrl, type EventInput } from "@/lib/events/validation";
 
 const INPUT =
@@ -60,6 +62,7 @@ function toInput(event?: EventRow): EventInput {
     registrationOpensAt: toDateTimeInput(event?.registration_opens_at ?? null),
     registrationClosesAt: toDateTimeInput(event?.registration_closes_at ?? null),
     confirmationMessage: event?.confirmation_message ?? "",
+    registrationQuestions: parseQuestions(event?.registration_questions),
     budgetAmount: event?.budget_amount?.toString() ?? "",
     fundingSource: event?.funding_source ?? "",
     budgetNotes: event?.budget_notes ?? "",
@@ -516,6 +519,7 @@ export function EventWizard({
                 </div>
               </div>
               <p className="-mt-2 text-xs text-slate-500">Leave blank to open on publish and close when the event ends.</p>
+              <RegistrationQuestionsEditor value={values.registrationQuestions ?? []} onChange={(next) => set("registrationQuestions", next)} />
               <div>
                 <label className={LABEL} htmlFor="confirmationMessage">Confirmation message</label>
                 <textarea

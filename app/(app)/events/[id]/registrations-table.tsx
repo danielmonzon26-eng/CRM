@@ -6,6 +6,7 @@ import { ArrowUpRight, Download, Search } from "lucide-react";
 import { buttonClass } from "@/components/ui/button";
 import { downloadCsv } from "@/lib/csv";
 import { FORMAT_LABELS } from "@/lib/events/format";
+import { answerText, parseQuestions, type RegistrationAnswers } from "@/lib/events/questions";
 import type { EventRegistrationRow } from "@/lib/events/queries";
 import { RegistrationActions } from "./event-controls";
 
@@ -47,11 +48,16 @@ export function RegistrationsTable({
   registrations,
   eventId,
   fileName,
+  questionsJson,
 }: {
   registrations: EventRegistrationRow[];
   eventId: string;
   fileName: string;
+  /** The event's registration_questions, as stored. */
+  questionsJson?: unknown;
 }) {
+  const questions = useMemo(() => parseQuestions(questionsJson), [questionsJson]);
+  const answersOf = (r: EventRegistrationRow) => ((r.answers && typeof r.answers === "object" ? r.answers : {}) as RegistrationAnswers);
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState<(typeof STATUS_FILTERS)[number][0]>("all");
 
@@ -69,7 +75,7 @@ export function RegistrationsTable({
 
   function exportCsv() {
     downloadCsv(fileName, [
-      ["Name", "Email", "Phone", "Company", "Attending", "Status", "Payment", "Amount paid", "Registered"],
+      ["Name", "Email", "Phone", "Company", "Attending", "Status", "Payment", "Amount paid", "Registered", ...questions.map((q) => q.label)],
       ...filtered.map((r) => [
         r.full_name,
         r.email,
@@ -80,6 +86,7 @@ export function RegistrationsTable({
         r.payment_status === "not_required" ? "" : PAYMENT_LABELS[r.payment_status],
         r.amount_paid,
         r.created_at,
+        ...questions.map((q) => answerText(q, answersOf(r)[q.id])),
       ]),
     ]);
   }
@@ -127,6 +134,7 @@ export function RegistrationsTable({
                 <th scope="col" className="px-3 py-3 font-medium">Attending</th>
                 <th scope="col" className="px-3 py-3 font-medium">Status</th>
                 {hasPayments && <th scope="col" className="px-3 py-3 font-medium">Payment</th>}
+                {questions.length > 0 && <th scope="col" className="px-3 py-3 font-medium">Answers</th>}
                 <th scope="col" className="px-3 py-3 font-medium">Registered</th>
                 <th scope="col" className="px-3 py-3"><span className="sr-only">Actions</span></th>
               </tr>
@@ -158,6 +166,11 @@ export function RegistrationsTable({
                       </span>
                     </td>
                   )}
+                  {questions.length > 0 && (
+                    <td className="max-w-xs px-3 py-2.5">
+                      <Answers questions={questions} answers={answersOf(r)} />
+                    </td>
+                  )}
                   <td className="px-3 py-2.5 text-xs">{new Date(r.created_at).toLocaleDateString("en-CA")}</td>
                   <td className="px-3 py-2.5">
                     <RegistrationActions
@@ -176,5 +189,27 @@ export function RegistrationsTable({
         </div>
       )}
     </div>
+  );
+}
+
+/** A registrant's answers: the first one inline, the rest a click away. */
+function Answers({ questions, answers }: { questions: ReturnType<typeof parseQuestions>; answers: RegistrationAnswers }) {
+  const given = questions.map((q) => [q, answerText(q, answers[q.id])] as const).filter(([, a]) => a);
+  if (given.length === 0) return <span className="text-slate-400">—</span>;
+  return (
+    <details className="group text-xs">
+      <summary className="cursor-pointer list-none truncate text-slate-700 hover:text-brand-700">
+        <span className="text-slate-500">{given[0][0].label}:</span> {given[0][1]}
+        {given.length > 1 && <span className="ml-1 font-medium text-brand-700 group-open:hidden">+{given.length - 1} more</span>}
+      </summary>
+      <dl className="mt-1.5 space-y-1 whitespace-normal">
+        {given.map(([q, a]) => (
+          <div key={q.id}>
+            <dt className="text-slate-500">{q.label}</dt>
+            <dd className="text-slate-800">{a}</dd>
+          </div>
+        ))}
+      </dl>
+    </details>
   );
 }

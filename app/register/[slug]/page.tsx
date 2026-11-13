@@ -11,6 +11,7 @@ import {
   isEventOver,
 } from "@/lib/events/format";
 import { isStripeEnabled, isStripeTestMode } from "@/lib/payments/stripe";
+import { getRegistrationQuestions } from "@/lib/events/questions-server";
 import { RegisterForm } from "./register-form";
 import { PublicFooter, PublicHeader } from "./public-chrome";
 
@@ -72,7 +73,7 @@ export default async function RegisterPage({
 }) {
   const { slug } = await params;
   const { payment } = await searchParams;
-  const event = await getPublicEvent(slug);
+  const [event, questions] = await Promise.all([getPublicEvent(slug), getRegistrationQuestions(slug)]);
   if (!event) notFound();
 
   const closedMessage =
@@ -264,6 +265,7 @@ export default async function RegisterPage({
                         paid={isPaid && !onWaitlist}
                         onlinePayment={onlinePayment}
                         priceLabel={price}
+                        questions={questions}
                       />
                       {isPaid && !onWaitlist && (
                         <p className="mt-4 flex items-start gap-2 text-xs leading-relaxed text-slate-500">

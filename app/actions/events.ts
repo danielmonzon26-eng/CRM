@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { fromDateTimeInput, toDateTimeInput } from "@/lib/events/format";
+import { cleanQuestions, parseQuestions } from "@/lib/events/questions";
 import { getMissingForPublish, isWebUrl, normalizeWebUrl, type EventInput } from "@/lib/events/validation";
 import type { EventRow } from "@/lib/events/queries";
 import type { EventStatus } from "@/lib/supabase/types";
@@ -89,6 +90,11 @@ function parseEventInput(input: EventInput, requireComplete: boolean) {
     return { error: "The ticket price must be a positive number." };
   }
 
+  // Like a bad link, a half-written question never stops the rest from saving.
+  const cleaned = input.registrationQuestions ? cleanQuestions(input.registrationQuestions) : null;
+  const questions = cleaned && "questions" in cleaned ? cleaned : null;
+  if (cleaned && "error" in cleaned) warnings.push(`the questions weren't saved yet (${cleaned.error.replace(/\.$/, "").replace(/^./, (c) => c.toLowerCase())})`);
+
   const budgetAmount = parseNumber(input.budgetAmount);
   if (budgetAmount !== null && (!Number.isFinite(budgetAmount) || budgetAmount < 0)) {
     return { error: "The budget must be a positive number." };
@@ -121,6 +127,7 @@ function parseEventInput(input: EventInput, requireComplete: boolean) {
       registration_opens_at: opensAt,
       registration_closes_at: closesAt,
       confirmation_message: input.confirmationMessage.trim() || null,
+      ...(questions ? { registration_questions: questions.questions } : {}),
       budget_amount: budgetAmount,
       funding_source: input.fundingSource.trim() || null,
       budget_notes: input.budgetNotes.trim() || null,
@@ -154,6 +161,7 @@ function rowToInput(row: EventRow): EventInput {
     registrationOpensAt: toDateTimeInput(row.registration_opens_at),
     registrationClosesAt: toDateTimeInput(row.registration_closes_at),
     confirmationMessage: row.confirmation_message ?? "",
+    registrationQuestions: parseQuestions(row.registration_questions),
     budgetAmount: row.budget_amount?.toString() ?? "",
     fundingSource: row.funding_source ?? "",
     budgetNotes: row.budget_notes ?? "",

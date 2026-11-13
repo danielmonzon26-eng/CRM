@@ -257,6 +257,7 @@ export function RegistrationsTab({ detail }: { detail: EventDetail }) {
       registrations={detail.registrations}
       eventId={detail.event.id}
       fileName={`${detail.event.slug}-registrations.csv`}
+      questionsJson={detail.event.registration_questions}
     />
   );
 }
