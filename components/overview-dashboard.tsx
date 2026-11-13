@@ -11,6 +11,7 @@ import {
   Sparkles,
   Ticket,
   UserPlus,
+  ListChecks,
   Users,
   Wallet,
 } from "lucide-react";
@@ -164,7 +165,7 @@ export function OverviewDashboard({ data, firstName }: { data: DashboardData; fi
           <p className="relative mt-1 text-sm text-ink-200">Here&apos;s what&apos;s happening across Catapult.</p>
         </header>
 
-        <section aria-label="Key figures" className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7">
+        <section aria-label="Key figures" className="grid grid-cols-2 gap-3 sm:grid-cols-4 2xl:grid-cols-8">
           <Kpi
             icon={CalendarDays}
             tone="bg-brand-50 text-brand-600"
@@ -188,6 +189,14 @@ export function OverviewDashboard({ data, firstName }: { data: DashboardData; fi
             label="Avg. attendance"
             detail={kpis.attendancePercent === null ? "After your first check-ins" : "Checked in at past events"}
             href="/events"
+          />
+          <Kpi
+            icon={ListChecks}
+            tone="bg-violet-50 text-violet-700"
+            value={kpis.leads.toLocaleString()}
+            label="Leads"
+            detail={`${kpis.newLeads30Days.toLocaleString()} new in the last 30 days`}
+            href="/leads"
           />
           <Kpi
             icon={Users}

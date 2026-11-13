@@ -71,6 +71,8 @@ export type DashboardData = {
     registrations: number;
     registrationsThisWeek: number;
     attendancePercent: number | null;
+    leads: number;
+    newLeads30Days: number;
     contacts: number;
     openDeals: number;
     openDealValue: number;
@@ -102,6 +104,8 @@ export async function getDashboardData(): Promise<DashboardData> {
     forecast,
     budget,
     { count: contacts, error: contactsError },
+    { count: leadCount, error: leadCountError },
+    { count: newLeadCount, error: newLeadError },
     { count: overdueTasks, error: overdueError },
     { data: taskRows, error: tasksError },
     { data: activityRows, error: activitiesError },
@@ -128,6 +132,8 @@ export async function getDashboardData(): Promise<DashboardData> {
     getPipelineForecast(),
     getBudgetSnapshot(),
     supabase.from("contacts").select("id", { count: "exact", head: true }),
+    supabase.from("leads").select("id", { count: "exact", head: true }),
+    supabase.from("leads").select("id", { count: "exact", head: true }).gte("created_at", new Date(now - 30 * DAY_MS).toISOString()),
     supabase.from("tasks").select("id", { count: "exact", head: true }).is("completed_at", null).lt("due_at", nowIso),
     supabase
       .from("tasks")
@@ -159,7 +165,7 @@ export async function getDashboardData(): Promise<DashboardData> {
       .eq("engagement", "engaged")
       .is("assigned_to", null),
   ]);
-  const queryError = contactsError ?? overdueError ?? tasksError ?? activitiesError ?? leadsError ?? unassignedError;
+  const queryError = contactsError ?? leadCountError ?? newLeadError ?? overdueError ?? tasksError ?? activitiesError ?? leadsError ?? unassignedError;
   if (queryError) throw queryError;
   const tasks = taskRows ?? [];
   const activities = activityRows ?? [];
@@ -215,6 +221,8 @@ export async function getDashboardData(): Promise<DashboardData> {
       registrations: allRegistrations.length,
       registrationsThisWeek: allRegistrations.filter((r) => new Date(r.created_at).getTime() >= now - 7 * DAY_MS).length,
       attendancePercent: percent(pastRegistrations.filter((r) => r.checked_in_at).length, pastRegistrations.length),
+      leads: leadCount ?? 0,
+      newLeads30Days: newLeadCount ?? 0,
       contacts: contacts ?? 0,
       openDeals: forecast.openCount,
       openDealValue: forecast.openValue,
