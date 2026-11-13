@@ -41,7 +41,7 @@ type Editing = { post: PostItem } | { timing: string };
 /**
  * The event's social media plan: up to three posts, one at each of 4 weeks, 2 weeks, 1 week
  * and 1 day before, or on dates you pick. Click a slot to plan a post there, or a post to
- * change it. Each one is a request in Marketing → Social, to be written and approved there.
+ * change it. Each one is a request in Marketing → Social Planner, to be written and approved there.
  */
 export function EventSocialPlan({ eventId, eventDay, posts, channels, today }: { eventId: string; eventDay: string; posts: PostItem[]; channels: Channel[]; today: string }) {
   const [editing, setEditing] = useState<Editing | null>(null);
@@ -55,7 +55,7 @@ export function EventSocialPlan({ eventId, eventDay, posts, channels, today }: {
           <h2 id="event-social-title" className="font-semibold text-slate-900">
             Social media
           </h2>
-          <p className="text-xs text-slate-500">Up to three posts per event. Click a slot to plan one, or a post to change it. Each goes to Marketing → Social to be written and approved.</p>
+          <p className="text-xs text-slate-500">Up to three posts per event. Click a slot to plan one, or a post to change it. Each goes to Marketing → Social Planner to be written and approved.</p>
         </div>
         <div className="flex items-center gap-3">
           <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${full ? "bg-emerald-50 text-emerald-800" : "bg-slate-100 text-slate-700"}`}>
@@ -207,7 +207,7 @@ function PostDialog({
     startTransition(async () => {
       const result = await saveEventPost({ eventId, postId: post?.id ?? null, timing, date, time, topic, channelIds }).catch(() => ({ error: "That didn't save. Please try again." }));
       if (result.error) return setError(result.error);
-      toast(post ? "Post updated." : "Post planned. It's in Marketing → Social to write and approve.");
+      toast(post ? "Post updated." : "Post planned. It's in Marketing → Social Planner to write and approve.");
       router.refresh();
       ref.current?.close();
     });
@@ -296,7 +296,7 @@ function PostDialog({
           <fieldset>
             <legend className={LABEL}>Where</legend>
             <div className="mt-1 flex flex-wrap gap-2">
-              {channels.length === 0 && <span className="text-sm text-slate-500">No channels yet. Add them under Marketing → Social → Channels.</span>}
+              {channels.length === 0 && <span className="text-sm text-slate-500">No channels yet. Add them under Marketing → Social Planner → Channels.</span>}
               {channels.map((c) => {
                 const on = channelIds.includes(c.id);
                 return (
