@@ -16,7 +16,8 @@ import {
   Users,
   Wallet,
 } from "lucide-react";
-import { DeleteRevenueButton, EventLinePicker, RevenueForm } from "@/components/budget-controls";
+import { DeleteRevenueButton, RevenueForm } from "@/components/budget-controls";
+import { EventBudgetEditor } from "@/components/event-budget-editor";
 import { TaskForm } from "@/components/task-form";
 import { TaskList } from "@/components/task-list";
 import { buttonClass } from "@/components/ui/button";
@@ -314,13 +315,11 @@ export function SpeakersTab({ detail }: { detail: EventDetail }) {
 export function BudgetTab({
   detail,
   line,
-  unlinkedLines,
   revenue,
   report,
 }: {
   detail: EventDetail;
   line: LineDetail | null;
-  unlinkedLines: { id: string; name: string; amount: number }[];
   revenue: EventRevenueEntry[];
   report: EventReportRow | null;
 }) {
@@ -329,69 +328,40 @@ export function BudgetTab({
 
   return (
     <div className="space-y-5">
-      {line ? (
-        <>
-          <section aria-label="Budget figures" className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-            {([
-              ["Budget", line.line.amount],
-              ["Committed", line.line.committed],
-              ["Actual", line.line.actual],
-              ["Remaining", line.line.remaining],
-            ] as [string, number][]).map(([label, value]) => (
-              <div key={label} className={`${CARD} p-4`}>
-                <p className={`text-2xl font-semibold tracking-tight ${label === "Remaining" && value < 0 ? "text-rose-700" : "text-slate-900"}`}>{formatMoney(value)}</p>
-                <p className="text-sm text-slate-600">{label}</p>
-              </div>
-            ))}
-          </section>
-          <section className={CARD}>
-            <header className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 px-5 py-3.5">
-              <div>
-                <h2 className="font-semibold text-slate-900">{line.line.name}</h2>
-                <p className="text-xs text-slate-500">{line.budgetName}</p>
-              </div>
-              <Link href={`/budgets/lines/${line.line.id}`} className={buttonClass("secondary", "sm")}>Add expenses</Link>
-            </header>
-            <div className="relative overflow-x-auto">
-              <table className="w-full min-w-[520px] text-left text-sm">
-                <thead className="text-xs uppercase tracking-wide text-slate-500">
-                  <tr>
-                    <th scope="col" className="px-5 py-2.5 font-medium">Item</th>
-                    <th scope="col" className="px-3 py-2.5 text-right font-medium">Budget</th>
-                    <th scope="col" className="px-3 py-2.5 text-right font-medium">Actual</th>
-                    <th scope="col" className="px-5 py-2.5 text-right font-medium">Remaining</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100 border-t border-slate-100">
-                  {line.items.map((item) => (
-                    <tr key={item.id}>
-                      <td className="px-5 py-2.5 text-slate-800">{item.name}</td>
-                      <td className="px-3 py-2.5 text-right text-slate-700">{formatMoney(item.amount)}</td>
-                      <td className="px-3 py-2.5 text-right text-slate-700">{formatMoney(item.actual)}</td>
-                      <td className={`px-5 py-2.5 text-right font-medium ${item.remaining < 0 ? "text-rose-700" : "text-slate-900"}`}>{formatMoney(item.remaining)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+      {line && (
+        <section aria-label="Budget figures" className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+          {([
+            ["Budget", line.line.amount],
+            ["Committed", line.line.committed],
+            ["Actual", line.line.actual],
+            ["Remaining", line.line.remaining],
+          ] as [string, number][]).map(([label, value]) => (
+            <div key={label} className={`${CARD} p-4`}>
+              <p className={`text-2xl font-semibold tracking-tight ${label === "Remaining" && value < 0 ? "text-rose-700" : "text-slate-900"}`}>{formatMoney(value)}</p>
+              <p className="text-sm text-slate-600">{label}</p>
             </div>
-          </section>
-        </>
-      ) : (
-        <section className={`${CARD} p-5`}>
-          <h2 className="font-semibold text-slate-900">Budget</h2>
-          {unlinkedLines.length > 0 ? (
-            <>
-              <p className="mb-3 mt-1 text-sm text-slate-500">Tie this event to its line in the approved budget to track spending against it.</p>
-              <EventLinePicker eventId={event.id} lines={unlinkedLines} />
-            </>
-          ) : (
-            <p className="mt-1 text-sm text-slate-500">
-              {event.budget_amount != null ? `${formatMoney(event.budget_amount)} allocated. ` : ""}
-              No unlinked event lines are available. <Link href="/budgets" className="font-medium text-brand-600 hover:underline">Go to Budgets</Link>
-            </p>
-          )}
+          ))}
         </section>
       )}
+
+      <section className={CARD} aria-labelledby="event-costs-title">
+        <header className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 px-5 py-3.5">
+          <div>
+            <h2 id="event-costs-title" className="font-semibold text-slate-900">
+              Costs
+            </h2>
+            <p className="text-xs text-slate-500">Edit any cost, or add one. Totals update as you go.</p>
+          </div>
+          {line && (
+            <Link href={`/budgets/lines/${line.line.id}`} className={buttonClass("secondary", "sm")}>
+              Add expenses
+            </Link>
+          )}
+        </header>
+        <div className="p-4 sm:p-5">
+          <EventBudgetEditor eventId={event.id} />
+        </div>
+      </section>
 
       <section className={CARD}>
         <h2 className="border-b border-slate-100 px-5 py-3.5 font-semibold text-slate-900">Revenue</h2>

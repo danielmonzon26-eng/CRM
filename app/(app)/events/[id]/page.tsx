@@ -4,7 +4,7 @@ import { CalendarDays, MapPin, MonitorPlay, Users } from "lucide-react";
 import { getEventDetail } from "@/lib/events/queries";
 import { STATUS_LABELS, STATUS_STYLES, formatEventWhen } from "@/lib/events/format";
 import { getEventRevenueEntries } from "@/lib/events/queries";
-import { getLineDetailForEvent, getUnlinkedEventLines } from "@/lib/budgets/queries";
+import { getLineDetailForEvent } from "@/lib/budgets/queries";
 import { getEventReport } from "@/lib/reports/queries";
 import { getSiteUrl } from "@/lib/site-url";
 import { getTasksForSubject } from "@/lib/tasks/queries";
@@ -51,11 +51,10 @@ export default async function EventWorkspacePage({
 }) {
   const { id } = await params;
   const { tab, notice } = await searchParams;
-  const [detail, tasks, line, unlinkedLines, revenue, report, feedback] = await Promise.all([
+  const [detail, tasks, line, revenue, report, feedback] = await Promise.all([
     getEventDetail(id),
     getTasksForSubject({ eventId: id }),
     getLineDetailForEvent(id),
-    getUnlinkedEventLines(),
     getEventRevenueEntries(id),
     getEventReport(id),
     getEventFeedback(id),
@@ -147,7 +146,7 @@ export default async function EventWorkspacePage({
         )}
         {active === "agenda" && <AgendaTab detail={detail} />}
         {active === "speakers" && <SpeakersTab detail={detail} />}
-        {active === "budget" && <BudgetTab detail={detail} line={line} unlinkedLines={unlinkedLines} revenue={revenue} report={report[0] ?? null} />}
+        {active === "budget" && <BudgetTab detail={detail} line={line} revenue={revenue} report={report[0] ?? null} />}
         {active === "tasks" && <TasksTab eventId={event.id} tasks={tasks} />}
         {active === "communications" && <CommunicationsTab detail={detail} />}
         {active === "files" && <FilesTab detail={detail} />}
