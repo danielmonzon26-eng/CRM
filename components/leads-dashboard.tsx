@@ -93,7 +93,7 @@ export function LeadsDashboard({
                   <span aria-hidden="true" className={`h-2 w-2 shrink-0 rounded-full ${STATUS_DOTS[stage]}`} />
                   <span className="truncate">{STATUS_LABELS[stage]}</span>
                 </span>
-                <span className="mt-1 text-2xl font-semibold tabular-nums tracking-tight text-slate-900">{count.toLocaleString()}</span>
+                <span className="mt-1 text-3xl font-bold tabular-nums tracking-tight text-slate-900">{count.toLocaleString()}</span>
                 <span aria-hidden="true" className="mt-1.5 block h-1 w-full rounded-full bg-slate-100">
                   <span className={`block h-full rounded-full ${STATUS_DOTS[stage]}`} style={{ width: `${(count / maxStage) * 100}%` }} />
                 </span>

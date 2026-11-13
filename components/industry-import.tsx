@@ -75,7 +75,7 @@ export function IndustryImportForm() {
 
       {preview && !isPending && (
         <section className={`${CARD} animate-fade`} aria-label="Import preview">
-          <h2 className="font-semibold text-slate-900">{preview.changes.toLocaleString()} companies will change</h2>
+          <h2 className="text-lg font-semibold text-slate-900">{preview.changes.toLocaleString()} companies will change</h2>
           <p className="mt-1 text-sm text-slate-600">
             {preview.unchanged.toLocaleString()} already match, and {preview.skipped.toLocaleString()} have no code and will be left alone.
           </p>

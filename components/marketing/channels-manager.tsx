@@ -28,7 +28,7 @@ export function ChannelsManager({ channels, isAdmin }: { channels: Channel[]; is
           <section key={p.key} aria-labelledby={`platform-${p.key}`} className="rounded-xl border border-slate-200 bg-white shadow-card">
             <header className="flex items-center gap-2 border-b border-slate-100 px-4 py-3">
               <PlatformIcon platform={p.key} className="h-5 w-5" title="" />
-              <h2 id={`platform-${p.key}`} className="font-semibold text-slate-900">
+              <h2 id={`platform-${p.key}`} className="text-lg font-semibold text-slate-900">
                 {p.label}
               </h2>
             </header>

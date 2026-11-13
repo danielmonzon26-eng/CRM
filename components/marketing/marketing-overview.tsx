@@ -43,7 +43,7 @@ function BudgetSummary({ b }: { b: MarketingDashboard["budget"] }) {
           <h2 id="mk-budget-title" className="text-xs font-semibold uppercase tracking-wide text-slate-500">
             Marketing budget
           </h2>
-          <p className="mt-1 text-5xl font-semibold tabular-nums tracking-tight text-slate-900">{money(b.total)}</p>
+          <p className="mt-1 text-5xl font-bold tabular-nums tracking-tight text-slate-900">{money(b.total)}</p>
           <p className="mt-1.5 text-sm text-slate-500">
             {b.name ? (
               <>
@@ -61,7 +61,7 @@ function BudgetSummary({ b }: { b: MarketingDashboard["budget"] }) {
           </p>
         </div>
         <div className="text-right">
-          <p className={`text-4xl font-semibold tabular-nums tracking-tight ${over ? "text-rose-700" : "text-slate-900"}`}>{allocatedPct}%</p>
+          <p className={`text-4xl font-bold tabular-nums tracking-tight ${over ? "text-rose-700" : "text-slate-900"}`}>{allocatedPct}%</p>
           <p className="text-sm text-slate-500">allocated</p>
         </div>
       </div>
@@ -104,7 +104,7 @@ function BudgetSummary({ b }: { b: MarketingDashboard["budget"] }) {
           {figures.map((f) => (
             <div key={f.label} className="rounded-xl bg-slate-50/80 p-4">
               <dt className="text-xs font-medium uppercase tracking-wide text-slate-500">{f.label}</dt>
-              <dd className={`mt-1 text-2xl font-semibold tabular-nums tracking-tight ${f.tone ?? "text-slate-900"}`}>{f.value}</dd>
+              <dd className={`mt-1 text-3xl font-bold tabular-nums tracking-tight ${f.tone ?? "text-slate-900"}`}>{f.value}</dd>
               <dd className="mt-0.5 text-xs text-slate-500">{f.detail}</dd>
             </div>
           ))}

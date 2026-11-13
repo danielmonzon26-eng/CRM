@@ -43,7 +43,7 @@ function figuresFor(row: AnalysisRow): Figures {
 function Figure({ value, label, detail, tone = "text-slate-900" }: { value: string; label: string; detail?: string; tone?: string }) {
   return (
     <div className={`${CARD} p-4`}>
-      <p className={`text-2xl font-semibold tracking-tight ${tone}`}>{value}</p>
+      <p className={`text-3xl font-bold tracking-tight ${tone}`}>{value}</p>
       <p className="text-sm text-slate-600">{label}</p>
       {detail && <p className="mt-0.5 text-xs text-slate-500">{detail}</p>}
     </div>
@@ -291,7 +291,7 @@ export function BudgetAnalysisView({
       <section className={CARD}>
         <header className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 px-5 py-3.5">
           <div>
-            <h2 className="font-semibold text-slate-900">Revenue and cost by quarter</h2>
+            <h2 className="text-lg font-semibold text-slate-900">Revenue and cost by quarter</h2>
             <div className="mt-1 flex items-center gap-3 text-xs text-slate-600">
               <span className="inline-flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-sm" style={{ backgroundColor: REVENUE_COLOR }} />Revenue</span>
               <span className="inline-flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-sm" style={{ backgroundColor: COST_COLOR }} />Actual cost</span>
@@ -367,7 +367,7 @@ export function BudgetAnalysisView({
             <section className={CARD}>
               <header className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 px-5 py-3.5">
                 <div>
-                  <h2 className="font-semibold text-slate-900">Revenue and cost by event</h2>
+                  <h2 className="text-lg font-semibold text-slate-900">Revenue and cost by event</h2>
                   <div className="mt-1 flex items-center gap-3 text-xs text-slate-600">
                     <span className="inline-flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-sm" style={{ backgroundColor: REVENUE_COLOR }} />Revenue</span>
                     <span className="inline-flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-sm" style={{ backgroundColor: COST_COLOR }} />{basis === "actual" ? "Actual cost" : "Budget"}</span>
@@ -394,7 +394,7 @@ export function BudgetAnalysisView({
 
             <section className={CARD}>
               <header className="border-b border-slate-100 px-5 py-3.5">
-                <h2 className="font-semibold text-slate-900">Costs by section</h2>
+                <h2 className="text-lg font-semibold text-slate-900">Costs by section</h2>
                 <p className="mt-1 text-xs text-slate-500">Actual spend against each section&apos;s budget.</p>
               </header>
               <ul className="divide-y divide-slate-100">
@@ -420,7 +420,7 @@ export function BudgetAnalysisView({
           <section className={CARD}>
             <header className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 px-5 py-3.5">
               <div>
-                <h2 className="font-semibold text-slate-900">Event profit and loss</h2>
+                <h2 className="text-lg font-semibold text-slate-900">Event profit and loss</h2>
                 <p className="mt-0.5 text-xs text-slate-500">Open an event to add revenue or change its budget. Net is revenue minus actual cost.</p>
               </div>
               <button type="button" onClick={exportCsv} className={buttonClass("secondary", "sm")}>

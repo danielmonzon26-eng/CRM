@@ -60,7 +60,7 @@ function Metric({ icon: Icon, tone, value, label, detail }: { icon: LucideIcon; 
       <span className={`flex h-9 w-9 items-center justify-center rounded-lg ${tone}`}>
         <Icon className="h-[18px] w-[18px]" strokeWidth={2} />
       </span>
-      <p className="mt-3 text-2xl font-semibold tracking-tight text-slate-900">{value}</p>
+      <p className="mt-3 text-3xl font-bold tracking-tight text-slate-900">{value}</p>
       <p className="text-sm font-medium text-slate-700">{label}</p>
       <p className="mt-0.5 text-xs text-slate-500">{detail}</p>
     </div>
@@ -151,7 +151,7 @@ export function OverviewTab({
 
       <div className="grid gap-5 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
         <section className={CARD}>
-          <h2 className="rounded-t-xl border-b border-slate-200/70 bg-slate-50/80 px-5 py-4 font-semibold text-slate-900">Event timeline</h2>
+          <h2 className="rounded-t-xl border-b border-slate-200/70 bg-slate-50/80 px-5 py-4 text-lg font-semibold text-slate-900">Event timeline</h2>
           <ol className="divide-y divide-slate-100">
             {timeline.map((item) => {
               const Icon = item.done ? CheckCircle2 : Circle;
@@ -168,7 +168,7 @@ export function OverviewTab({
 
         <div className="space-y-5">
           <section className={CARD}>
-            <h2 className="rounded-t-xl border-b border-slate-200/70 bg-slate-50/80 px-5 py-4 font-semibold text-slate-900">Quick actions</h2>
+            <h2 className="rounded-t-xl border-b border-slate-200/70 bg-slate-50/80 px-5 py-4 text-lg font-semibold text-slate-900">Quick actions</h2>
             <ul className="p-2 text-sm">
               {([
                 [Users, "View registration list", `${base}?tab=registrations`],
@@ -187,7 +187,7 @@ export function OverviewTab({
           </section>
 
           <section className={`${CARD} p-5 text-sm`}>
-            <h2 className="font-semibold text-slate-900">Landing page</h2>
+            <h2 className="text-lg font-semibold text-slate-900">Landing page</h2>
             {event.status === "published" ? (
               <>
                 <p className="mt-1 break-all text-xs text-slate-500">{landingUrl}</p>
@@ -213,7 +213,7 @@ export function OverviewTab({
           </section>
 
           <section className={`${CARD} p-5 text-sm`}>
-            <h2 className="font-semibold text-slate-900">Details</h2>
+            <h2 className="text-lg font-semibold text-slate-900">Details</h2>
             <dl className="mt-2 space-y-2">
               <Detail label="When" value={formatEventWhen(event.starts_at, event.ends_at)} />
               <Detail label="Format" value={FORMAT_LABELS[event.format]} />
@@ -236,7 +236,7 @@ export function OverviewTab({
 
       {event.description && (
         <section className={`${CARD} p-5 text-sm`}>
-          <h2 className="font-semibold text-slate-900">Description</h2>
+          <h2 className="text-lg font-semibold text-slate-900">Description</h2>
           <p className="mt-1 whitespace-pre-line text-slate-600">{event.description}</p>
         </section>
       )}
@@ -342,7 +342,7 @@ export function BudgetTab({
             ["Remaining", line.line.remaining],
           ] as [string, number][]).map(([label, value]) => (
             <div key={label} className={`${CARD} p-4`}>
-              <p className={`text-2xl font-semibold tracking-tight ${label === "Remaining" && value < 0 ? "text-rose-700" : "text-slate-900"}`}>{formatMoney(value)}</p>
+              <p className={`text-3xl font-bold tracking-tight ${label === "Remaining" && value < 0 ? "text-rose-700" : "text-slate-900"}`}>{formatMoney(value)}</p>
               <p className="text-sm text-slate-600">{label}</p>
             </div>
           ))}
@@ -352,7 +352,7 @@ export function BudgetTab({
       <section className={CARD} aria-labelledby="event-costs-title">
         <header className="flex flex-wrap items-center justify-between gap-2 rounded-t-xl border-b border-slate-200/70 bg-slate-50/80 px-5 py-4">
           <div>
-            <h2 id="event-costs-title" className="font-semibold text-slate-900">
+            <h2 id="event-costs-title" className="text-lg font-semibold text-slate-900">
               Costs
             </h2>
             <p className="text-xs text-slate-500">Edit any cost, or add one. Totals update as you go.</p>
@@ -371,7 +371,7 @@ export function BudgetTab({
       {social && <EventSocialPlan eventId={event.id} eventDay={social.eventDay} posts={social.posts} channels={social.channels} today={social.today} />}
 
       <section className={CARD}>
-        <h2 className="rounded-t-xl border-b border-slate-200/70 bg-slate-50/80 px-5 py-4 font-semibold text-slate-900">Revenue</h2>
+        <h2 className="rounded-t-xl border-b border-slate-200/70 bg-slate-50/80 px-5 py-4 text-lg font-semibold text-slate-900">Revenue</h2>
         <div className="space-y-4 p-5">
           <RevenueForm eventId={event.id} />
           <ul className="divide-y divide-slate-100 text-sm">
@@ -397,7 +397,7 @@ export function BudgetTab({
 
       {(event.funding_source || event.budget_notes) && (
         <section className={`${CARD} p-5 text-sm`}>
-          <h2 className="font-semibold text-slate-900">Planning notes</h2>
+          <h2 className="text-lg font-semibold text-slate-900">Planning notes</h2>
           {event.funding_source && <p className="mt-1 text-slate-700">Funding source: {event.funding_source}</p>}
           {event.budget_notes && <p className="mt-1 whitespace-pre-line text-slate-600">{event.budget_notes}</p>}
         </section>
@@ -433,7 +433,7 @@ export function CommunicationsTab({ detail }: { detail: EventDetail }) {
         Sending from the CRM isn&apos;t connected yet, so nothing here emails anyone. Copy a list into your email app, using BCC to keep addresses private.
       </p>
       <section className={CARD}>
-        <h2 className="rounded-t-xl border-b border-slate-200/70 bg-slate-50/80 px-5 py-4 font-semibold text-slate-900">Recipient lists</h2>
+        <h2 className="rounded-t-xl border-b border-slate-200/70 bg-slate-50/80 px-5 py-4 text-lg font-semibold text-slate-900">Recipient lists</h2>
         <ul className="divide-y divide-slate-100">
           {groups.map(([label, emails]) => (
             <li key={label} className="flex items-center justify-between gap-3 px-5 py-2.5 text-sm">
@@ -446,7 +446,7 @@ export function CommunicationsTab({ detail }: { detail: EventDetail }) {
         </ul>
       </section>
       <section className={`${CARD} p-5 text-sm`}>
-        <h2 className="font-semibold text-slate-900">Confirmation message</h2>
+        <h2 className="text-lg font-semibold text-slate-900">Confirmation message</h2>
         <p className="mt-1 whitespace-pre-line text-slate-600">{event.confirmation_message ?? "Using the standard message: \"We have your spot saved. See you there.\""}</p>
         <Link href={`/events/${event.id}/edit?step=2`} className="mt-2 inline-block font-medium text-brand-600 hover:underline">Edit</Link>
       </section>
@@ -461,7 +461,7 @@ export function FilesTab({ detail }: { detail: EventDetail }) {
       <section>
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div>
-            <h2 className="font-semibold text-slate-900">Materials ({documents.length})</h2>
+            <h2 className="text-lg font-semibold text-slate-900">Materials ({documents.length})</h2>
             <p className="text-xs text-slate-500">Visible to your team only. Up to 50 MB per file.</p>
           </div>
           <DocumentUpload eventId={event.id} />
@@ -474,7 +474,7 @@ export function FilesTab({ detail }: { detail: EventDetail }) {
       </section>
 
       <section>
-        <h2 className="font-semibold text-slate-900">Event videos ({videos.length})</h2>
+        <h2 className="text-lg font-semibold text-slate-900">Event videos ({videos.length})</h2>
         <p className="text-xs text-slate-500">Visible to your team only.</p>
         <div className="mt-3"><VideoForm eventId={event.id} /></div>
         <div className="mt-3 grid gap-3 md:grid-cols-2">
@@ -535,7 +535,7 @@ function ResultsPanel({ report }: { report: EventReportRow }) {
     <section aria-label="Event results" className="grid gap-3 lg:grid-cols-3">
       {panels.map((panel) => (
         <div key={panel.title} className={`${CARD} p-4`}>
-          <h2 className="font-semibold text-slate-900">{panel.title}</h2>
+          <h2 className="text-lg font-semibold text-slate-900">{panel.title}</h2>
           <dl className="mt-2 space-y-1.5 text-sm">
             {panel.rows.map(([label, value]) => (
               <div key={label} className="flex items-baseline justify-between gap-3">
@@ -597,7 +597,7 @@ export function AnalyticsTab({ detail, report }: { detail: EventDetail; report: 
       </section>
 
       <section className={`${CARD} p-5`}>
-        <h2 className="font-semibold text-slate-900">Registrations per day</h2>
+        <h2 className="text-lg font-semibold text-slate-900">Registrations per day</h2>
         <p className="text-xs text-slate-500">The 30 days up to the latest registration, excluding cancellations. Calgary time.</p>
         <div className="relative mt-4 overflow-x-auto">
           <div className="flex h-40 min-w-[560px] items-end gap-[2px] border-b border-slate-200">

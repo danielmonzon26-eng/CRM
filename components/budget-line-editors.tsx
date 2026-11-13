@@ -52,7 +52,7 @@ export function LineDetailsForm({ line, sections, months }: { line: LineSummary;
         });
       }}
     >
-      <h2 className="font-semibold text-slate-900">Line details</h2>
+      <h2 className="text-lg font-semibold text-slate-900">Line details</h2>
       <label className={`${LABEL} block`}>
         Name
         <input required value={name} onChange={(e) => setName(e.target.value)} className={`${INPUT} mt-1`} />
@@ -116,7 +116,7 @@ export function MonthPlanEditor({ line, months }: { line: LineSummary; months: s
     <section className={CARD}>
       <header className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 px-5 py-3.5">
         <div>
-          <h2 className="font-semibold text-slate-900">Monthly plan</h2>
+          <h2 className="text-lg font-semibold text-slate-900">Monthly plan</h2>
           <p className="text-xs text-slate-500">Click an amount to change it. The line&apos;s total follows.</p>
         </div>
         <button
@@ -159,7 +159,7 @@ export function ItemsEditor({ lineId, items }: { lineId: string; items: ItemSumm
   return (
     <section className={CARD}>
       <div className="border-b border-slate-100 px-5 py-3.5">
-        <h2 className="font-semibold text-slate-900">Budget items</h2>
+        <h2 className="text-lg font-semibold text-slate-900">Budget items</h2>
         <p className="text-xs text-slate-500">Click a name or amount to change it. The line&apos;s total and monthly plan follow.</p>
       </div>
       <div className="relative overflow-x-auto">

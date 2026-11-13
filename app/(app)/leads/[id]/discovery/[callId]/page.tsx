@@ -27,7 +27,7 @@ export default async function DiscoveryCallPage({ params }: { params: Promise<{ 
       </Link>
       <header className="mb-5 mt-3">
         <p className="text-xs font-semibold uppercase tracking-wide text-rose-700">Internal: do not send to the prospect</p>
-        <h1 className="text-[28px] font-semibold leading-tight tracking-tight text-slate-900">Discovery call</h1>
+        <h1 className="text-3xl font-bold leading-tight tracking-tight sm:text-[2.125rem] text-slate-900">Discovery call</h1>
         <p className="text-sm text-slate-500">{companyName}</p>
       </header>
       <DiscoveryForm call={call} companyName={companyName} contacts={(contacts ?? []).map((c) => ({ id: c.id, name: c.full_name }))} />

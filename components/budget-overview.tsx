@@ -128,7 +128,7 @@ export function TotalField({ budget }: { budget: BudgetOverview }) {
   if (!editing) {
     return (
       <button type="button" onClick={() => setEditing(true)} className="group inline-flex items-center gap-1.5 text-left" aria-label="Change the total budget">
-        <span className={`text-2xl font-semibold tabular-nums tracking-tight ${budget.total === null ? "text-slate-400" : "text-slate-900"}`}>
+        <span className={`text-3xl font-bold tabular-nums tracking-tight ${budget.total === null ? "text-slate-400" : "text-slate-900"}`}>
           {budget.total === null ? "Not set" : formatMoney(budget.total)}
         </span>
         <Pencil className="h-3.5 w-3.5 text-slate-400 group-hover:text-slate-700" strokeWidth={2} />
@@ -220,7 +220,7 @@ function BudgetGauges({
         {figures.map((f) => (
           <div key={f.label} className="min-w-0">
             <dt className="text-xs font-medium uppercase tracking-wide text-slate-500">{f.label}</dt>
-            <dd className={`mt-1 text-2xl font-semibold tabular-nums tracking-tight ${f.tone ?? "text-slate-900"}`}>{f.value}</dd>
+            <dd className={`mt-1 text-3xl font-bold tabular-nums tracking-tight ${f.tone ?? "text-slate-900"}`}>{f.value}</dd>
           </div>
         ))}
       </dl>

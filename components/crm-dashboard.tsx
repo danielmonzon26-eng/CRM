@@ -68,7 +68,7 @@ export function CrmDashboardView({ d, today }: { d: CrmDashboard; today: string 
               ["Declined", d.proposals.declined, "bg-slate-100 text-slate-700"],
             ].map(([label, n, tone]) => (
               <div key={label as string} className={`rounded-xl p-3 ${tone}`}>
-                <p className="text-2xl font-semibold tabular-nums">{n as number}</p>
+                <p className="text-3xl font-bold tabular-nums">{n as number}</p>
                 <p className="text-xs font-medium">{label as string}</p>
               </div>
             ))}

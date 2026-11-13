@@ -366,7 +366,7 @@ export function DiscoveryForm({
             <h2 className="text-xs font-semibold uppercase tracking-wide text-slate-500">Completion</h2>
             <SaveStatus state={saveState} onRetry={() => void flush()} />
           </div>
-          <p className="mt-2 text-4xl font-semibold tabular-nums tracking-tight text-slate-900">{Math.round(score)}%</p>
+          <p className="mt-2 text-4xl font-bold tabular-nums tracking-tight text-slate-900">{Math.round(score)}%</p>
           <div className="mt-2 h-2 overflow-hidden rounded-full bg-slate-100" role="progressbar" aria-valuenow={Math.round(score)} aria-valuemin={0} aria-valuemax={100} aria-label="BMC completion">
             <div className="h-full rounded-full bg-brand-500 transition-[width]" style={{ width: `${score}%` }} />
           </div>

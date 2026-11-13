@@ -23,7 +23,7 @@ export default async function FeedbackPage({ params }: { params: Promise<{ token
         <div className="h-1.5 bg-brand-600" />
         <header className="border-b border-slate-100 px-6 py-5">
           <p className="text-xs font-semibold uppercase tracking-wide text-brand-700">Catapult · Feedback</p>
-          <h1 className="mt-1 text-2xl font-semibold leading-tight tracking-tight text-slate-900">{form.event_title}</h1>
+          <h1 className="mt-1 text-3xl font-bold leading-tight tracking-tight text-slate-900">{form.event_title}</h1>
           <p className="mt-1 text-sm text-slate-600">{formatEventWhen(form.starts_at, null)}</p>
         </header>
         {form.submitted ? (

@@ -102,7 +102,7 @@ export default async function EventWorkspacePage({
           <div className="relative flex flex-wrap items-start justify-between gap-4 p-6">
             <div className="min-w-0">
               <p className="text-sm font-medium text-ink-200">{[event.program, event.event_type].filter(Boolean).join(" · ") || "Event"}</p>
-              <h1 className="mt-1 text-[28px] font-semibold leading-tight tracking-tight">{event.title}</h1>
+              <h1 className="mt-1 text-3xl font-bold leading-tight tracking-tight sm:text-[2.125rem]">{event.title}</h1>
               <div className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-2 text-sm text-ink-100">
                 <span className="flex items-center gap-1.5">
                   <CalendarDays className="h-4 w-4" strokeWidth={2} />

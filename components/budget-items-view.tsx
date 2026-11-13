@@ -86,11 +86,11 @@ export function BudgetItemsView({ budget, events }: { budget: BudgetOverview; ev
           <dl className="flex flex-wrap gap-x-8 gap-y-2">
             <div>
               <dt className="text-xs font-medium uppercase tracking-wide text-slate-500">Allocated to lines</dt>
-              <dd className="mt-1 text-2xl font-semibold tabular-nums tracking-tight text-slate-900">{formatMoney(budget.approved)}</dd>
+              <dd className="mt-1 text-3xl font-bold tabular-nums tracking-tight text-slate-900">{formatMoney(budget.approved)}</dd>
             </div>
             <div>
               <dt className="text-xs font-medium uppercase tracking-wide text-slate-500">{unallocated !== null && unallocated < 0 ? "Over-allocated" : "Unallocated"}</dt>
-              <dd className={`mt-1 text-2xl font-semibold tabular-nums tracking-tight ${unallocated === null ? "text-slate-400" : unallocated < 0 ? "text-rose-700" : "text-emerald-700"}`}>
+              <dd className={`mt-1 text-3xl font-bold tabular-nums tracking-tight ${unallocated === null ? "text-slate-400" : unallocated < 0 ? "text-rose-700" : "text-emerald-700"}`}>
                 {unallocated === null ? "—" : formatMoney(Math.abs(unallocated))}
               </dd>
             </div>

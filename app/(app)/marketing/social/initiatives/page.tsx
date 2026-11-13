@@ -43,7 +43,7 @@ export default async function InitiativesPage() {
                   className="flex h-full flex-col rounded-xl border border-slate-200 bg-white p-4 shadow-card transition-colors hover:border-brand-300"
                 >
                   <div className="flex items-start justify-between gap-2">
-                    <h2 className="font-semibold text-slate-900">{i.name}</h2>
+                    <h2 className="text-lg font-semibold text-slate-900">{i.name}</h2>
                     <span className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] font-medium ${PHASE_META[i.phase].pill}`}>{PHASE_META[i.phase].label}</span>
                   </div>
                   {i.objective && <p className="mt-1 line-clamp-2 text-sm text-slate-600">{i.objective}</p>}
