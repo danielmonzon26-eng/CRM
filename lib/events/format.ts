@@ -14,8 +14,8 @@ export const EVENT_TIME_ZONE_LABEL = "ABT";
 
 export const FORMAT_LABELS: Record<EventFormat, string> = {
   in_person: "In person",
-  online: "Online / livestream",
-  hybrid: "In person + livestream",
+  online: "Online",
+  hybrid: "In person and online",
 };
 
 export const STATUS_LABELS: Record<EventStatus, string> = {

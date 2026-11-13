@@ -95,3 +95,49 @@ table { font-variant-numeric: tabular-nums; }
     scroll-behavior: auto !important;
   }
 }
+
+/*
+ * Form controls look the same in every browser. Safari draws its own small, flat
+ * dropdowns and number arrows, so selects get the inputs' height and padding with a
+ * matching chevron, and number fields lose their spin buttons. Outside a layer, so a
+ * select's room for the chevron wins over padding utilities like px-3.
+ */
+select:not([multiple]):not([size]) {
+  -webkit-appearance: none;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='none' stroke='%2364748b' stroke-width='1.75' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 8l4 4 4-4'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.6rem center;
+  background-size: 1.1rem;
+  padding-right: 2.25rem;
+  line-height: 1.25rem;
+  text-overflow: ellipsis;
+  cursor: pointer;
+}
+select:disabled {
+  cursor: not-allowed;
+  background-color: #f8fafc;
+  color: #64748b;
+}
+
+input[type="number"] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+/* Safari sizes date and time fields from their own font metrics; line them up with text inputs. */
+input[type="date"],
+input[type="time"],
+input[type="datetime-local"] {
+  line-height: 1.25rem;
+  min-height: 2.375rem;
+}
+input[type="date"]::-webkit-date-and-time-value,
+input[type="time"]::-webkit-date-and-time-value {
+  text-align: left;
+}
