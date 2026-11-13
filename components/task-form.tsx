@@ -11,10 +11,13 @@ export function TaskForm({
   leadId,
   companyId,
   eventId,
+  members,
 }: {
   leadId?: string | null;
   companyId?: string | null;
   eventId?: string | null;
+  /** Team members to assign it to; without them it's assigned to whoever adds it. */
+  members?: { id: string; name: string }[];
 }) {
   const [isPending, startTransition] = useTransition();
   const formRef = useRef<HTMLFormElement>(null);
@@ -39,6 +42,7 @@ export function TaskForm({
             leadId: leadId ?? null,
             companyId: companyId ?? null,
             eventId: eventId ?? null,
+            assignedTo: (data.get("assignedTo") as string) || null,
           });
           form.reset();
         });
@@ -47,7 +51,7 @@ export function TaskForm({
       <div className="min-w-[180px] flex-1">
         <input
           name="title"
-          placeholder="New task…"
+          placeholder="New assignment…"
           required
           className="w-full rounded-md border border-slate-200 bg-white px-2.5 py-1.5 text-sm focus:border-brand-400 focus:outline-none focus:ring-1 focus:ring-brand-200"
         />
@@ -62,6 +66,21 @@ export function TaskForm({
         <option value="email">Email</option>
         <option value="meeting">Meeting</option>
       </select>
+      {members && members.length > 0 && (
+        <select
+          name="assignedTo"
+          aria-label="Assign to"
+          defaultValue=""
+          className="rounded-md border border-slate-200 bg-white px-2.5 py-1.5 text-sm focus:border-brand-400 focus:outline-none focus:ring-1 focus:ring-brand-200"
+        >
+          <option value="">Assign to me</option>
+          {members.map((m) => (
+            <option key={m.id} value={m.id}>
+              {m.name}
+            </option>
+          ))}
+        </select>
+      )}
       <DateInput
         name="dueAt"
         aria-label="Due date"
@@ -74,7 +93,7 @@ export function TaskForm({
         className="flex items-center gap-1.5 rounded-md bg-brand-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-50"
       >
         <Plus className="h-3.5 w-3.5" strokeWidth={2.5} />
-        Add task
+        Add assignment
       </button>
     </form>
   );

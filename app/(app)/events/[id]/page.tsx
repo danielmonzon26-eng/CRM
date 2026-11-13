@@ -10,6 +10,7 @@ import { getLineDetailForEvent } from "@/lib/budgets/queries";
 import { getEventReport } from "@/lib/reports/queries";
 import { getSiteUrl } from "@/lib/site-url";
 import { getTasksForSubject } from "@/lib/tasks/queries";
+import { getTeamMembers } from "@/lib/leads/queries";
 import { getEventFeedback } from "@/lib/events/feedback-queries";
 import { isEventOver } from "@/lib/events/format";
 import { EventFeedbackTab } from "@/components/event-feedback-tab";
@@ -37,7 +38,7 @@ const TABS = [
   ["agenda", "Agenda"],
   ["speakers", "Speakers"],
   ["budget", "Budget & Marketing"],
-  ["tasks", "Tasks"],
+  ["tasks", "Assignments"],
   ["communications", "Communications"],
   ["files", "Files"],
   ["feedback", "Feedback"],
@@ -76,6 +77,12 @@ export default async function EventWorkspacePage({
           today: calgaryDateKey(new Date()),
         }))
       : null;
+  const members =
+    active === "tasks"
+      ? await getTeamMembers()
+          .then((list) => list.map((m) => ({ id: m.id, name: m.fullName?.trim() || m.email || "Team member" })).sort((a, b) => a.name.localeCompare(b.name)))
+          .catch(() => [])
+      : [];
   const landingUrl = `${await getSiteUrl()}/register/${event.slug}`;
 
   return (
@@ -159,7 +166,7 @@ export default async function EventWorkspacePage({
         {active === "agenda" && <AgendaTab detail={detail} />}
         {active === "speakers" && <SpeakersTab detail={detail} />}
         {active === "budget" && <BudgetTab detail={detail} line={line} revenue={revenue} report={report[0] ?? null} social={social} />}
-        {active === "tasks" && <TasksTab eventId={event.id} tasks={tasks} />}
+        {active === "tasks" && <TasksTab eventId={event.id} tasks={tasks} members={members} />}
         {active === "communications" && <CommunicationsTab detail={detail} />}
         {active === "files" && <FilesTab detail={detail} />}
         {active === "analytics" && <AnalyticsTab detail={detail} report={report[0] ?? null} />}

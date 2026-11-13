@@ -406,11 +406,11 @@ export function BudgetTab({
   );
 }
 
-export function TasksTab({ eventId, tasks }: { eventId: string; tasks: TaskListRow[] }) {
+export function TasksTab({ eventId, tasks, members = [] }: { eventId: string; tasks: TaskListRow[]; members?: { id: string; name: string }[] }) {
   return (
     <div className="space-y-3">
-      <TaskForm eventId={eventId} />
-      <TaskList tasks={tasks} />
+      <TaskForm eventId={eventId} members={members} />
+      <TaskList tasks={tasks} memberNames={Object.fromEntries(members.map((m) => [m.id, m.name]))} />
     </div>
   );
 }

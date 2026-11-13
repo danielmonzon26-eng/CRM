@@ -3,8 +3,8 @@
 import { useMemo, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { AlertCircle, Check, ExternalLink, Loader2, Plus, Search, Trash2 } from "lucide-react";
-import { deleteMarketingItem, saveMarketingItem, searchSponsors, type MarketingItemInput } from "@/app/actions/marketing-items";
+import { AlertCircle, Check, Copy, ExternalLink, Loader2, Plus, Search, Trash2 } from "lucide-react";
+import { deleteMarketingItem, duplicateMarketingItem, saveMarketingItem, searchSponsors, type MarketingItemInput } from "@/app/actions/marketing-items";
 import { PostStatusPill } from "@/components/marketing/status-pill";
 import { buttonClass } from "@/components/ui/button";
 import { money } from "@/components/ui/dashboard";
@@ -38,12 +38,12 @@ const fmtDay = (day: string | null) => (day ? dueFormat.format(new Date(`${day}T
 
 type Row = { kind: "item"; item: MarketingItem } | { kind: "post"; post: PostItem } | { kind: "new"; key: string };
 
-export type ItemDraft = Omit<MarketingItemInput, "id"> & { sponsorName: string };
+export type ItemDraft = Omit<MarketingItemInput, "id" | "assignedTo"> & { sponsorName: string; assignedTo: string | null };
 type Draft = ItemDraft;
 
 function draftOf(item: MarketingItem | null, options: ItemOptions, defaults: Partial<Draft> = {}): Draft {
   if (!item) {
-    const base: Draft = { stream: "catapult", type: "social", description: "", eventId: null, sponsorId: null, sponsorName: "", amount: "", budgetLineId: null, timing: "custom", deliveryOn: "", status: "planned" };
+    const base: Draft = { stream: "catapult", type: "social", description: "", eventId: null, sponsorId: null, sponsorName: "", amount: "", budgetLineId: null, timing: "custom", deliveryOn: "", status: "planned", assignedTo: null };
     const d = { ...base, ...defaults };
     // An event item starts on the event's own budget line and "2 weeks before".
     const ev = d.eventId ? options.events.find((e) => e.id === d.eventId) : undefined;
@@ -61,6 +61,7 @@ function draftOf(item: MarketingItem | null, options: ItemOptions, defaults: Par
     timing: item.timing,
     deliveryOn: item.deliveryOn ?? "",
     status: item.status,
+    assignedTo: item.assigneeId,
   };
   void options;
 }
@@ -156,7 +157,7 @@ export function PlannerTable({ items, posts, options, today }: { items: Marketin
       </p>
 
       <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-card">
-        <table className="w-full min-w-[1240px] table-fixed text-sm">
+        <table className="w-full min-w-[1680px] table-fixed text-sm">
           <ItemTableHead />
           <tbody className="divide-y divide-slate-100">
             {adding.map((key) => (
@@ -164,7 +165,7 @@ export function PlannerTable({ items, posts, options, today }: { items: Marketin
             ))}
             {rows.length === 0 && adding.length === 0 && (
               <tr>
-                <td colSpan={9} className="px-4 py-10 text-center text-sm text-slate-500">
+                <td colSpan={10} className="px-4 py-10 text-center text-sm text-slate-500">
                   Nothing here yet. Use <span className="font-medium">Add item</span> for Catapult marketing, or add marketing items on an event&apos;s Budget tab.
                 </td>
               </tr>
@@ -239,7 +240,8 @@ export function ItemRow({
   }
 
   const linesForEvent = options.lines.filter((l) => !l.eventId || l.eventId === draft.eventId);
-  const byBudget = linesForEvent.reduce<Record<string, ItemOptions["lines"]>>((acc, l) => ((acc[l.budgetName] ??= []).push(l), acc), {});
+  // Grouped by budget and section, so each choice is just the line's name and fits its cell.
+  const byBudget = linesForEvent.reduce<Record<string, ItemOptions["lines"]>>((acc, l) => ((acc[l.section ? `${l.budgetName} · ${l.section}` : l.budgetName] ??= []).push(l), acc), {});
 
   return (
     <tr className={`align-top ${!item ? "bg-brand-50/30" : ""}`}>
@@ -378,12 +380,21 @@ export function ItemRow({
               {lines.map((l) => (
                 <option key={l.id} value={l.id}>
                   {l.name}
-                  {l.section ? ` · ${l.section}` : ""}
                 </option>
               ))}
             </optgroup>
           ))}
           {item?.budgetLine && !linesForEvent.some((l) => l.id === item.budgetLine!.id) && <option value={item.budgetLine.id}>{item.budgetLine.name}</option>}
+        </select>
+      </td>
+      <td className="px-2 py-1.5">
+        <select aria-label="Assigned to" value={draft.assignedTo ?? ""} onChange={(e) => change({ assignedTo: e.target.value || null })} className={`${CELL} ${!draft.assignedTo ? "text-slate-400" : ""}`}>
+          <option value="">Unassigned</option>
+          {options.members.map((m) => (
+            <option key={m.id} value={m.id}>
+              {m.name}
+            </option>
+          ))}
         </select>
       </td>
       <td className="px-2 py-1.5">
@@ -401,8 +412,30 @@ export function ItemRow({
             {(pending || state === "saving") && <Loader2 className="h-4 w-4 animate-spin text-slate-400" strokeWidth={2} aria-label="Saving" />}
             {!pending && state === "saved" && <Check className="h-4 w-4 text-emerald-600" strokeWidth={2.5} aria-label="Saved" />}
           </span>
+          {item && (
+            <button
+              type="button"
+              aria-label={`Copy ${item.name}`}
+              title="Copy"
+              disabled={pending}
+              onClick={() =>
+                startTransition(async () => {
+                  const result = await duplicateMarketingItem(item.id).catch(() => ({ error: "That wasn't copied." }));
+                  if (result.error) toast(result.error, "error");
+                  else {
+                    toast("Copied.");
+                    router.refresh();
+                  }
+                })
+              }
+              className="rounded-md p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-900 disabled:opacity-50"
+            >
+              <Copy className="h-4 w-4" strokeWidth={2} />
+            </button>
+          )}
           <button
             type="button"
+            title={item ? "Delete" : "Discard"}
             aria-label={item ? `Delete ${item.name}` : "Discard this new row"}
             onClick={async () => {
               if (!item) return onDone?.();
@@ -487,7 +520,7 @@ export function SponsorField({
   );
 }
 
-function PostRow({ post }: { post: PostItem }) {
+export function PostRow({ post }: { post: PostItem }) {
   const late = post.isPast && post.status !== "approved";
   return (
     <tr className="align-top bg-slate-50/60 text-slate-700">
@@ -516,6 +549,9 @@ function PostRow({ post }: { post: PostItem }) {
         <span className="block px-2 py-2 text-xs text-slate-500">Written in Social Planner</span>
       </td>
       <td className="px-2 py-1.5">
+        <span className="block px-2 py-2 text-sm text-slate-400">{post.createdByName ?? "—"}</span>
+      </td>
+      <td className="px-2 py-1.5">
         <span className={READ_CELL}>
           <PostStatusPill status={post.status} size="sm" />
         </span>
@@ -533,16 +569,18 @@ function PostRow({ post }: { post: PostItem }) {
 export function ItemTableHead() {
   return (
     <>
+    {/* Wide enough that every dropdown shows its whole choice, e.g. "Onsite Advertising". */}
     <colgroup>
-      <col className="w-[8.5rem]" />
+      <col className="w-36" />
+      <col className="w-56" />
+      <col className="min-w-[14rem]" />
+      <col className="w-60" />
+      <col className="w-52" />
+      <col className="w-28" />
+      <col className="w-72" />
       <col className="w-44" />
-      <col />
-      <col className="w-52" />
-      <col className="w-48" />
-      <col className="w-24" />
-      <col className="w-52" />
-      <col className="w-32" />
-      <col className="w-14" />
+      <col className="w-40" />
+      <col className="w-20" />
     </colgroup>
     <thead className="border-b border-slate-200 bg-slate-50 text-left text-xs font-medium uppercase tracking-wide text-slate-500">
       <tr>
@@ -553,6 +591,7 @@ export function ItemTableHead() {
         <th scope="col" className="px-3 py-2.5">Due</th>
         <th scope="col" className="px-3 py-2.5 text-right">Amount</th>
         <th scope="col" className="px-3 py-2.5">Budget line</th>
+        <th scope="col" className="px-3 py-2.5">Assigned to</th>
         <th scope="col" className="px-3 py-2.5">Status</th>
         <th scope="col" className="px-3 py-2.5">
           <span className="sr-only">Actions</span>

@@ -12,6 +12,8 @@ export async function createTask(input: {
   leadId?: string | null;
   companyId?: string | null;
   eventId?: string | null;
+  /** Who it's assigned to; blank means whoever adds it. */
+  assignedTo?: string | null;
 }) {
   const title = input.title.trim();
   if (!title) return;
@@ -30,7 +32,7 @@ export async function createTask(input: {
     company_id: input.leadId ? null : input.companyId ?? null,
     event_id: input.eventId ?? null,
     created_by: user?.id ?? null,
-    assigned_to: user?.id ?? null,
+    assigned_to: (input.assignedTo && /^[0-9a-f-]{36}$/i.test(input.assignedTo) ? input.assignedTo : null) ?? user?.id ?? null,
   });
   if (error) throw error;
 

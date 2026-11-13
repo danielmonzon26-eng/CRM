@@ -13,15 +13,15 @@ export const MARKETING_STREAM_STYLES: Record<MarketingStream, string> = {
   sponsorship: "bg-amber-50 text-amber-900",
 };
 
-/** The kind of marketing work, the same list for every stream. */
+/** The kind of marketing work, the same list for every stream, in alphabetical order. */
 export const MARKETING_CATEGORIES = [
-  ["social", "Social"],
-  ["online_advertising", "Online Advertising"],
-  ["production", "Production"],
   ["creative", "Creative"],
   ["event_materials", "Event Materials"],
-  ["onsite_advertising", "Onsite Advertising"],
   ["newsletter", "Newsletter/eBlast"],
+  ["online_advertising", "Online Advertising"],
+  ["onsite_advertising", "Onsite Advertising"],
+  ["production", "Production"],
+  ["social", "Social"],
 ] as const;
 
 export type MarketingCategory = (typeof MARKETING_CATEGORIES)[number][0];

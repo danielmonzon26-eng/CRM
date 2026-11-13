@@ -14,17 +14,22 @@ export type TaskListRow = {
   companyName: string | null;
   eventId: string | null;
   eventTitle: string | null;
+  assignedTo: string | null;
 };
 
 export type TaskFilter = "open" | "overdue" | "completed" | "all";
 
-export async function getTasksList(filter: TaskFilter = "open"): Promise<TaskListRow[]> {
+export async function getTasksList(filter: TaskFilter = "open", options: { assigneeId?: string | "unassigned"; search?: string } = {}): Promise<TaskListRow[]> {
   const supabase = await createClient();
 
   let query = supabase
     .from("tasks")
-    .select("id, title, description, task_type, due_at, completed_at, lead_id, company_id, event_id")
+    .select("id, title, description, task_type, due_at, completed_at, lead_id, company_id, event_id, assigned_to")
     .order("due_at", { ascending: true, nullsFirst: false });
+  if (options.assigneeId === "unassigned") query = query.is("assigned_to", null);
+  else if (options.assigneeId) query = query.eq("assigned_to", options.assigneeId);
+  const search = options.search?.trim().replace(/[%_\\,()]/g, " ").trim();
+  if (search) query = query.or(`title.ilike.%${search}%,description.ilike.%${search}%`);
 
   if (filter === "open") query = query.is("completed_at", null);
   if (filter === "completed") query = query.not("completed_at", "is", null);
@@ -69,6 +74,7 @@ export async function getTasksList(filter: TaskFilter = "open"): Promise<TaskLis
       companyName: companyId ? companyNameById.get(companyId) ?? null : null,
       eventId: t.event_id,
       eventTitle: t.event_id ? eventTitleById.get(t.event_id) ?? null : null,
+      assignedTo: t.assigned_to,
     };
   });
 }
@@ -91,7 +97,7 @@ export async function getTasksForSubject(opts: {
   const supabase = await createClient();
   let query = supabase
     .from("tasks")
-    .select("id, title, description, task_type, due_at, completed_at, lead_id, company_id, event_id")
+    .select("id, title, description, task_type, due_at, completed_at, lead_id, company_id, event_id, assigned_to")
     .order("completed_at", { ascending: true, nullsFirst: true })
     .order("due_at", { ascending: true, nullsFirst: false });
 
@@ -115,5 +121,6 @@ export async function getTasksForSubject(opts: {
     companyName: null,
     eventId: t.event_id,
     eventTitle: null,
+    assignedTo: t.assigned_to,
   }));
 }
