@@ -10,7 +10,7 @@ import { buttonClass } from "@/components/ui/button";
 import { FORMAT_LABELS, formatEventWhen, fromDateTimeInput, toDateTimeInput } from "@/lib/events/format";
 import type { EventRow, EventTemplate } from "@/lib/events/queries";
 import { uploadEventBanner } from "@/lib/events/upload";
-import { getMissingForPublish, getPublishReminders, type EventInput } from "@/lib/events/validation";
+import { getMissingForPublish, getPublishReminders, normalizeWebUrl, type EventInput } from "@/lib/events/validation";
 
 const INPUT =
   "mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-brand-600 focus:outline-none focus:ring-2 focus:ring-brand-100";
@@ -143,13 +143,24 @@ export function EventWizard({
       setSaveNote("Saving...");
       try {
         const result = await save(values);
-        setSaveNote(result.error ? `Not saved: ${result.error}` : "Draft saved");
+        setSaveNote(result.error ? `Not saved: ${result.error}` : result.warning ?? "Draft saved");
       } catch {
         setSaveNote("Not saved. Check your connection.");
       }
     }, AUTOSAVE_DELAY_MS);
     return () => clearTimeout(handle);
   }, [values, autosaves, save]);
+
+  // Warn before leaving or reloading with changes that haven't saved yet.
+  const unsavedRef = useRef(false);
+  unsavedRef.current = JSON.stringify(values) !== lastSaved.current;
+  useEffect(() => {
+    const warn = (e: BeforeUnloadEvent) => {
+      if (unsavedRef.current) e.preventDefault();
+    };
+    window.addEventListener("beforeunload", warn);
+    return () => window.removeEventListener("beforeunload", warn);
+  }, []);
 
   const set = <K extends keyof EventInput>(key: K, value: EventInput[K]) =>
     setValues((current) => ({ ...current, [key]: value }));
@@ -411,8 +422,25 @@ export function EventWizard({
               {values.format !== "in_person" && (
                 <div>
                   <label className={LABEL} htmlFor="onlineUrl">Livestream or join link</label>
-                  <input id="onlineUrl" type="url" placeholder="https://" value={values.onlineUrl} onChange={(e) => set("onlineUrl", e.target.value)} className={INPUT} />
-                  <p className="mt-1 text-xs text-slate-500">Only shown to people who register to attend online.</p>
+                  <input
+                    id="onlineUrl"
+                    type="text"
+                    inputMode="url"
+                    placeholder="https://zoom.us/j/… (optional, add it later)"
+                    value={values.onlineUrl}
+                    onChange={(e) => set("onlineUrl", e.target.value)}
+                    onBlur={() => {
+                      const fixed = normalizeWebUrl(values.onlineUrl);
+                      if (fixed && fixed !== values.onlineUrl) set("onlineUrl", fixed);
+                    }}
+                    aria-invalid={normalizeWebUrl(values.onlineUrl) === null}
+                    className={`${INPUT} aria-[invalid=true]:border-rose-300`}
+                  />
+                  {normalizeWebUrl(values.onlineUrl) === null ? (
+                    <p className="mt-1 text-xs text-rose-700">That doesn&apos;t look like a web address yet. Paste the full link, or leave it blank for now.</p>
+                  ) : (
+                    <p className="mt-1 text-xs text-slate-500">Optional. Only shown to people who register to attend online.</p>
+                  )}
                 </div>
               )}
 
@@ -582,7 +610,19 @@ export function EventWizard({
                     <label className={LABEL} htmlFor="fix-online">
                       Livestream or join link <span className="font-normal text-slate-500">(optional, add it later if you don&apos;t have it yet)</span>
                     </label>
-                    <input id="fix-online" type="url" placeholder="https://" value={values.onlineUrl} onChange={(e) => set("onlineUrl", e.target.value)} className={INPUT} />
+                    <input
+                      id="fix-online"
+                      type="text"
+                      inputMode="url"
+                      placeholder="https://zoom.us/j/…"
+                      value={values.onlineUrl}
+                      onChange={(e) => set("onlineUrl", e.target.value)}
+                      onBlur={() => {
+                        const fixed = normalizeWebUrl(values.onlineUrl);
+                        if (fixed && fixed !== values.onlineUrl) set("onlineUrl", fixed);
+                      }}
+                      className={INPUT}
+                    />
                     <p className="mt-1 text-xs text-slate-500">Online registrants get it once it&apos;s added.</p>
                   </div>
                 )}
