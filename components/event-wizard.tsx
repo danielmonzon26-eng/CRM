@@ -11,6 +11,8 @@ import { FORMAT_LABELS, formatEventWhen, fromDateTimeInput, toDateTimeInput } fr
 import type { EventRow, EventTemplate } from "@/lib/events/queries";
 import { uploadEventBanner } from "@/lib/events/upload";
 import { RegistrationQuestionsEditor } from "@/components/registration-questions-editor";
+import { ProgramPicker } from "@/components/program-picker";
+import type { Program } from "@/app/actions/programs";
 import { parseQuestions } from "@/lib/events/questions";
 import { getMissingForPublish, getPublishReminders, normalizeWebUrl, type EventInput } from "@/lib/events/validation";
 
@@ -31,9 +33,26 @@ function splitDateTime(value: string): [string, string] {
   return [date, time.slice(0, 5)];
 }
 
-/** Joins a date and time back into one value; a date alone gets 9:00 a.m. */
-function joinDateTime(date: string, time: string): string {
-  return date ? `${date}T${time || "09:00"}` : "";
+/** Joins a date and time back into one value; a date alone gets 9:00 a.m. (or the fallback). */
+function joinDateTime(date: string, time: string, fallback = "09:00"): string {
+  return date ? `${date}T${time || fallback}` : "";
+}
+
+/**
+ * Registration closes by default at 11:59 p.m. the day before the event, or when it starts
+ * if that's already past (an event today), so registration isn't closed from the outset.
+ */
+function dayBeforeClose(startsAt: string): string {
+  const [date] = splitDateTime(startsAt);
+  if (!date) return "";
+  const d = new Date(`${date}T00:00:00Z`);
+  d.setUTCDate(d.getUTCDate() - 1);
+  const close = `${d.toISOString().slice(0, 10)}T23:59`;
+  try {
+    return new Date(fromDateTimeInput(close)).getTime() > Date.now() ? close : startsAt;
+  } catch {
+    return close;
+  }
 }
 
 function toInput(event?: EventRow): EventInput {
@@ -77,10 +96,13 @@ export function EventWizard({
   videos = [],
   initialStep = 0,
   initialStart = "",
+  programs = PROGRAMS.map((name) => ({ id: name, name })),
 }: {
   event?: EventRow;
   initialStep?: number;
   initialStart?: string;
+  /** The Program dropdown's list; defaults to the original four. */
+  programs?: Program[];
   members: { id: string; name: string }[];
   templates: EventTemplate[];
   materials?: string[];
@@ -153,6 +175,15 @@ export function EventWizard({
     }, AUTOSAVE_DELAY_MS);
     return () => clearTimeout(handle);
   }, [values, autosaves, save]);
+
+  // Registration closes the day before the event unless someone sets it; if the event moves,
+  // an untouched close date moves with it.
+  const autoClose = useRef(dayBeforeClose(values.startsAt));
+  useEffect(() => {
+    const next = dayBeforeClose(values.startsAt);
+    setValues((v) => (!v.registrationClosesAt || v.registrationClosesAt === autoClose.current ? { ...v, registrationClosesAt: next } : v));
+    autoClose.current = next;
+  }, [values.startsAt]);
 
   // Warn before leaving or reloading with changes that haven't saved yet.
   const unsavedRef = useRef(false);
@@ -282,8 +313,7 @@ export function EventWizard({
               <div className="grid gap-4 sm:grid-cols-2">
                 <div>
                   <label className={LABEL} htmlFor="program">Program</label>
-                  <input id="program" list="programs" placeholder="e.g. Apex Forum" value={values.program} onChange={(e) => set("program", e.target.value)} className={INPUT} />
-                  <datalist id="programs">{PROGRAMS.map((p) => <option key={p} value={p} />)}</datalist>
+                  <ProgramPicker id="program" value={values.program} onChange={(v) => set("program", v)} programs={programs} className={INPUT} />
                 </div>
                 <div>
                   <label className={LABEL} htmlFor="ownerId">Event owner</label>
@@ -509,16 +539,53 @@ export function EventWizard({
                 onChange={(v) => set("waitlistEnabled", v)}
               />
               <div className="grid gap-4 sm:grid-cols-2">
-                <div>
-                  <label className={LABEL} htmlFor="registrationOpensAt">Registration opens</label>
-                  <input id="registrationOpensAt" type="datetime-local" value={values.registrationOpensAt} onChange={(e) => set("registrationOpensAt", e.target.value)} className={INPUT} />
-                </div>
-                <div>
-                  <label className={LABEL} htmlFor="registrationClosesAt">Registration closes</label>
-                  <input id="registrationClosesAt" type="datetime-local" value={values.registrationClosesAt} onChange={(e) => set("registrationClosesAt", e.target.value)} className={INPUT} />
-                </div>
+                <fieldset>
+                  <legend className={LABEL}>Registration opens</legend>
+                  <div className="grid grid-cols-[1fr_130px] gap-2">
+                    <input
+                      id="registrationOpensAt"
+                      aria-label="Registration opens, date"
+                      type="date"
+                      value={splitDateTime(values.registrationOpensAt)[0]}
+                      onChange={(e) => set("registrationOpensAt", joinDateTime(e.target.value, splitDateTime(values.registrationOpensAt)[1]))}
+                      className={INPUT}
+                    />
+                    <input
+                      aria-label="Registration opens, time"
+                      type="time"
+                      step={900}
+                      disabled={!values.registrationOpensAt}
+                      value={splitDateTime(values.registrationOpensAt)[1]}
+                      onChange={(e) => set("registrationOpensAt", joinDateTime(splitDateTime(values.registrationOpensAt)[0], e.target.value))}
+                      className={`${INPUT} disabled:bg-slate-50`}
+                    />
+                  </div>
+                </fieldset>
+                <fieldset>
+                  <legend className={LABEL}>Registration closes</legend>
+                  <div className="grid grid-cols-[1fr_130px] gap-2">
+                    <input
+                      id="registrationClosesAt"
+                      aria-label="Registration closes, date"
+                      type="date"
+                      value={splitDateTime(values.registrationClosesAt)[0]}
+                      onChange={(e) => set("registrationClosesAt", joinDateTime(e.target.value, splitDateTime(values.registrationClosesAt)[1], "23:59"))}
+                      className={INPUT}
+                    />
+                    <input
+                      aria-label="Registration closes, time"
+                      type="time"
+                      disabled={!values.registrationClosesAt}
+                      value={splitDateTime(values.registrationClosesAt)[1]}
+                      onChange={(e) => set("registrationClosesAt", joinDateTime(splitDateTime(values.registrationClosesAt)[0], e.target.value, "23:59"))}
+                      className={`${INPUT} disabled:bg-slate-50`}
+                    />
+                  </div>
+                </fieldset>
               </div>
-              <p className="-mt-2 text-xs text-slate-500">Leave blank to open on publish and close when the event ends.</p>
+              <p className="-mt-2 text-xs text-slate-500">
+                Opens when you publish unless you pick a date. Closes the day before the event at 11:59 p.m. unless you change it. Calgary time.
+              </p>
               <RegistrationQuestionsEditor value={values.registrationQuestions ?? []} onChange={(next) => set("registrationQuestions", next)} />
               <div>
                 <label className={LABEL} htmlFor="confirmationMessage">Confirmation message</label>
