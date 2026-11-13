@@ -52,7 +52,7 @@ export function EventSocialPlan({ eventId, eventDay, posts, channels, today }: {
     <section aria-labelledby="event-social-title" className="rounded-xl border border-slate-200 bg-white shadow-card">
       <header className="flex flex-wrap items-start justify-between gap-2 rounded-t-xl border-b border-slate-200/70 bg-slate-50/80 px-5 py-4">
         <div>
-          <h2 id="event-social-title" className="font-semibold text-slate-900">
+          <h2 id="event-social-title" className="text-lg font-semibold text-slate-900">
             Social media
           </h2>
           <p className="text-xs text-slate-500">Up to three posts per event. Click a slot to plan one, or a post to change it. Each goes to Marketing → Social Planner to be written and approved.</p>
@@ -235,7 +235,7 @@ function PostDialog({
       <form onSubmit={save}>
         <header className="flex items-start justify-between gap-3 border-b border-slate-100 px-5 py-4">
           <div>
-            <h2 id="event-post-title" className="font-semibold text-slate-900">
+            <h2 id="event-post-title" className="text-lg font-semibold text-slate-900">
               {post ? "Change post" : "Plan a post"}
             </h2>
             {post && (

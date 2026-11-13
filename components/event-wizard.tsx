@@ -818,7 +818,7 @@ export function EventWizard({
         <aside className="space-y-4 lg:sticky lg:top-20 lg:self-start">
           {step === 0 && !event && (
             <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-card">
-              <h2 className="font-semibold text-slate-900">Event template</h2>
+              <h2 className="text-lg font-semibold text-slate-900">Event template</h2>
               {templates.length === 0 ? (
                 <p className="mt-1 text-sm text-slate-500">No templates yet. You can save any event as a template on the Review step.</p>
               ) : (
@@ -833,7 +833,7 @@ export function EventWizard({
             </div>
           )}
           <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-card">
-            <h2 className="font-semibold text-slate-900">Summary</h2>
+            <h2 className="text-lg font-semibold text-slate-900">Summary</h2>
             <SummaryList values={values} members={members} compact />
           </div>
         </aside>

@@ -30,8 +30,8 @@ export function Kpi({
       <span className={`flex h-9 w-9 items-center justify-center rounded-lg ${tone}`}>
         <Icon className="h-[18px] w-[18px]" strokeWidth={2} />
       </span>
-      <p className="mt-3 text-2xl font-semibold tracking-tight tabular-nums text-slate-900">{value}</p>
-      <p className="text-sm font-medium text-slate-700">{label}</p>
+      <p className="mt-3 text-3xl font-bold tracking-tight tabular-nums text-slate-900">{value}</p>
+      <p className="mt-0.5 text-sm font-semibold text-slate-700">{label}</p>
       <p className="mt-0.5 text-xs text-slate-500">{detail}</p>
     </Link>
   );
@@ -54,10 +54,10 @@ export function Panel({
 }) {
   return (
     <section className={`rounded-xl border border-slate-200 bg-white shadow-card ${className}`}>
-      <header className="flex items-start justify-between gap-3 border-b border-slate-100 px-5 py-3.5">
+      <header className="flex items-start justify-between gap-3 rounded-t-xl border-b border-slate-100 px-5 py-4">
         <div className="min-w-0">
-          <h2 className="font-semibold text-slate-900">{title}</h2>
-          {subtitle && <p className="text-xs text-slate-500">{subtitle}</p>}
+          <h2 className="text-lg font-semibold text-slate-900">{title}</h2>
+          {subtitle && <p className="mt-0.5 text-sm text-slate-500">{subtitle}</p>}
         </div>
         {href && (
           <Link href={href} className="flex shrink-0 items-center gap-0.5 pt-0.5 text-sm font-medium text-brand-600 hover:text-brand-700">

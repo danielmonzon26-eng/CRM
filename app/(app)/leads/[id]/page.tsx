@@ -71,7 +71,7 @@ export default async function LeadDetailPage({ params }: { params: Promise<{ id:
             {getInitials(title) || <Building2 className="h-5 w-5" />}
           </div>
           <div className="min-w-0">
-            <h1 className="break-words text-[28px] font-semibold leading-tight tracking-tight text-slate-900">{title}</h1>
+            <h1 className="break-words text-3xl font-bold leading-tight tracking-tight sm:text-[2.125rem] text-slate-900">{title}</h1>
             <p className="text-sm text-slate-500">
               {primaryContact && (
                 <>

@@ -80,7 +80,7 @@ function SocialPosts({ posts }: { posts: PostItem[] }) {
     <section aria-labelledby="social-posts-title" className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-card">
       <header className="flex flex-wrap items-start justify-between gap-3 border-b border-slate-100 px-5 py-3">
         <div>
-          <h2 id="social-posts-title" className="font-semibold text-slate-900">
+          <h2 id="social-posts-title" className="text-lg font-semibold text-slate-900">
             Social Planner posts
           </h2>
           <p className="text-xs text-slate-500">
@@ -112,7 +112,7 @@ function Group({ group, options, today }: { group: StreamGroup; options: ItemOpt
     <section aria-labelledby={`grp-${group.key}`} className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-card">
       <header className="flex flex-wrap items-start justify-between gap-3 border-b border-slate-100 px-5 py-3">
         <div className="min-w-0">
-          <h2 id={`grp-${group.key}`} className="font-semibold text-slate-900">
+          <h2 id={`grp-${group.key}`} className="text-lg font-semibold text-slate-900">
             {group.href ? (
               <Link href={group.href} className="inline-flex items-center gap-1 hover:text-brand-700 hover:underline">
                 {group.title}

@@ -61,7 +61,7 @@ export default async function AssignmentsPage({ searchParams }: { searchParams: 
   return (
     <main className="mx-auto max-w-[1600px] px-4 py-6 sm:px-6 lg:px-8">
       <header className="mb-6">
-        <h1 className="text-[28px] font-semibold leading-tight tracking-tight text-slate-900">Assignments</h1>
+        <h1 className="text-3xl font-bold leading-tight tracking-tight sm:text-[2.125rem] text-slate-900">Assignments</h1>
         <p className="text-sm text-slate-500">Tasks and marketing items, and who they&apos;re assigned to. Pick a person to see everything they&apos;ve been given.</p>
       </header>
 
@@ -115,7 +115,7 @@ export default async function AssignmentsPage({ searchParams }: { searchParams: 
 
       <div className="grid gap-6 xl:grid-cols-2">
         <section aria-labelledby="tasks-title" className="rounded-xl border border-slate-200 bg-white shadow-card">
-          <h2 id="tasks-title" className="rounded-t-xl border-b border-slate-200/70 bg-slate-50/80 px-5 py-4 font-semibold text-slate-900">
+          <h2 id="tasks-title" className="rounded-t-xl border-b border-slate-200/70 bg-slate-50/80 px-5 py-4 text-lg font-semibold text-slate-900">
             Tasks
           </h2>
           <div className="space-y-4 p-5">
@@ -126,7 +126,7 @@ export default async function AssignmentsPage({ searchParams }: { searchParams: 
 
         <section aria-labelledby="items-title" className="rounded-xl border border-slate-200 bg-white shadow-card">
           <div className="flex items-center justify-between gap-2 rounded-t-xl border-b border-slate-200/70 bg-slate-50/80 px-5 py-4">
-            <h2 id="items-title" className="font-semibold text-slate-900">
+            <h2 id="items-title" className="text-lg font-semibold text-slate-900">
               Marketing items
             </h2>
             <Link href="/marketing/planner?view=table" className="text-sm font-medium text-brand-700 hover:underline">

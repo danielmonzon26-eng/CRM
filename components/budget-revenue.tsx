@@ -164,7 +164,7 @@ export function BudgetRevenueLedger({ budgetId, entries, quarter }: { budgetId: 
     <section className={CARD}>
       <header className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 px-5 py-3.5">
         <div>
-          <h2 className="font-semibold text-slate-900">Grants and revenue</h2>
+          <h2 className="text-lg font-semibold text-slate-900">Grants and revenue</h2>
           <p className="mt-0.5 text-xs text-slate-500">Counts toward revenue once marked Received. Click anything to change it.</p>
         </div>
         <div className="flex items-center gap-2">
@@ -218,7 +218,7 @@ export function WonDealsList({ deals, quarter }: { deals: WonDeal[]; quarter: st
     <section className={CARD}>
       <header className="flex items-start justify-between gap-3 border-b border-slate-100 px-5 py-3.5">
         <div>
-          <h2 className="font-semibold text-slate-900">Deals won</h2>
+          <h2 className="text-lg font-semibold text-slate-900">Deals won</h2>
           <p className="mt-0.5 text-xs text-slate-500">From Proposals, by the date each one closed{quarter ? ` in ${quarterLabel(quarter)}` : ""}.</p>
         </div>
         <span className="shrink-0 font-semibold tabular-nums text-slate-900">{formatMoney(sumMoney(shown.map((d) => d.amount)))}</span>

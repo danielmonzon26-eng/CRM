@@ -65,7 +65,7 @@ function Kpi({
       <span className={`flex h-9 w-9 items-center justify-center rounded-lg ${tone}`}>
         <Icon className="h-[18px] w-[18px]" strokeWidth={2} />
       </span>
-      <p className="mt-3 text-2xl font-semibold tracking-tight text-slate-900">{value}</p>
+      <p className="mt-3 text-3xl font-bold tracking-tight text-slate-900">{value}</p>
       <p className="text-sm font-medium text-slate-700">{label}</p>
       <p className="mt-0.5 text-xs text-slate-500">{detail}</p>
     </Link>
@@ -89,7 +89,7 @@ function Panel({
     <section className="rounded-xl border border-slate-200 bg-white shadow-card">
       <header className="flex items-start justify-between gap-3 border-b border-slate-100 px-5 py-3.5">
         <div className="min-w-0">
-          <h2 className="font-semibold text-slate-900">{title}</h2>
+          <h2 className="text-lg font-semibold text-slate-900">{title}</h2>
           {subtitle && <p className="text-xs text-slate-500">{subtitle}</p>}
         </div>
         {href && (
@@ -157,7 +157,7 @@ export function OverviewDashboard({ data, firstName }: { data: DashboardData; fi
       <div className="mx-auto max-w-[1600px] space-y-5">
         <header className="relative overflow-hidden rounded-xl bg-ink-950 px-6 py-6 text-white">
           <div className="absolute inset-y-0 right-0 w-1/2 bg-gradient-to-l from-brand-500/25 to-transparent" aria-hidden="true" />
-          <h1 className="relative text-[28px] font-semibold leading-tight tracking-tight">
+          <h1 className="relative text-3xl font-bold leading-tight tracking-tight sm:text-[2.125rem]">
             {greeting(now)}
             {firstName ? `, ${firstName}` : ""}
           </h1>

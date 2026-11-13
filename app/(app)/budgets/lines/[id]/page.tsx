@@ -42,7 +42,7 @@ export default async function BudgetLinePage({ params }: { params: Promise<{ id:
           ["Remaining", line.remaining],
         ] as [string, number][]).map(([label, value]) => (
           <div key={label} className={`${CARD} p-4`}>
-            <p className={`text-2xl font-semibold tracking-tight ${label === "Remaining" && value < 0 ? "text-rose-700" : "text-slate-900"}`}>{formatMoney(value)}</p>
+            <p className={`text-3xl font-bold tracking-tight ${label === "Remaining" && value < 0 ? "text-rose-700" : "text-slate-900"}`}>{formatMoney(value)}</p>
             <p className="text-sm text-slate-600">{label}</p>
           </div>
         ))}
@@ -57,12 +57,12 @@ export default async function BudgetLinePage({ params }: { params: Promise<{ id:
           )}
 
           <section className={`${CARD} p-5`}>
-            <h2 className="mb-3 font-semibold text-slate-900">Add an expense</h2>
+            <h2 className="mb-3 text-lg font-semibold text-slate-900">Add an expense</h2>
             <ExpenseForm lineId={line.id} items={items.map((i) => ({ id: i.id, name: i.name }))} />
           </section>
 
           <section className={CARD}>
-            <h2 className="border-b border-slate-100 px-5 py-3.5 font-semibold text-slate-900">Expenses ({expenses.length})</h2>
+            <h2 className="border-b border-slate-100 px-5 py-3.5 text-lg font-semibold text-slate-900">Expenses ({expenses.length})</h2>
             {expenses.length === 0 ? (
               <p className="px-5 py-8 text-center text-sm text-slate-500">No expenses yet.</p>
             ) : (

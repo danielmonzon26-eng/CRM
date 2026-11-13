@@ -61,7 +61,7 @@ export function EventFeedbackTab({
       {responses.length > 0 && (
         <div className="grid gap-5 lg:grid-cols-2">
           <section className={`${CARD} p-5`}>
-            <h2 className="font-semibold text-slate-900">Topics they want next</h2>
+            <h2 className="text-lg font-semibold text-slate-900">Topics they want next</h2>
             <ul className="mt-3 space-y-2">
               {summary.topicCounts.map((t) => (
                 <li key={t.key} className="text-sm">
@@ -77,7 +77,7 @@ export function EventFeedbackTab({
             </ul>
           </section>
           <section className={`${CARD} p-5`}>
-            <h2 className="font-semibold text-slate-900">Asked for a follow-up ({summary.followUps.length})</h2>
+            <h2 className="text-lg font-semibold text-slate-900">Asked for a follow-up ({summary.followUps.length})</h2>
             {summary.followUps.length === 0 ? (
               <p className="mt-2 text-sm text-slate-500">Nobody yet.</p>
             ) : (
@@ -104,7 +104,7 @@ export function EventFeedbackTab({
       )}
 
       <section className={CARD}>
-        <h2 className="border-b border-slate-100 px-5 py-3.5 font-semibold text-slate-900">Responses ({responses.length})</h2>
+        <h2 className="border-b border-slate-100 px-5 py-3.5 text-lg font-semibold text-slate-900">Responses ({responses.length})</h2>
         {responses.length === 0 ? (
           <p className="px-5 py-8 text-center text-sm text-slate-500">No responses yet. They appear here as people fill in the form.</p>
         ) : (
@@ -239,7 +239,7 @@ function RequestPanel({
     <section className={`${CARD} p-5`}>
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h2 className="font-semibold text-slate-900">Request feedback</h2>
+          <h2 className="text-lg font-semibold text-slate-900">Request feedback</h2>
           <p className="mt-0.5 text-sm text-slate-600">
             {summary.requested > 0
               ? `Sent to ${summary.sentCount} of ${summary.requested}. ${summary.responses.length} responded.`
@@ -352,7 +352,7 @@ function Metric({ icon: Icon, label, value, detail, tone }: { icon: typeof Star;
         <Icon aria-hidden="true" className="h-3.5 w-3.5" strokeWidth={2} />
         {label}
       </p>
-      <p className={`mt-1 text-2xl font-semibold tabular-nums tracking-tight ${tone ?? "text-slate-900"}`}>{value}</p>
+      <p className={`mt-1 text-3xl font-bold tabular-nums tracking-tight ${tone ?? "text-slate-900"}`}>{value}</p>
       <p className="mt-0.5 text-xs text-slate-500">{detail}</p>
     </div>
   );
@@ -362,7 +362,7 @@ function Distribution({ title, counts }: { title: string; counts: number[] }) {
   const max = Math.max(1, ...counts);
   return (
     <section className={`${CARD} p-5`}>
-      <h2 className="font-semibold text-slate-900">{title}</h2>
+      <h2 className="text-lg font-semibold text-slate-900">{title}</h2>
       <div className="mt-4 flex h-28 items-end gap-1.5" role="img" aria-label={`${title}: ${counts.map((c, i) => `${i + 1}: ${c}`).join(", ")}`}>
         {counts.map((count, i) => (
           <div key={i} className="flex h-full flex-1 flex-col justify-end text-center">

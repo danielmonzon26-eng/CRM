@@ -46,7 +46,7 @@ export default async function DealDetailPage({ params }: { params: Promise<{ id:
             {getInitials(deal.companyName) || <Building2 className="h-5 w-5" />}
           </div>
           <div className="min-w-0">
-            <h1 className="break-words text-[28px] font-semibold leading-tight tracking-tight text-slate-900">{deal.name}</h1>
+            <h1 className="break-words text-3xl font-bold leading-tight tracking-tight sm:text-[2.125rem] text-slate-900">{deal.name}</h1>
             <p className="text-sm text-slate-500">
               <Link href={`/companies/${deal.companyId}`} className="font-medium text-slate-700 hover:text-brand-700 hover:underline">
                 {deal.companyName}
