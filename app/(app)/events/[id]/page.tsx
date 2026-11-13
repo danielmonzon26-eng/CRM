@@ -75,12 +75,18 @@ export default async function EventWorkspacePage({
           </p>
         )}
 
-        <header className="relative rounded-xl bg-ink-950 text-white">
+        {/* With a photo, the header is a 400px banner: the photo shows in full, darkening toward
+            the bottom so the title stays readable. No overflow-hidden, so the Actions menu can
+            drop below it. */}
+        <header className={`relative flex rounded-xl bg-ink-950 text-white ${event.image_url ? "min-h-[400px] items-end" : ""}`}>
           {event.image_url && (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={event.image_url} alt="" className="absolute inset-0 h-full w-full rounded-xl object-cover opacity-25" />
+            <>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={event.image_url} alt="" className="absolute inset-0 h-full w-full rounded-xl object-cover" />
+              <div className="absolute inset-0 rounded-xl bg-gradient-to-t from-ink-950 via-ink-950/55 to-ink-950/10" aria-hidden="true" />
+            </>
           )}
-          <div className="relative flex flex-wrap items-start justify-between gap-4 p-6">
+          <div className={`relative flex w-full flex-wrap justify-between gap-4 p-6 ${event.image_url ? "items-end sm:p-8" : "items-start"}`}>
             <div className="min-w-0">
               <p className="text-sm font-medium text-ink-200">{[event.program, event.event_type].filter(Boolean).join(" · ") || "Event"}</p>
               <h1 className="mt-1 text-[28px] font-semibold leading-tight tracking-tight">{event.title}</h1>
