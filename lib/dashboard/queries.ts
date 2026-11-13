@@ -132,8 +132,9 @@ export async function getDashboardData(): Promise<DashboardData> {
     getPipelineForecast(),
     getBudgetSnapshot(),
     supabase.from("contacts").select("id", { count: "exact", head: true }),
-    supabase.from("leads").select("id", { count: "exact", head: true }),
-    supabase.from("leads").select("id", { count: "exact", head: true }).gte("created_at", new Date(now - 30 * DAY_MS).toISOString()),
+    // A lead is a record whose Status is Engaged, the same as the Leads page shows.
+    supabase.from("leads").select("id", { count: "exact", head: true }).eq("engagement", "engaged"),
+    supabase.from("leads").select("id", { count: "exact", head: true }).eq("engagement", "engaged").gte("created_at", new Date(now - 30 * DAY_MS).toISOString()),
     supabase.from("tasks").select("id", { count: "exact", head: true }).is("completed_at", null).lt("due_at", nowIso),
     supabase
       .from("tasks")
