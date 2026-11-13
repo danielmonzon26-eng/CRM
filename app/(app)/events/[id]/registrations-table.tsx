@@ -23,6 +23,26 @@ function statusLabel(r: EventRegistrationRow): string {
   return r.checked_in_at ? "Checked in" : "Registered";
 }
 
+const PAYMENT_LABELS: Record<EventRegistrationRow["payment_status"], string> = {
+  not_required: "—",
+  unpaid: "Unpaid",
+  paid: "Paid",
+  refunded: "Refunded",
+};
+
+const PAYMENT_STYLES: Record<EventRegistrationRow["payment_status"], string> = {
+  not_required: "text-slate-400",
+  unpaid: "bg-amber-50 text-amber-700",
+  paid: "bg-emerald-50 text-emerald-700",
+  refunded: "bg-slate-100 text-slate-600",
+};
+
+function paymentDetail(r: EventRegistrationRow): string | undefined {
+  if (r.payment_status === "paid") return r.stripe_payment_intent_id ? "Paid online with Stripe" : "Marked paid by the team";
+  if (r.payment_status === "unpaid" && r.amount_due != null) return `${r.amount_due} ${r.currency ?? ""} due`.trim();
+  return undefined;
+}
+
 export function RegistrationsTable({
   registrations,
   eventId,
@@ -44,10 +64,23 @@ export function RegistrationsTable({
     });
   }, [registrations, search, status]);
 
+  // Free events have nothing to show, so the column only appears when someone owes or paid.
+  const hasPayments = registrations.some((r) => r.payment_status !== "not_required");
+
   function exportCsv() {
     downloadCsv(fileName, [
-      ["Name", "Email", "Phone", "Company", "Attending", "Status", "Registered"],
-      ...filtered.map((r) => [r.full_name, r.email, r.phone, r.company_name, FORMAT_LABELS[r.attendance_mode], statusLabel(r), r.created_at]),
+      ["Name", "Email", "Phone", "Company", "Attending", "Status", "Payment", "Amount paid", "Registered"],
+      ...filtered.map((r) => [
+        r.full_name,
+        r.email,
+        r.phone,
+        r.company_name,
+        FORMAT_LABELS[r.attendance_mode],
+        statusLabel(r),
+        r.payment_status === "not_required" ? "" : PAYMENT_LABELS[r.payment_status],
+        r.amount_paid,
+        r.created_at,
+      ]),
     ]);
   }
 
@@ -93,6 +126,7 @@ export function RegistrationsTable({
                 <th scope="col" className="px-3 py-3 font-medium">Company</th>
                 <th scope="col" className="px-3 py-3 font-medium">Attending</th>
                 <th scope="col" className="px-3 py-3 font-medium">Status</th>
+                {hasPayments && <th scope="col" className="px-3 py-3 font-medium">Payment</th>}
                 <th scope="col" className="px-3 py-3 font-medium">Registered</th>
                 <th scope="col" className="px-3 py-3"><span className="sr-only">Actions</span></th>
               </tr>
@@ -114,9 +148,26 @@ export function RegistrationsTable({
                   <td className="px-3 py-2.5">{r.company_name ?? "—"}</td>
                   <td className="px-3 py-2.5">{FORMAT_LABELS[r.attendance_mode]}</td>
                   <td className="px-3 py-2.5">{statusLabel(r)}</td>
+                  {hasPayments && (
+                    <td className="px-3 py-2.5">
+                      <span
+                        title={paymentDetail(r)}
+                        className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${PAYMENT_STYLES[r.payment_status]}`}
+                      >
+                        {PAYMENT_LABELS[r.payment_status]}
+                      </span>
+                    </td>
+                  )}
                   <td className="px-3 py-2.5 text-xs">{new Date(r.created_at).toLocaleDateString("en-CA")}</td>
                   <td className="px-3 py-2.5">
-                    <RegistrationActions registrationId={r.id} eventId={eventId} status={r.status} checkedIn={Boolean(r.checked_in_at)} />
+                    <RegistrationActions
+                      registrationId={r.id}
+                      eventId={eventId}
+                      status={r.status}
+                      checkedIn={Boolean(r.checked_in_at)}
+                      paymentStatus={r.payment_status}
+                      paidByStripe={Boolean(r.stripe_payment_intent_id)}
+                    />
                   </td>
                 </tr>
               ))}

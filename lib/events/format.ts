@@ -102,6 +102,28 @@ export function formatEventTime(iso: string): string {
   return timeFormat.format(new Date(iso));
 }
 
+const longDateFormat = new Intl.DateTimeFormat("en-CA", {
+  timeZone: EVENT_TIME_ZONE,
+  weekday: "long",
+  month: "long",
+  day: "numeric",
+  year: "numeric",
+});
+
+/** The day an event runs on, written out ("Wednesday, December 10, 2026"), for public pages. */
+export function formatEventDateLong(startsAt: string, endsAt: string | null): string {
+  const start = longDateFormat.format(new Date(startsAt));
+  if (!endsAt || calgaryDateKey(startsAt) === calgaryDateKey(endsAt)) return start;
+  return `${start} – ${longDateFormat.format(new Date(endsAt))}`;
+}
+
+/** Just the clock times ("1:00 p.m. – 4:00 p.m. ABT"), for pairing with formatEventDateLong. */
+export function formatEventTimeRange(startsAt: string, endsAt: string | null): string {
+  const start = timeFormat.format(new Date(startsAt));
+  if (!endsAt || calgaryDateKey(startsAt) !== calgaryDateKey(endsAt)) return `${start} ${EVENT_TIME_ZONE_LABEL}`;
+  return `${start} – ${timeFormat.format(new Date(endsAt))} ${EVENT_TIME_ZONE_LABEL}`;
+}
+
 export function formatTicketPrice(
   ticketType: EventTicketType,
   price: number | null,

@@ -29,6 +29,7 @@ export type EventStatus = "draft" | "published" | "cancelled";
 export type EventTicketType = "free" | "paid";
 export type AttendanceMode = "in_person" | "online";
 export type RegistrationStatus = "registered" | "waitlisted" | "cancelled";
+export type PaymentStatus = "not_required" | "unpaid" | "paid" | "refunded";
 export type AgendaItem = { time: string; title: string };
 export type Speaker = { name: string; title: string };
 export type EventResourceKind = "document" | "video";
@@ -875,6 +876,13 @@ export type Database = {
           status: RegistrationStatus;
           checked_in_at: string | null;
           ticket_code: string;
+          payment_status: PaymentStatus;
+          amount_due: number | null;
+          amount_paid: number | null;
+          currency: string | null;
+          stripe_checkout_session_id: string | null;
+          stripe_payment_intent_id: string | null;
+          paid_at: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -891,6 +899,13 @@ export type Database = {
           status?: RegistrationStatus;
           checked_in_at?: string | null;
           ticket_code?: string;
+          payment_status?: PaymentStatus;
+          amount_due?: number | null;
+          amount_paid?: number | null;
+          currency?: string | null;
+          stripe_checkout_session_id?: string | null;
+          stripe_payment_intent_id?: string | null;
+          paid_at?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -1188,10 +1203,22 @@ export type Database = {
           p_attendance_mode?: string | null;
         };
         Returns: {
-          status: "registered" | "waitlisted" | "already_registered" | "sold_out" | "closed" | "not_open" | "not_found" | "invalid";
+          status:
+            | "registered"
+            | "waitlisted"
+            | "payment_pending"
+            | "already_registered"
+            | "sold_out"
+            | "closed"
+            | "not_open"
+            | "not_found"
+            | "invalid";
           ticket_code?: string;
           online_url?: string | null;
           confirmation_message?: string | null;
+          payment_required?: boolean;
+          amount_due?: number | null;
+          currency?: string | null;
         };
       };
       unseen_reply_ids: { Args: Record<string, never>; Returns: string[] };

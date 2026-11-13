@@ -12,12 +12,13 @@ import {
   setEventStatus,
   setRegistrationCancelled,
   setRegistrationCheckedIn,
+  setRegistrationPaid,
 } from "@/app/actions/events";
 import { buttonClass } from "@/components/ui/button";
 import { useFeedback } from "@/components/ui/feedback";
 import { useDismiss } from "@/components/ui/use-dismiss";
 import { uploadEventDocument } from "@/lib/events/upload";
-import type { EventStatus, RegistrationStatus } from "@/lib/supabase/types";
+import type { EventStatus, PaymentStatus, RegistrationStatus } from "@/lib/supabase/types";
 
 export function CopyButton({ text, label = "Copy link" }: { text: string; label?: string }) {
   const [copied, setCopied] = useState(false);
@@ -129,11 +130,16 @@ export function RegistrationActions({
   eventId,
   status,
   checkedIn,
+  paymentStatus,
+  paidByStripe,
 }: {
   registrationId: string;
   eventId: string;
   status: RegistrationStatus;
   checkedIn: boolean;
+  paymentStatus: PaymentStatus;
+  /** Stripe payments are changed (refunded) in Stripe, not here. */
+  paidByStripe: boolean;
 }) {
   const cancelled = status === "cancelled";
   const [shownCheckedIn, setShownCheckedIn] = useOptimistic(checkedIn);
@@ -161,6 +167,24 @@ export function RegistrationActions({
           }`}
         >
           {shownCheckedIn ? "Checked in" : "Check in"}
+        </button>
+      )}
+      {status === "registered" && !paidByStripe && (paymentStatus === "unpaid" || paymentStatus === "paid") && (
+        <button
+          type="button"
+          disabled={isPending}
+          onClick={() =>
+            startTransition(async () => {
+              try {
+                await setRegistrationPaid(registrationId, eventId, paymentStatus === "unpaid");
+              } catch {
+                toast("That payment change didn't save. Please try again.", "error");
+              }
+            })
+          }
+          className="rounded-md border border-slate-200 px-2 py-1 text-xs font-medium text-slate-600 hover:bg-slate-50 disabled:opacity-50"
+        >
+          {paymentStatus === "unpaid" ? "Mark paid" : "Mark unpaid"}
         </button>
       )}
       {status === "waitlisted" && (
