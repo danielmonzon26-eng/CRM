@@ -25,11 +25,14 @@ import type { ItemOptions, MarketingItem } from "@/lib/marketing/items-queries";
 import type { PostItem } from "@/lib/marketing/queries";
 import { DateInput } from "@/components/ui/date-input";
 
+/** Every editable cell is the same box: white, a light border, a stronger one on hover. */
 const CELL =
-  "w-full rounded-md border border-transparent bg-transparent px-2 py-1.5 text-sm text-slate-900 hover:border-slate-200 focus:border-brand-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-100";
-/** Dropdowns that carry a colour (stream, item, status) keep their tint instead of going transparent. */
+  "h-9 w-full rounded-md border border-slate-200 bg-white px-2 py-1.5 text-sm text-slate-900 hover:border-slate-300 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-100";
+/** Dropdowns that carry a colour (stream, item, status): the same box, tinted. */
 const PILL_CELL =
-  "w-full rounded-md border border-transparent px-2 py-1.5 text-sm hover:border-slate-300 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-100";
+  "h-9 w-full rounded-md border border-slate-200 px-2 py-1.5 text-sm hover:border-slate-300 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-100";
+/** A read-only cell (social posts): the same size as the boxes, without the border. */
+const READ_CELL = "flex h-9 w-full items-center rounded-md px-2 text-sm";
 const dueFormat = new Intl.DateTimeFormat("en-CA", { weekday: "short", month: "short", day: "numeric", timeZone: "UTC" });
 const fmtDay = (day: string | null) => (day ? dueFormat.format(new Date(`${day}T00:00:00Z`)) : "—");
 
@@ -97,14 +100,14 @@ export function PlannerTable({ items, posts, options, today }: { items: Marketin
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap items-center gap-2">
-        <div role="tablist" aria-label="Stream" className="inline-flex rounded-lg border border-slate-200 bg-white p-0.5">
-          {([["all", "All"], ...MARKETING_STREAMS] as const).map(([key, label]) => (
+        <div role="group" aria-label="Stream (click again to show all)" className="inline-flex rounded-lg border border-slate-200 bg-white p-0.5">
+          {MARKETING_STREAMS.map(([key, label]) => (
             <button
               key={key}
               type="button"
-              role="tab"
-              aria-selected={stream === key}
-              onClick={() => setStream(key)}
+              aria-pressed={stream === key}
+              title={stream === key ? "Show every stream" : `Show ${label} only`}
+              onClick={() => setStream(stream === key ? "all" : key)}
               className={`rounded-md px-3 py-1.5 text-sm font-medium ${stream === key ? "bg-brand-600 text-white" : "text-slate-600 hover:bg-slate-50"}`}
             >
               {label}
@@ -485,28 +488,39 @@ export function SponsorField({
 }
 
 function PostRow({ post }: { post: PostItem }) {
+  const late = post.isPast && post.status !== "approved";
   return (
-    <tr className="align-top bg-slate-50/50 text-slate-700">
-      <td className="px-3 py-2.5">
-        <span className={`rounded-md px-2 py-1 text-xs font-medium ${MARKETING_STREAM_STYLES[post.event ? "event" : "catapult"]}`}>{post.event ? "Event" : "Catapult"}</span>
+    <tr className="align-top bg-slate-50/60 text-slate-700">
+      <td className="px-2 py-1.5">
+        <span className={`${READ_CELL} font-medium ${MARKETING_STREAM_STYLES[post.event ? "event" : "catapult"]}`}>{post.event ? "Event" : "Catapult"}</span>
       </td>
-      <td className="px-3 py-2.5">
-        <span className={`rounded-md px-2 py-1 text-xs ${MARKETING_CATEGORY_STYLES.social}`}>Social post</span>
+      <td className="px-2 py-1.5">
+        <span className={`${READ_CELL} ${MARKETING_CATEGORY_STYLES.social}`}>Social post</span>
       </td>
-      <td className="px-3 py-2.5">
-        <Link href={`/marketing/posts/${post.id}`} className="font-medium text-slate-900 hover:text-brand-700 hover:underline">
+      <td className="px-2 py-1.5">
+        <Link href={`/marketing/posts/${post.id}`} className="block px-2 py-1.5 font-medium text-slate-900 hover:text-brand-700 hover:underline">
           {post.title}
         </Link>
-        <span className="block text-xs text-slate-500">{post.platforms.length ? post.channels.map((c) => c.name).join(", ") : "No channels yet"}</span>
+        <span className="block px-2 text-xs text-slate-500">{post.platforms.length ? post.channels.map((c) => c.name).join(", ") : "No channels yet"}</span>
       </td>
-      <td className="truncate px-3 py-2.5 text-sm">{post.event?.title ?? post.initiative?.name ?? <span className="text-slate-400">Catapult</span>}</td>
-      <td className={`px-3 py-2.5 text-sm ${post.isPast && post.status !== "approved" ? "font-medium text-rose-700" : ""}`}>{post.scheduledLabel ?? "Not scheduled"}</td>
-      <td className="px-3 py-2.5 text-right text-slate-400">—</td>
-      <td className="px-3 py-2.5 text-slate-400">—</td>
-      <td className="px-3 py-2.5">
-        <PostStatusPill status={post.status} size="sm" />
+      <td className="px-2 py-1.5">
+        <span className="block truncate px-2 py-2 text-sm">{post.event?.title ?? post.initiative?.name ?? <span className="text-slate-400">Catapult</span>}</span>
       </td>
-      <td className="px-3 py-2.5 text-right">
+      <td className="px-2 py-1.5">
+        <span className={`block px-2 py-2 text-sm ${late ? "font-medium text-rose-700" : ""}`}>{post.scheduledLabel ?? "Not scheduled"}</span>
+      </td>
+      <td className="px-2 py-1.5">
+        <span className="block px-2 py-2 text-right text-slate-400">—</span>
+      </td>
+      <td className="px-2 py-1.5">
+        <span className="block px-2 py-2 text-xs text-slate-500">Written in Social Planner</span>
+      </td>
+      <td className="px-2 py-1.5">
+        <span className={READ_CELL}>
+          <PostStatusPill status={post.status} size="sm" />
+        </span>
+      </td>
+      <td className="px-2 py-2 text-right">
         <Link href={`/marketing/posts/${post.id}`} aria-label={`Open ${post.title}`} className="inline-flex rounded-md p-1 text-slate-400 hover:bg-slate-100 hover:text-brand-700">
           <ExternalLink className="h-4 w-4" strokeWidth={2} />
         </Link>

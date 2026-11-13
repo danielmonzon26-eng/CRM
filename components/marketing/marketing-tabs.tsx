@@ -10,7 +10,7 @@ const TABS = [
   { href: "/marketing/catapult", label: "Catapult", icon: Building2 },
   { href: "/marketing/event", label: "Event", icon: Ticket },
   { href: "/marketing/sponsorship", label: "Sponsorship", icon: Handshake },
-  { href: "/marketing/social", label: "Social", icon: MessageSquareText },
+  { href: "/marketing/social", label: "Social Planner", icon: MessageSquareText },
 ];
 
 /** Marketing's sections: the planner, the three streams (Catapult, Event, Sponsorship) and Social. */
@@ -39,7 +39,7 @@ export function MarketingTabs({ waitingCount }: { waitingCount: number }) {
           >
             <Icon className="h-4 w-4" strokeWidth={2} />
             {tab.label}
-            {tab.label === "Social" && waitingCount > 0 && (
+            {tab.href === "/marketing/social" && waitingCount > 0 && (
               <span className="rounded-full bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold leading-none text-amber-900">
                 {waitingCount}
                 <span className="sr-only"> posts waiting approval</span>
