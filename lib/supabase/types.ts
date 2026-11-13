@@ -835,6 +835,10 @@ export type Database = {
           notes: string | null;
           sort_order: number;
           updated_at: string;
+          marketing_category: string | null;
+          delivery_timing: string | null;
+          delivery_on: string | null;
+          delivered_at: string | null;
         };
         Insert: {
           id?: string;
@@ -843,6 +847,10 @@ export type Database = {
           amount?: number;
           notes?: string | null;
           sort_order?: number;
+          marketing_category?: string | null;
+          delivery_timing?: string | null;
+          delivery_on?: string | null;
+          delivered_at?: string | null;
         };
         Update: Partial<Database["public"]["Tables"]["budget_items"]["Insert"]>;
         Relationships: [];

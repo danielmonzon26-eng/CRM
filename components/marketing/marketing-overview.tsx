@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { AlertTriangle, CalendarCheck, CheckCircle2, Clock, Hourglass, PenLine, Send, Target, Ticket } from "lucide-react";
+import { AlertTriangle, CalendarCheck, CheckCircle2, Clock, Hourglass, Package, PenLine, Send, Target, Ticket } from "lucide-react";
+import { MARKETING_CATEGORY_LABELS, MARKETING_CATEGORY_STYLES } from "@/lib/budgets/marketing-items";
 import { PlatformIcon, PlatformIcons } from "@/components/marketing/platform-icon";
 import { PostStatusPill } from "@/components/marketing/status-pill";
 import { BarRow, Kpi, Panel, PanelEmpty } from "@/components/ui/dashboard";
@@ -175,6 +176,31 @@ export function MarketingOverview({ d }: { d: MarketingDashboard }) {
           )}
         </Panel>
       </div>
+
+      <Panel title="Marketing items due" subtitle="From event budgets: overdue or due in the next 2 weeks" href="/marketing/deliverables" linkLabel="All items">
+        {d.itemsDue.length === 0 ? (
+          <PanelEmpty icon={Package}>Nothing due in the next two weeks.</PanelEmpty>
+        ) : (
+          <ul className="divide-y divide-slate-100">
+            {d.itemsDue.map((i) => {
+              const late = !!i.due && i.due < d.today;
+              return (
+                <li key={i.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 px-5 py-2.5 text-sm">
+                  <span className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${MARKETING_CATEGORY_STYLES[i.category]}`}>{MARKETING_CATEGORY_LABELS[i.category]}</span>
+                  <span className="min-w-0 flex-1 truncate text-slate-900">{i.name}</span>
+                  <Link href={`/events/${i.event.id}?tab=budget`} className="truncate text-xs text-slate-500 hover:text-brand-700 hover:underline">
+                    {i.event.title}
+                  </Link>
+                  <span className={`text-xs tabular-nums ${late ? "font-medium text-rose-700" : "text-slate-600"}`}>
+                    {late ? "Overdue · " : "Due "}
+                    {new Date(`${i.due}T00:00:00Z`).toLocaleDateString("en-CA", { month: "short", day: "numeric", timeZone: "UTC" })}
+                  </span>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </Panel>
 
       <Panel title="Approved and coming up" subtitle="Next 2 weeks" href="/marketing/planner" linkLabel="Planner">
         {d.upcoming.length === 0 ? (
