@@ -151,7 +151,7 @@ export function OverviewTab({
 
       <div className="grid gap-5 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
         <section className={CARD}>
-          <h2 className="border-b border-slate-100 px-5 py-3.5 font-semibold text-slate-900">Event timeline</h2>
+          <h2 className="rounded-t-xl border-b border-slate-200/70 bg-slate-50/80 px-5 py-4 font-semibold text-slate-900">Event timeline</h2>
           <ol className="divide-y divide-slate-100">
             {timeline.map((item) => {
               const Icon = item.done ? CheckCircle2 : Circle;
@@ -168,7 +168,7 @@ export function OverviewTab({
 
         <div className="space-y-5">
           <section className={CARD}>
-            <h2 className="border-b border-slate-100 px-5 py-3.5 font-semibold text-slate-900">Quick actions</h2>
+            <h2 className="rounded-t-xl border-b border-slate-200/70 bg-slate-50/80 px-5 py-4 font-semibold text-slate-900">Quick actions</h2>
             <ul className="p-2 text-sm">
               {([
                 [Users, "View registration list", `${base}?tab=registrations`],
@@ -332,7 +332,7 @@ export function BudgetTab({
   const ticketEstimate = report?.revenue.ticketsEstimated ?? 0;
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-6">
       {line && (
         <section aria-label="Budget figures" className="grid grid-cols-2 gap-3 lg:grid-cols-4">
           {([
@@ -350,7 +350,7 @@ export function BudgetTab({
       )}
 
       <section className={CARD} aria-labelledby="event-costs-title">
-        <header className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 px-5 py-3.5">
+        <header className="flex flex-wrap items-center justify-between gap-2 rounded-t-xl border-b border-slate-200/70 bg-slate-50/80 px-5 py-4">
           <div>
             <h2 id="event-costs-title" className="font-semibold text-slate-900">
               Costs
@@ -371,7 +371,7 @@ export function BudgetTab({
       {social && <EventSocialPlan eventId={event.id} eventDay={social.eventDay} posts={social.posts} channels={social.channels} today={social.today} />}
 
       <section className={CARD}>
-        <h2 className="border-b border-slate-100 px-5 py-3.5 font-semibold text-slate-900">Revenue</h2>
+        <h2 className="rounded-t-xl border-b border-slate-200/70 bg-slate-50/80 px-5 py-4 font-semibold text-slate-900">Revenue</h2>
         <div className="space-y-4 p-5">
           <RevenueForm eventId={event.id} />
           <ul className="divide-y divide-slate-100 text-sm">
@@ -433,7 +433,7 @@ export function CommunicationsTab({ detail }: { detail: EventDetail }) {
         Sending from the CRM isn&apos;t connected yet, so nothing here emails anyone. Copy a list into your email app, using BCC to keep addresses private.
       </p>
       <section className={CARD}>
-        <h2 className="border-b border-slate-100 px-5 py-3.5 font-semibold text-slate-900">Recipient lists</h2>
+        <h2 className="rounded-t-xl border-b border-slate-200/70 bg-slate-50/80 px-5 py-4 font-semibold text-slate-900">Recipient lists</h2>
         <ul className="divide-y divide-slate-100">
           {groups.map(([label, emails]) => (
             <li key={label} className="flex items-center justify-between gap-3 px-5 py-2.5 text-sm">

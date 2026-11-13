@@ -20,7 +20,7 @@ import { DateInput } from "@/components/ui/date-input";
 const INPUT =
   "mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-brand-600 focus:outline-none focus:ring-2 focus:ring-brand-100";
 const LABEL = "text-sm font-medium text-slate-700";
-const CARD = "space-y-4 rounded-xl border border-slate-200 bg-white p-5 shadow-card";
+const CARD = "space-y-6 rounded-2xl border border-slate-200 bg-white p-5 shadow-card sm:p-6";
 const AUTOSAVE_DELAY_MS = 1500;
 
 const STEPS = ["Details", "Schedule", "Registration", "Budget & Marketing", "Review"];
@@ -321,6 +321,7 @@ export function EventWizard({
           {step === 0 && (
             <section className={CARD}>
               <StepHeading title="Event details" question="What is the event, and who's running it?" />
+              <Group title="The basics">
               <div>
                 <label className={LABEL} htmlFor="title">Event name <span className="text-brand-600">*</span></label>
                 <input id="title" value={values.title} onChange={(e) => set("title", e.target.value)} className={INPUT} />
@@ -364,12 +365,14 @@ export function EventWizard({
                   <p className="mt-1 text-xs text-slate-500">You&apos;ll add the venue or the join link on the next step.</p>
                 </div>
               </div>
-              <div>
-                <label className={LABEL} htmlFor="description">Description</label>
+              </Group>
+              <Group title="Description" hint="Shown on the public event page.">
+                <label className="sr-only" htmlFor="description">Description</label>
                 <textarea id="description" rows={5} value={values.description} onChange={(e) => set("description", e.target.value)} className={INPUT} />
-              </div>
+              </Group>
+              <Group title="Banner" hint="The header image on the event page.">
               <div>
-                <label className={LABEL} htmlFor="banner">Banner</label>
+                <label className="sr-only" htmlFor="banner">Banner</label>
                 {values.imageUrl && (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img src={values.imageUrl} alt="" className="mt-2 max-h-40 w-full rounded-lg object-cover" />
@@ -399,12 +402,14 @@ export function EventWizard({
                   className={INPUT}
                 />
               </div>
+              </Group>
             </section>
           )}
 
           {step === 1 && (
             <section className={CARD}>
               <StepHeading title="Schedule" question="When and where is it?" />
+              <Group title="Date and time" hint="Calgary time. Leave the end blank if it isn't set yet.">
               {(() => {
                 const [startDate, startTime] = splitDateTime(values.startsAt);
                 const [endDate, endTime] = splitDateTime(values.endsAt);
@@ -453,7 +458,8 @@ export function EventWizard({
                   </div>
                 );
               })()}
-              <p className="text-xs text-slate-500">Times are in Calgary time. Leave the end blank if it isn&apos;t set yet.</p>
+              </Group>
+              <Group title={values.format === "online" ? "Join link" : "Location"}>
               {values.format !== "online" && (
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div>
@@ -491,6 +497,8 @@ export function EventWizard({
                 </div>
               )}
 
+              </Group>
+              <Group title="Program">
               <Repeater
                 title="Agenda"
                 addLabel="Add agenda item"
@@ -505,12 +513,14 @@ export function EventWizard({
                 placeholders={["Name", "Title and organization"]}
                 onChange={(rows) => set("speakers", rows.map(([name, title]) => ({ name, title })))}
               />
+              </Group>
             </section>
           )}
 
           {step === 2 && (
             <section className={CARD}>
               <StepHeading title="Registration" question="Who can come, how many do you want, and what does it cost to attend?" />
+              <Group title="Tickets and numbers">
               <div className="grid gap-4 sm:grid-cols-3">
                 <div>
                   <label className={LABEL} htmlFor="ticketType">Ticket type</label>
@@ -541,9 +551,10 @@ export function EventWizard({
                   Online payment isn&apos;t connected yet. People can register, and the page tells them your team will follow up about payment.
                 </p>
               )}
+              </Group>
+              <Group title="What we ask" hint="Name and email are always collected.">
               <fieldset>
                 <legend className={LABEL}>Registration fields</legend>
-                <p className="text-xs text-slate-500">Name and email are always collected.</p>
                 <Checkbox label="Ask for company" checked={values.collectCompany} onChange={(v) => set("collectCompany", v)} />
                 <Checkbox label="Ask for phone number" checked={values.collectPhone} onChange={(v) => set("collectPhone", v)} />
               </fieldset>
@@ -552,6 +563,9 @@ export function EventWizard({
                 checked={values.waitlistEnabled}
                 onChange={(v) => set("waitlistEnabled", v)}
               />
+              <RegistrationQuestionsEditor value={values.registrationQuestions ?? []} onChange={(next) => set("registrationQuestions", next)} />
+              </Group>
+              <Group title="Registration window" hint="Opens when you publish unless you pick a date. Closes the day before the event at 11:59 p.m. unless you change it. Calgary time.">
               <div className="grid gap-4 sm:grid-cols-2">
                 <fieldset>
                   <legend className={LABEL}>Registration opens</legend>
@@ -595,10 +609,8 @@ export function EventWizard({
                   </div>
                 </fieldset>
               </div>
-              <p className="-mt-2 text-xs text-slate-500">
-                Opens when you publish unless you pick a date. Closes the day before the event at 11:59 p.m. unless you change it. Calgary time.
-              </p>
-              <RegistrationQuestionsEditor value={values.registrationQuestions ?? []} onChange={(next) => set("registrationQuestions", next)} />
+              </Group>
+              <Group title="After they register">
               <div>
                 <label className={LABEL} htmlFor="confirmationMessage">Confirmation message</label>
                 <textarea
@@ -610,6 +622,7 @@ export function EventWizard({
                   className={INPUT}
                 />
               </div>
+              </Group>
             </section>
           )}
 
@@ -617,6 +630,7 @@ export function EventWizard({
             <section className={CARD}>
               <StepHeading title="Budget & Marketing" question="What will it cost, and which budget pays for it?" />
               <EventBudgetStep eventId={eventId} onTotal={onBudgetTotal} />
+              <Group title="Funding and notes">
               <div className="grid gap-4 sm:grid-cols-2">
                 {!budgetLinked && (
                   <div>
@@ -633,6 +647,7 @@ export function EventWizard({
                 <label className={LABEL} htmlFor="budgetNotes">Budget notes</label>
                 <textarea id="budgetNotes" rows={3} value={values.budgetNotes} onChange={(e) => set("budgetNotes", e.target.value)} className={INPUT} />
               </div>
+              </Group>
             </section>
           )}
 
@@ -727,12 +742,7 @@ export function EventWizard({
               </section>
 
               <section className={CARD}>
-                <div>
-                  <h2 className="font-semibold text-slate-900">Materials and video</h2>
-                  <p className="text-xs text-slate-500">
-                    Optional, and you can add more any time, including after the event. Visible to your team only.
-                  </p>
-                </div>
+                <StepHeading title="Materials and video" question="Optional, and you can add more any time, including after the event. Visible to your team only." />
                 {eventId ? (
                   <>
                     <DocumentUpload eventId={eventId} onUploaded={(name) => setMaterialNames((c) => [...c, name])} />
@@ -750,10 +760,7 @@ export function EventWizard({
               </section>
 
               <section className={CARD}>
-                <div>
-                  <h2 className="font-semibold text-slate-900">Save as a template</h2>
-                  <p className="text-xs text-slate-500">Reuse this plan for future events. Dates aren&apos;t included.</p>
-                </div>
+                <StepHeading title="Save as a template" question="Reuse this plan for future events. Dates aren't included." />
                 <div className="flex flex-col gap-2 sm:flex-row">
                   <input aria-label="Template name" placeholder="Template name" value={templateName} onChange={(e) => setTemplateName(e.target.value)} className={`${INPUT} mt-0`} />
                   <button
@@ -835,11 +842,25 @@ export function EventWizard({
   );
 }
 
+/** The card's title, on a shaded band across the top of the card. */
 function StepHeading({ title, question }: { title: string; question: string }) {
   return (
-    <div>
+    <div className="-mx-5 -mt-5 rounded-t-2xl border-b border-slate-200/70 bg-gradient-to-b from-slate-50 to-slate-50/40 px-5 py-4 sm:-mx-6 sm:-mt-6 sm:px-6 sm:py-5">
       <h2 className="text-lg font-semibold text-slate-900">{title}</h2>
       <p className="mt-0.5 text-sm text-slate-500">{question}</p>
+    </div>
+  );
+}
+
+/** A shaded block that groups related fields inside a card. */
+function Group({ title, hint, children }: { title: string; hint?: string; children: React.ReactNode }) {
+  return (
+    <div className="space-y-4 rounded-xl border border-slate-100 bg-slate-50/70 p-4 sm:p-5">
+      <div>
+        <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-500">{title}</h3>
+        {hint && <p className="mt-0.5 text-xs text-slate-500">{hint}</p>}
+      </div>
+      {children}
     </div>
   );
 }
