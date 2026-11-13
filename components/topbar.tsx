@@ -7,15 +7,17 @@ import type { CurrentUser } from "@/lib/auth/session";
 export function Topbar({
   user,
   openTaskCount,
+  unseenMailCount,
   isAdmin,
 }: {
   user: CurrentUser | null;
   openTaskCount: number;
+  unseenMailCount: number;
   isAdmin: boolean;
 }) {
   return (
     <header className="sticky top-0 z-20 flex h-16 items-center gap-3 border-b border-slate-200 bg-white px-4 sm:px-6 lg:px-8">
-      <MobileNavDrawer isAdmin={isAdmin} openTaskCount={openTaskCount} />
+      <MobileNavDrawer isAdmin={isAdmin} openTaskCount={openTaskCount} unseenMailCount={unseenMailCount} />
       <div className="min-w-0 flex-1">
         <GlobalSearch />
       </div>

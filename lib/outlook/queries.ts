@@ -50,6 +50,8 @@ export type EmailItem = {
   hasAttachments: boolean;
   webLink: string | null;
   needsReply: boolean;
+  /** Received, recent, and not yet opened in the CRM by the person viewing. */
+  isNew: boolean;
   contacts: ContactRef[];
 };
 
@@ -156,9 +158,10 @@ type EmailRow = {
 };
 
 async function decorateEmails(supabase: Supabase, rows: EmailRow[], currentUserId: string): Promise<EmailItem[]> {
-  const [accounts, contacts] = await Promise.all([
+  const [accounts, contacts, newIds] = await Promise.all([
     getMailAccounts(),
     contactsByEmail(supabase, [...new Set(rows.flatMap((r) => r.participants))]),
+    unseenReplyIds(supabase),
   ]);
   const accountById = new Map(accounts.map((a) => [a.id, a]));
 
@@ -188,9 +191,31 @@ async function decorateEmails(supabase: Supabase, rows: EmailRow[], currentUserI
       hasAttachments: r.has_attachments,
       webLink: r.web_link,
       needsReply: isLatest && r.direction === "inbound",
+      isNew: newIds.has(r.id),
       contacts: r.participants.map((p) => contacts.get(p)).filter((c): c is ContactRef => c !== undefined),
     };
   });
+}
+
+/**
+ * Ids of received email the viewer hasn't opened here yet. Only the "New" markers depend
+ * on this, so a failure is logged and shows nothing as new rather than hiding the email.
+ */
+async function unseenReplyIds(supabase: Supabase): Promise<Set<string>> {
+  const { data, error } = await supabase.rpc("unseen_reply_ids");
+  if (error) {
+    console.error("Unseen email lookup failed:", error);
+    return new Set();
+  }
+  return new Set((data ?? []) as string[]);
+}
+
+/** The number on the Communication nav link. */
+export async function getUnseenReplyCount(): Promise<number> {
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("unseen_reply_count");
+  if (error) throw error;
+  return (data as number | null) ?? 0;
 }
 
 export type InboxFilter = "all" | "unread" | "needs_reply";

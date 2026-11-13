@@ -510,6 +510,12 @@ export type Database = {
         Update: Partial<Database["public"]["Tables"]["deal_people"]["Insert"]>;
         Relationships: [];
       };
+      email_seen: {
+        Row: { user_id: string; email_id: string; seen_at: string };
+        Insert: { user_id?: string; email_id: string; seen_at?: string };
+        Update: Partial<Database["public"]["Tables"]["email_seen"]["Insert"]>;
+        Relationships: [];
+      };
       deal_staff: {
         Row: { deal_id: string; user_id: string; created_at: string };
         Insert: { deal_id: string; user_id: string; created_at?: string };
@@ -1172,6 +1178,9 @@ export type Database = {
           confirmation_message?: string | null;
         };
       };
+      unseen_reply_ids: { Args: Record<string, never>; Returns: string[] };
+      unseen_reply_count: { Args: Record<string, never>; Returns: number };
+      mark_all_emails_seen: { Args: Record<string, never>; Returns: number };
     };
     Enums: Record<string, never>;
   };
