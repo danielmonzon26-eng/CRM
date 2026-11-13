@@ -12,7 +12,7 @@ const TONE: Record<DashboardEntry["tone"], string> = {
 };
 
 const STREAM_BAR: Record<string, string> = { catapult: "bg-brand-500", event: "bg-sky-500", sponsorship: "bg-amber-500" };
-const TYPE_BAR: Record<string, string> = { social: "bg-sky-500", online_advertising: "bg-violet-500", production: "bg-teal-500", creative: "bg-fuchsia-500" };
+const TYPE_BAR: Record<string, string> = { social: "bg-sky-500", online_advertising: "bg-violet-500", production: "bg-teal-500", creative: "bg-fuchsia-500", event_materials: "bg-orange-500", onsite_advertising: "bg-indigo-500" };
 
 const pct = (part: number, whole: number) => (whole > 0 ? Math.round((part / whole) * 100) : 0);
 
