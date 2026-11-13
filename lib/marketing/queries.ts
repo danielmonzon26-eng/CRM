@@ -29,6 +29,10 @@ export type PostItem = {
   channels: Channel[];
   platforms: SocialPlatform[];
   initiative: { id: string; name: string } | null;
+  /** The event this post promotes, when it was requested automatically for one. */
+  event: { id: string; title: string } | null;
+  /** 14, 7 or 1 for an automatic request. */
+  autoDaysBefore: number | null;
   createdBy: string | null;
   createdByName: string | null;
   approvedByName: string | null;
@@ -82,11 +86,13 @@ export async function getChannels(includeInactive = false): Promise<Channel[]> {
 }
 
 const POST_COLUMNS =
-  "id, initiative_id, title, caption, scheduled_at, status, image_path, image_name, review_note, created_by, submitted_at, approved_by, approved_at, updated_at";
+  "id, initiative_id, event_id, auto_days_before, title, caption, scheduled_at, status, image_path, image_name, review_note, created_by, submitted_at, approved_by, approved_at, updated_at";
 
 type PostRow = {
   id: string;
   initiative_id: string | null;
+  event_id: string | null;
+  auto_days_before: number | null;
   title: string;
   caption: string;
   scheduled_at: string | null;
@@ -106,14 +112,18 @@ async function decoratePosts(supabase: Supabase, rows: PostRow[]): Promise<PostI
   const ids = rows.map((r) => r.id);
   const initiativeIds = [...new Set(rows.map((r) => r.initiative_id).filter((x): x is string => !!x))];
   const paths = rows.map((r) => r.image_path).filter((x): x is string => !!x);
+  const eventIds = [...new Set(rows.map((r) => r.event_id).filter((x): x is string => !!x))];
 
-  const [links, channels, initiatives, names, signed] = await Promise.all([
+  const [links, channels, initiatives, names, signed, events] = await Promise.all([
     supabase.from("social_post_channels").select("post_id, channel_id").in("post_id", ids),
     supabase.from("marketing_channels").select("id, platform, name, handle, active"),
     initiativeIds.length ? supabase.from("marketing_initiatives").select("id, name").in("id", initiativeIds) : Promise.resolve({ data: [], error: null }),
     nameMap(supabase),
     paths.length ? supabase.storage.from("marketing-images").createSignedUrls(paths, 3600) : Promise.resolve({ data: [], error: null }),
+    eventIds.length ? supabase.from("events").select("id, title").in("id", eventIds) : Promise.resolve({ data: [] as { id: string; title: string }[], error: null }),
   ]);
+  if (events.error) throw events.error;
+  const eventById = new Map((events.data ?? []).map((e) => [e.id, e]));
   if (links.error) throw links.error;
   if (channels.error) throw channels.error;
   if (initiatives.error) throw initiatives.error;
@@ -149,6 +159,8 @@ async function decoratePosts(supabase: Supabase, rows: PostRow[]): Promise<PostI
       channels: postChannels,
       platforms: [...new Set(postChannels.map((c) => c.platform))],
       initiative: r.initiative_id ? initiativeById.get(r.initiative_id) ?? null : null,
+      event: r.event_id ? eventById.get(r.event_id) ?? null : null,
+      autoDaysBefore: r.auto_days_before,
       createdBy: r.created_by,
       createdByName: r.created_by ? names.get(r.created_by) ?? null : null,
       approvedByName: r.approved_by ? names.get(r.approved_by) ?? null : null,
