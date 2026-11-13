@@ -20,6 +20,11 @@ const LABELS: Record<string, string> = {
   reports: "Reports",
   events: "Events",
   calendar: "Calendar",
+  marketing: "Marketing",
+  approvals: "Approvals",
+  initiatives: "Initiatives",
+  channels: "Channels",
+  posts: "Posts",
   new: "New",
   edit: "Edit",
 };

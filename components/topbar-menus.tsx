@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Bell, ChevronDown, LogOut, Menu, Plus, X } from "lucide-react";
 import { signOut } from "@/app/actions/auth";
 import { AppNav } from "@/components/app-nav";
+import type { NavCounts } from "@/components/nav-links";
 import { buttonClass } from "@/components/ui/button";
 import { useDismiss } from "@/components/ui/use-dismiss";
 import { VersionStamp, Wordmark } from "@/components/wordmark";
@@ -112,15 +113,7 @@ export function UserMenu({ user, isAdmin }: { user: CurrentUser; isAdmin: boolea
   );
 }
 
-export function MobileNavDrawer({
-  isAdmin,
-  openTaskCount,
-  unseenMailCount,
-}: {
-  isAdmin: boolean;
-  openTaskCount: number;
-  unseenMailCount: number;
-}) {
+export function MobileNavDrawer({ isAdmin, counts }: { isAdmin: boolean; counts: NavCounts }) {
   const { open, setOpen, close, ref } = useMenu();
 
   return (
@@ -151,7 +144,7 @@ export function MobileNavDrawer({
             <div className="border-b border-white/10 px-5 py-2.5">
               <VersionStamp />
             </div>
-            <AppNav isAdmin={isAdmin} openTaskCount={openTaskCount} unseenMailCount={unseenMailCount} onNavigate={close} />
+            <AppNav isAdmin={isAdmin} counts={counts} onNavigate={close} />
           </div>
         </div>
       )}
