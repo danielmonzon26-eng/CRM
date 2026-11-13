@@ -17,11 +17,13 @@ import {
 export function AppNav({
   isAdmin,
   openTaskCount,
+  unseenMailCount = 0,
   collapsed = false,
   onNavigate,
 }: {
   isAdmin: boolean;
   openTaskCount: number;
+  unseenMailCount?: number;
   collapsed?: boolean;
   onNavigate?: () => void;
 }) {
@@ -31,14 +33,15 @@ export function AppNav({
   const renderItem = (item: NavLink, nested = false) => {
     const active = isActive(pathname, item.href);
     const Icon = item.icon;
-    const badge = item.showTaskBadge && openTaskCount > 0 ? openTaskCount : 0;
+    const badge = item.badge === "tasks" ? openTaskCount : item.badge === "mail" ? unseenMailCount : 0;
+    const badgeLabel = item.badge === "mail" ? `${badge} new ${badge === 1 ? "email" : "emails"}` : `${badge} open`;
     return (
       <Link
         key={`${item.label}-${item.href}`}
         href={item.href}
         onClick={onNavigate}
         title={collapsed ? item.label : undefined}
-        aria-label={collapsed ? item.label : undefined}
+        aria-label={collapsed || badge > 0 ? `${item.label}${badge > 0 ? `, ${badgeLabel}` : ""}` : undefined}
         aria-current={active ? "page" : undefined}
         className={`relative flex items-center rounded-lg text-sm font-medium transition-colors ${
           collapsed ? "h-10 justify-center" : "justify-between px-3 py-2"
@@ -50,14 +53,15 @@ export function AppNav({
         </span>
         {badge > 0 &&
           (collapsed ? (
-            <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-brand-500" />
+            <span aria-hidden="true" className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-brand-500" />
           ) : (
             <span
+              aria-hidden="true"
               className={`rounded-full px-1.5 py-0.5 text-[10px] font-semibold leading-none ${
-                active ? "bg-white text-brand-700" : "bg-white/10 text-ink-100"
+                active ? "bg-white text-brand-700" : item.badge === "mail" ? "bg-brand-500 text-white" : "bg-white/10 text-ink-100"
               }`}
             >
-              {badge}
+              {badge > 99 ? "99+" : badge}
             </span>
           ))}
       </Link>
@@ -75,12 +79,20 @@ export function AppNav({
         title={collapsed ? CRM_TAB.label : undefined}
         aria-label={collapsed ? CRM_TAB.label : undefined}
         aria-expanded={inCrm}
-        className={`flex items-center gap-2.5 rounded-lg text-sm font-medium transition-colors ${
+        className={`relative flex items-center gap-2.5 rounded-lg text-sm font-medium transition-colors ${
           collapsed ? "h-10 justify-center" : "px-3 py-2"
         } ${inCrm ? "text-white" : "text-ink-200 hover:bg-white/5 hover:text-white"}`}
       >
         <CRM_TAB.icon className="h-[18px] w-[18px]" strokeWidth={2} />
         {!collapsed && CRM_TAB.label}
+        {!inCrm && unseenMailCount > 0 && (
+          <span
+            title={`${unseenMailCount} new ${unseenMailCount === 1 ? "email" : "emails"} in Communication`}
+            className={collapsed ? "absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-brand-500" : "ml-auto h-2 w-2 rounded-full bg-brand-500"}
+          >
+            <span className="sr-only">, new email in Communication</span>
+          </span>
+        )}
       </Link>
       {inCrm && (
         <div className={collapsed ? "space-y-1" : "ml-5 space-y-0.5 border-l border-white/10 pl-2"}>

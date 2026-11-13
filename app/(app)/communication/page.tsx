@@ -4,6 +4,7 @@ import { Inbox } from "lucide-react";
 import { ComposeEmailButton } from "@/components/outlook/compose-email";
 import { EmailList } from "@/components/outlook/email-list";
 import { MailboxPanel } from "@/components/outlook/mailbox-panel";
+import { MarkAllSeenButton } from "@/components/outlook/mark-all-seen";
 import { MailAutoSync, SyncNowButton } from "@/components/outlook/mail-sync";
 import { MeetingList } from "@/components/outlook/meeting-list";
 import { LoadError } from "@/components/ui/load-error";
@@ -11,7 +12,7 @@ import { EmptyState, Page, PageHeader } from "@/components/ui/page";
 import { settle } from "@/lib/settle";
 import { getCurrentUser } from "@/lib/auth/session";
 import { isOutlookConfigured } from "@/lib/outlook/graph";
-import { getInbox, getMailAccounts, getUpcomingMeetings, type InboxFilter } from "@/lib/outlook/queries";
+import { getInbox, getMailAccounts, getUnseenReplyCount, getUpcomingMeetings, type InboxFilter } from "@/lib/outlook/queries";
 
 export const dynamic = "force-dynamic";
 
@@ -41,11 +42,13 @@ export default async function CommunicationPage({
   const activeFilter = (TABS.some((t) => t.value === filter) ? filter : "all") as InboxFilter;
   const configured = isOutlookConfigured();
   // Each part loads on its own, so one failure shows where it happened and the rest still works.
-  const [accounts, inbox, upcoming] = await Promise.all([
+  const [accounts, inbox, upcoming, unseen] = await Promise.all([
     getMailAccounts(),
     settle(getInbox(user.id, activeFilter)),
     settle(getUpcomingMeetings()),
+    settle(getUnseenReplyCount()),
   ]);
+  const unseenCount = unseen.ok ? unseen.value : 0;
   const emails = inbox.ok ? inbox.value : [];
   const meetings = upcoming.ok ? upcoming.value : [];
   const mine = accounts.find((a) => a.userId === user.id);
@@ -77,6 +80,14 @@ export default async function CommunicationPage({
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_340px]">
         <div className="min-w-0">
+          {unseenCount > 0 && inbox.ok && (
+            <div className="mb-3 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-brand-100 bg-brand-50/60 px-3 py-2">
+              <p className="text-sm text-brand-900">
+                <span className="font-semibold">{unseenCount}</span> new {unseenCount === 1 ? "reply" : "replies"} since you last looked. Open one to clear it.
+              </p>
+              <MarkAllSeenButton count={unseenCount} />
+            </div>
+          )}
           <nav aria-label="Filter email" className="mb-4 flex gap-1 border-b border-slate-200">
             {TABS.map((tab) => (
               <Link

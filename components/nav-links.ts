@@ -15,7 +15,10 @@ import {
   Wallet,
 } from "lucide-react";
 
-export type NavLink = { href: string; label: string; icon: LucideIcon; showTaskBadge?: boolean };
+/** Which count, if any, shows beside the link. */
+export type NavBadge = "tasks" | "mail";
+
+export type NavLink = { href: string; label: string; icon: LucideIcon; badge?: NavBadge };
 
 export const OVERVIEW_TAB: NavLink = { href: "/", label: "Overview", icon: Home };
 
@@ -31,13 +34,13 @@ export const CRM_LINKS: NavLink[] = [
   { href: "/leads", label: "Leads", icon: ListChecks },
   { href: "/companies", label: "Companies", icon: Building2 },
   { href: "/contacts", label: "Contacts", icon: Users },
-  { href: "/communication", label: "Communication", icon: Mail },
+  { href: "/communication", label: "Communication", icon: Mail, badge: "mail" },
 ];
 
 export const WORK_TABS: NavLink[] = [
   { href: "/budgets", label: "Budgets", icon: Wallet },
   { href: "/reports", label: "Reports", icon: BarChart3 },
-  { href: "/tasks", label: "Tasks", icon: CheckSquare2, showTaskBadge: true },
+  { href: "/tasks", label: "Tasks", icon: CheckSquare2, badge: "tasks" },
 ];
 
 export const TEAM_LINK: NavLink = { href: "/admin", label: "Admin", icon: ShieldCheck };

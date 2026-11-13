@@ -112,7 +112,15 @@ export function UserMenu({ user, isAdmin }: { user: CurrentUser; isAdmin: boolea
   );
 }
 
-export function MobileNavDrawer({ isAdmin, openTaskCount }: { isAdmin: boolean; openTaskCount: number }) {
+export function MobileNavDrawer({
+  isAdmin,
+  openTaskCount,
+  unseenMailCount,
+}: {
+  isAdmin: boolean;
+  openTaskCount: number;
+  unseenMailCount: number;
+}) {
   const { open, setOpen, close, ref } = useMenu();
 
   return (
@@ -143,7 +151,7 @@ export function MobileNavDrawer({ isAdmin, openTaskCount }: { isAdmin: boolean; 
             <div className="border-b border-white/10 px-5 py-2.5">
               <VersionStamp />
             </div>
-            <AppNav isAdmin={isAdmin} openTaskCount={openTaskCount} onNavigate={close} />
+            <AppNav isAdmin={isAdmin} openTaskCount={openTaskCount} unseenMailCount={unseenMailCount} onNavigate={close} />
           </div>
         </div>
       )}

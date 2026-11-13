@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { markEmailsSeen } from "@/app/actions/outlook";
 import Link from "next/link";
 import { ArrowDownLeft, ArrowUpRight, ChevronDown, ExternalLink, Paperclip } from "lucide-react";
 import type { EmailItem } from "@/lib/outlook/queries";
@@ -29,6 +30,19 @@ export function EmailList({
   emptyText?: string;
 }) {
   const [openId, setOpenId] = useState<string | null>(null);
+  // Opened here since the page loaded, so the "New" marker goes at once without waiting
+  // for the server.
+  const [seenHere, setSeenHere] = useState<Set<string>>(() => new Set());
+
+  function toggle(email: EmailItem) {
+    const opening = openId !== email.id;
+    setOpenId(opening ? email.id : null);
+    if (opening && email.isNew && !seenHere.has(email.id)) {
+      setSeenHere((prev) => new Set(prev).add(email.id));
+      // Only the count depends on this; the email is open either way.
+      markEmailsSeen([email.id]).catch(() => undefined);
+    }
+  }
 
   if (emails.length === 0) return <p className="text-sm text-slate-500">{emptyText}</p>;
 
@@ -36,6 +50,7 @@ export function EmailList({
     <ul className="divide-y divide-slate-100 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-card">
       {emails.map((email) => {
         const open = openId === email.id;
+        const isNew = email.isNew && !seenHere.has(email.id);
         const unread = email.direction === "inbound" && !email.isRead;
         const DirectionIcon = email.direction === "inbound" ? ArrowDownLeft : ArrowUpRight;
         const replyTo = email.direction === "inbound" ? email.fromEmail : email.to[0];
@@ -44,8 +59,8 @@ export function EmailList({
             <button
               type="button"
               aria-expanded={open}
-              onClick={() => setOpenId(open ? null : email.id)}
-              className="flex w-full items-start gap-3 px-4 py-3 text-left hover:bg-slate-50"
+              onClick={() => toggle(email)}
+              className={`flex w-full items-start gap-3 border-l-[3px] px-4 py-3 text-left hover:bg-slate-50 ${isNew ? "border-brand-600 bg-brand-50/40" : "border-transparent"}`}
             >
               <span
                 className={`mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full ${
@@ -57,16 +72,24 @@ export function EmailList({
               </span>
               <span className="min-w-0 flex-1">
                 <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                  <span className={`truncate text-sm ${unread ? "font-semibold text-slate-900" : "font-medium text-slate-800"}`}>
+                  <span className={`truncate text-sm ${unread || isNew ? "font-semibold text-slate-900" : "font-medium text-slate-800"}`}>
                     {counterpart(email)}
                   </span>
-                  {unread && <span className="rounded-full bg-brand-600 px-1.5 py-0.5 text-[10px] font-semibold text-white">Unread</span>}
+                  {isNew ? (
+                    <span className="rounded-full bg-brand-600 px-1.5 py-0.5 text-[10px] font-semibold text-white">New</span>
+                  ) : (
+                    unread && (
+                      <span title="Not yet read in Outlook" className="rounded-full bg-brand-50 px-1.5 py-0.5 text-[10px] font-semibold text-brand-800">
+                        Unread
+                      </span>
+                    )
+                  )}
                   {email.needsReply && (
                     <span className="rounded-full bg-amber-50 px-1.5 py-0.5 text-[10px] font-semibold text-amber-800">Needs reply</span>
                   )}
                   {email.hasAttachments && <Paperclip aria-label="Has attachments" className="h-3.5 w-3.5 text-slate-500" strokeWidth={2} />}
                 </span>
-                <span className={`block truncate text-sm ${unread ? "text-slate-900" : "text-slate-700"}`}>{email.subject}</span>
+                <span className={`block truncate text-sm ${unread || isNew ? "text-slate-900" : "text-slate-700"}`}>{email.subject}</span>
                 {!open && <span className="block truncate text-xs text-slate-500">{email.preview}</span>}
               </span>
               <span className="flex shrink-0 items-center gap-1 text-xs text-slate-500">

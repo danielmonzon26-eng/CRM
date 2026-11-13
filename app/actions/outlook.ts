@@ -178,3 +178,40 @@ export async function sendOutlookEmail(input: SendEmailInput): Promise<ActionRes
   if (input.leadId) revalidatePath(`/leads/${input.leadId}`);
   return {};
 }
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/** Called when someone opens an email in the CRM, so it stops counting as new for them. */
+export async function markEmailsSeen(emailIds: string[]): Promise<ActionResult> {
+  const user = await getCurrentUser();
+  if (!user) return { error: "Sign in first." };
+  const ids = [...new Set(emailIds)].filter((id) => UUID.test(id)).slice(0, 500);
+  if (ids.length === 0) return {};
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("email_seen")
+    .upsert(
+      ids.map((email_id) => ({ user_id: user.id, email_id })),
+      { onConflict: "user_id,email_id", ignoreDuplicates: true },
+    );
+  if (error) {
+    console.error("Marking email seen failed:", error);
+    return { error: "Couldn't update the new-email count." };
+  }
+  revalidatePath("/", "layout");
+  return {};
+}
+
+/** "Mark all as seen" on the Communication page: clears the count in one step. */
+export async function markAllEmailsSeen(): Promise<ActionResult> {
+  const user = await getCurrentUser();
+  if (!user) return { error: "Sign in first." };
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("mark_all_emails_seen");
+  if (error) {
+    console.error("Marking all email seen failed:", error);
+    return { error: "Couldn't clear the new emails. Please try again." };
+  }
+  revalidatePath("/", "layout");
+  return {};
+}

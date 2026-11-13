@@ -10,10 +10,12 @@ export const SIDEBAR_COOKIE = "sidebar-collapsed";
 export function Sidebar({
   isAdmin,
   openTaskCount,
+  unseenMailCount,
   initialCollapsed,
 }: {
   isAdmin: boolean;
   openTaskCount: number;
+  unseenMailCount: number;
   initialCollapsed: boolean;
 }) {
   const [collapsed, setCollapsed] = useState(initialCollapsed);
@@ -42,7 +44,7 @@ export function Sidebar({
         </div>
       )}
 
-      <AppNav isAdmin={isAdmin} openTaskCount={openTaskCount} collapsed={collapsed} />
+      <AppNav isAdmin={isAdmin} openTaskCount={openTaskCount} unseenMailCount={unseenMailCount} collapsed={collapsed} />
 
       <div className="border-t border-white/10 p-3">
         <button
