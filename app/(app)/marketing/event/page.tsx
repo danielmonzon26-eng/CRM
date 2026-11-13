@@ -4,13 +4,14 @@ import { StreamView } from "@/components/marketing/stream-view";
 import { buttonClass } from "@/components/ui/button";
 import { LoadError } from "@/components/ui/load-error";
 import { calgaryDateKey } from "@/lib/events/format";
+import { getPosts } from "@/lib/marketing/queries";
 import { getStream } from "@/lib/marketing/streams";
 import { settle } from "@/lib/settle";
 
 export const dynamic = "force-dynamic";
 
 export default async function EventMarketingPage() {
-  const data = await settle(getStream("event"));
+  const [data, posts] = await Promise.all([settle(getStream("event")), getPosts().catch(() => null)]);
   if (!data.ok) return <LoadError what="Event marketing" />;
   return (
     <StreamView
@@ -18,6 +19,7 @@ export default async function EventMarketingPage() {
       groups={data.value.groups}
       options={data.value.options}
       today={calgaryDateKey(new Date())}
+      posts={posts ?? undefined}
       extra={
         <Link href="/marketing/promotion" className={buttonClass("secondary")}>
           <Rocket className="h-4 w-4" strokeWidth={2} />
