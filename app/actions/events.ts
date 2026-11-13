@@ -277,6 +277,20 @@ export async function setRegistrationCheckedIn(registrationId: string, eventId: 
   revalidatePath(`/events/${eventId}`);
 }
 
+// For payments the team takes outside Stripe (cash, cheque, invoice). Stripe payments are
+// recorded by the webhook in app/api/stripe/webhook/route.ts.
+export async function setRegistrationPaid(registrationId: string, eventId: string, paid: boolean) {
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("event_registrations")
+    .update(paid ? { payment_status: "paid", paid_at: new Date().toISOString() } : { payment_status: "unpaid", paid_at: null })
+    .eq("id", registrationId)
+    .in("payment_status", paid ? ["unpaid"] : ["paid"])
+    .is("stripe_payment_intent_id", null);
+  if (error) throw error;
+  revalidatePath(`/events/${eventId}`);
+}
+
 export async function setRegistrationCancelled(registrationId: string, eventId: string, cancelled: boolean) {
   const supabase = await createClient();
   const { error } = await supabase
