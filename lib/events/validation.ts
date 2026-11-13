@@ -1,3 +1,4 @@
+import { cleanQuestions, type RegistrationQuestion } from "@/lib/events/questions";
 import type { AgendaItem, EventFormat, EventTicketType, Speaker } from "@/lib/supabase/types";
 
 export type EventInput = {
@@ -25,6 +26,8 @@ export type EventInput = {
   registrationOpensAt: string;
   registrationClosesAt: string;
   confirmationMessage: string;
+  /** Custom questions on the registration form. Optional so older callers keep working. */
+  registrationQuestions?: RegistrationQuestion[];
   budgetAmount: string;
   fundingSource: string;
   budgetNotes: string;
@@ -57,6 +60,7 @@ export function getMissingForPublish(input: EventInput): string[] {
   if (!input.startsAt) missing.push("Start date and time");
   if (input.format !== "online" && !input.venueName.trim()) missing.push("Venue");
   if (input.ticketType === "paid" && !input.ticketPrice.trim()) missing.push("Ticket price");
+  if (input.registrationQuestions && "error" in cleanQuestions(input.registrationQuestions)) missing.push("Finish the custom questions (Registration step)");
   return missing;
 }
 

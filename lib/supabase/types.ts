@@ -713,6 +713,7 @@ export type Database = {
           created_by: string | null;
           created_at: string;
           updated_at: string;
+          registration_questions: unknown;
         };
         Insert: {
           id?: string;
@@ -750,6 +751,7 @@ export type Database = {
           created_by?: string | null;
           created_at?: string;
           updated_at?: string;
+          registration_questions?: unknown;
         };
         Update: Partial<Database["public"]["Tables"]["events"]["Insert"]>;
         Relationships: [];
@@ -995,6 +997,7 @@ export type Database = {
           paid_at: string | null;
           created_at: string;
           updated_at: string;
+          answers: unknown;
         };
         Insert: {
           id?: string;
@@ -1018,6 +1021,7 @@ export type Database = {
           paid_at?: string | null;
           created_at?: string;
           updated_at?: string;
+          answers?: unknown;
         };
         Update: Partial<Database["public"]["Tables"]["event_registrations"]["Insert"]>;
         Relationships: [];

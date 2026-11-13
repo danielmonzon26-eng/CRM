@@ -5,6 +5,8 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { formatEventWhen } from "@/lib/events/format";
 import { createEventCheckoutSession, isStripeEnabled } from "@/lib/payments/stripe";
+import { cleanAnswers, type RegistrationAnswers } from "@/lib/events/questions";
+import { getRegistrationQuestions } from "@/lib/events/questions-server";
 
 export type RegisterInput = {
   slug: string;
@@ -14,6 +16,8 @@ export type RegisterInput = {
   company: string;
   attendanceMode: string | null;
   website: string;
+  /** Answers to the event's custom questions, by question id. */
+  answers?: RegistrationAnswers;
 };
 
 export type RegisterResult = {
@@ -35,6 +39,8 @@ export type RegisterResult = {
   checkoutUrl?: string;
   /** Registered for a paid event, but payment wasn't taken online, so the team follows up. */
   paymentPending?: boolean;
+  /** A specific problem to show, e.g. a required question left blank. */
+  message?: string;
 };
 
 async function siteOrigin(): Promise<string> {
@@ -91,6 +97,12 @@ export async function registerForEvent(input: RegisterInput): Promise<RegisterRe
   // It gets the normal success screen and nothing is saved.
   if (input.website) return { status: "registered" };
 
+  // Custom questions are checked before anything is saved, so a missing answer doesn't
+  // leave a half-made registration.
+  const questions = await getRegistrationQuestions(input.slug);
+  const checked = cleanAnswers(questions, input.answers ?? {});
+  if ("error" in checked) return { status: "invalid", message: checked.error };
+
   const supabase = await createClient();
   const { data, error } = await supabase.rpc("register_for_event", {
     p_slug: input.slug,
@@ -103,6 +115,15 @@ export async function registerForEvent(input: RegisterInput): Promise<RegisterRe
   if (error) {
     console.error("register_for_event failed", error.message);
     return { status: "error" };
+  }
+
+  // Saves the answers on the registration just made (or held for payment).
+  if (data.ticket_code && Object.keys(checked.answers).length > 0) {
+    const { error: answersError } = await createAdminClient()
+      .from("event_registrations")
+      .update({ answers: checked.answers })
+      .eq("ticket_code", data.ticket_code);
+    if (answersError) console.error("saving registration answers failed", answersError.message);
   }
 
   // Paid tickets: a new registration, or someone coming back after leaving checkout.

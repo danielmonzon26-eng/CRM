@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { ArrowRight, CheckCircle2, Loader2 } from "lucide-react";
 import { registerForEvent, type RegisterResult } from "./actions";
+import type { RegistrationAnswers, RegistrationQuestion } from "@/lib/events/questions";
 import type { EventFormat } from "@/lib/supabase/types";
 
 const INPUT =
@@ -28,6 +29,7 @@ export function RegisterForm({
   paid,
   onlinePayment,
   priceLabel,
+  questions = [],
 }: {
   slug: string;
   format: EventFormat;
@@ -39,6 +41,8 @@ export function RegisterForm({
   /** Stripe is set up, so paying happens on Stripe Checkout right after this form. */
   onlinePayment: boolean;
   priceLabel: string;
+  /** The event's own extra questions. */
+  questions?: RegistrationQuestion[];
 }) {
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
@@ -46,6 +50,7 @@ export function RegisterForm({
   const [company, setCompany] = useState("");
   const [website, setWebsite] = useState("");
   const [attendanceMode, setAttendanceMode] = useState("in_person");
+  const [answers, setAnswers] = useState<RegistrationAnswers>({});
   const [result, setResult] = useState<RegisterResult | null>(null);
   const [isPending, startTransition] = useTransition();
 
@@ -97,7 +102,7 @@ export function RegisterForm({
     );
   }
 
-  const errorMessage = result ? ERROR_MESSAGES[result.status] : null;
+  const errorMessage = result ? result.message ?? ERROR_MESSAGES[result.status] : null;
   const submitLabel = waitlist ? "Join the waitlist" : paid && onlinePayment ? `Continue to payment · ${priceLabel}` : "Register";
 
   return (
@@ -115,6 +120,7 @@ export function RegisterForm({
             company,
             website,
             attendanceMode: format === "hybrid" ? attendanceMode : null,
+            answers,
           });
           setResult(next);
           if (next.status === "checkout" && next.checkoutUrl) window.location.assign(next.checkoutUrl);
@@ -150,6 +156,58 @@ export function RegisterForm({
           </select>
         </div>
       )}
+      {questions.map((q) => {
+        const id = `q-${q.id}`;
+        const optional = !q.required && <span className="text-slate-400"> (optional)</span>;
+        if (q.type === "checkbox") {
+          return (
+            <label key={q.id} className="flex items-start gap-3 text-sm font-light text-slate-700">
+              <input
+                type="checkbox"
+                required={q.required}
+                checked={answers[q.id] === true}
+                onChange={(e) => setAnswers({ ...answers, [q.id]: e.target.checked })}
+                className="mt-0.5 h-5 w-5 rounded border-slate-300 text-brand-600 focus:ring-brand-400"
+              />
+              <span>
+                {q.label}
+                {optional}
+              </span>
+            </label>
+          );
+        }
+        if (q.type === "choice") {
+          return (
+            <fieldset key={q.id}>
+              <legend className={LABEL}>
+                {q.label}
+                {optional}
+              </legend>
+              <div className="mt-1.5 space-y-1.5">
+                {q.options.map((o) => (
+                  <label key={o} className="flex items-center gap-3 rounded-[10px] border border-slate-200 px-3.5 py-2.5 text-base font-light text-slate-800 has-[:checked]:border-brand-500 has-[:checked]:bg-brand-50/50">
+                    <input type="radio" name={id} required={q.required} value={o} checked={answers[q.id] === o} onChange={() => setAnswers({ ...answers, [q.id]: o })} className="h-4 w-4 text-brand-600 focus:ring-brand-400" />
+                    {o}
+                  </label>
+                ))}
+              </div>
+            </fieldset>
+          );
+        }
+        return (
+          <div key={q.id}>
+            <label className={LABEL} htmlFor={id}>
+              {q.label}
+              {optional}
+            </label>
+            {q.type === "long" ? (
+              <textarea id={id} rows={3} required={q.required} value={(answers[q.id] as string) ?? ""} onChange={(e) => setAnswers({ ...answers, [q.id]: e.target.value })} className={INPUT} />
+            ) : (
+              <input id={id} required={q.required} value={(answers[q.id] as string) ?? ""} onChange={(e) => setAnswers({ ...answers, [q.id]: e.target.value })} className={INPUT} />
+            )}
+          </div>
+        );
+      })}
       <div className="absolute -left-[9999px]" aria-hidden="true">
         <label htmlFor="website">Website</label>
         <input id="website" tabIndex={-1} autoComplete="off" value={website} onChange={(e) => setWebsite(e.target.value)} />
