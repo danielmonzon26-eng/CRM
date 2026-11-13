@@ -145,7 +145,7 @@ export function ProposalDetailsForm({ deal, staff }: { deal: DealDetail; staff: 
 
         {deal.stage === "declined" && (
           <label className={LABEL}>
-            Why it was declined
+            Note on why it was declined
             <input value={values.declinedReason} onChange={(e) => set({ declinedReason: e.target.value })} placeholder="e.g. Budget moved to next year" className={FIELD} />
           </label>
         )}

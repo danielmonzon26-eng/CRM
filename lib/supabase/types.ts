@@ -334,6 +334,8 @@ export type Database = {
           sent_on: string | null;
           accepted_on: string | null;
           request_key: string | null;
+          declined_by: "them" | "us" | null;
+          declined_reason: string | null;
           created_by: string | null;
           created_at: string;
           updated_at: string;
@@ -364,6 +366,8 @@ export type Database = {
           sent_on?: string | null;
           accepted_on?: string | null;
           request_key?: string | null;
+          declined_by?: "them" | "us" | null;
+          declined_reason?: string | null;
           created_by?: string | null;
           created_at?: string;
           updated_at?: string;
@@ -498,6 +502,12 @@ export type Database = {
           created_by?: string | null;
         };
         Update: Partial<Database["public"]["Tables"]["discovery_calls"]["Insert"]>;
+        Relationships: [];
+      };
+      deal_people: {
+        Row: { deal_id: string; contact_id: string; role: string; created_at: string };
+        Insert: { deal_id: string; contact_id: string; role: string };
+        Update: Partial<Database["public"]["Tables"]["deal_people"]["Insert"]>;
         Relationships: [];
       };
       deal_staff: {

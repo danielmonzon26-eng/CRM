@@ -7,7 +7,8 @@ import { PaymentBadge, StaffAvatars } from "@/components/proposal-fields";
 import { buttonClass } from "@/components/ui/button";
 import { formatMoney } from "@/lib/budgets/money";
 import { getDealDetail, getDealStageHistory } from "@/lib/deals/queries";
-import { DEAL_STAGE_META } from "@/lib/deals/stages";
+import { DEAL_STAGE_META, DECLINED_REASON_LABELS } from "@/lib/deals/stages";
+import { BuyingCommittee } from "@/components/buying-committee";
 import { getTeamMembers } from "@/lib/leads/queries";
 import { getInitials } from "@/lib/text";
 import { ProposalDetailsForm } from "./proposal-details-form";
@@ -71,7 +72,7 @@ export default async function DealDetailPage({ params }: { params: Promise<{ id:
       </header>
 
       <section aria-label="Stage" className="mt-5">
-        <DealStageSelect dealId={deal.id} stage={deal.stage} />
+        <DealStageSelect dealId={deal.id} stage={deal.stage} proposalName={deal.name} />
       </section>
 
       {deal.stage === "accepted" && (
@@ -86,13 +87,16 @@ export default async function DealDetailPage({ params }: { params: Promise<{ id:
         <p className="mt-3 flex items-center gap-2 rounded-lg border border-rose-200 bg-rose-50 px-4 py-2.5 text-sm text-rose-900">
           <XCircle aria-hidden="true" className="h-4 w-4 shrink-0" strokeWidth={2} />
           <span>
-            <span className="font-medium">Declined.</span> {deal.lostReason ?? "Add the reason below so the team can learn from it."}
+            <span className="font-medium">{deal.declinedBy === "us" ? "We declined" : "Declined"}{deal.declinedReason ? `: ${DECLINED_REASON_LABELS[deal.declinedReason] ?? deal.declinedReason}.` : "."}</span>{" "}
+            {deal.lostReason ?? (deal.declinedReason ? "" : "Add the reason below so the team can learn from it.")}
           </span>
         </p>
       )}
 
       <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-[1fr_320px]">
         <div className="min-w-0 space-y-8">
+          <BuyingCommittee dealId={deal.id} leadId={deal.leadId} people={deal.people} open={deal.stage === "in_development" || deal.stage === "sent"} />
+
           <section aria-labelledby="files-title">
             <h2 id="files-title" className="text-sm font-semibold text-slate-700">
               Proposal documents ({deal.files.length})

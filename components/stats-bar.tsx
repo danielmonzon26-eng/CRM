@@ -8,7 +8,12 @@ export function StatsBar({ forecast }: { forecast: PipelineForecast }) {
     ["Open value", formatMoney(forecast.openValue)],
     ["Weighted value", formatMoney(Math.round(forecast.weightedValue))],
     ["Accepted", `${forecast.closedWonCount.toLocaleString()} · ${formatMoney(forecast.closedWonValue)}`],
-    ["Declined", forecast.closedLostCount.toLocaleString()],
+    [
+      "Declined",
+      forecast.declinedByUsCount
+        ? `${forecast.closedLostCount.toLocaleString()} · ${forecast.declinedByUsCount} by us`
+        : forecast.closedLostCount.toLocaleString(),
+    ],
   ];
 
   return (

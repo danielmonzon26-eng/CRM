@@ -3,7 +3,17 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import type { Database, DealPayment, DealStage } from "@/lib/supabase/types";
-import { DEAL_STAGE_META, OPEN_DEAL_STAGES, PAYMENT_LABELS, isDealStage } from "@/lib/deals/stages";
+import {
+  COMMITTEE_ROLES,
+  DEAL_STAGE_META,
+  DECLINED_REASON_LABELS,
+  OPEN_DEAL_STAGES,
+  PAYMENT_LABELS,
+  isDealStage,
+  isDeclinedReason,
+  type CommitteeRole,
+  type DeclinedBy,
+} from "@/lib/deals/stages";
 import { isLeadProgram, programLabel } from "@/lib/leads/classification";
 
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
@@ -121,8 +131,14 @@ export async function createDeal(input: CreateDealInput): Promise<string> {
  * Moves a proposal. Sent and accepted dates fill in with today when they're blank, and the
  * accepted date clears if it moves back out of Accepted.
  */
-export async function updateDealStage(dealId: string, newStage: DealStage, declinedReason?: string | null) {
+export type DeclineDetails = { by: DeclinedBy; reason: string; note?: string | null };
+
+export async function updateDealStage(dealId: string, newStage: DealStage, decline?: DeclineDetails) {
   if (!isDealStage(newStage)) throw new Error("That isn't a proposal stage.");
+  // Declined always says who declined and why, so the two kinds can be counted apart.
+  if (newStage === "declined" && (!decline || !isDeclinedReason(decline.by, decline.reason))) {
+    throw new Error("Choose who declined and why.");
+  }
   const supabase = await createClient();
   const {
     data: { user },
@@ -141,7 +157,9 @@ export async function updateDealStage(dealId: string, newStage: DealStage, decli
     .from("deals")
     .update({
       stage: newStage,
-      lost_reason: newStage === "declined" ? declinedReason?.trim() || deal.lost_reason || null : null,
+      lost_reason: newStage === "declined" ? decline?.note?.trim().slice(0, 1000) || null : null,
+      declined_by: newStage === "declined" ? decline!.by : null,
+      declined_reason: newStage === "declined" ? decline!.reason : null,
       closed_at: closed ? new Date().toISOString() : null,
       sent_on: newStage !== "in_development" ? deal.sent_on ?? today() : deal.sent_on,
       accepted_on: newStage === "accepted" ? deal.accepted_on ?? today() : null,
@@ -156,11 +174,34 @@ export async function updateDealStage(dealId: string, newStage: DealStage, decli
       lead_id: deal.lead_id,
       actor_id: user?.id ?? null,
       type: "deal_stage_change",
-      body: `Proposal "${deal.name}" moved to ${DEAL_STAGE_META[newStage].label}`,
+      body:
+        newStage === "declined"
+          ? `Proposal "${deal.name}" declined (${decline!.by === "us" ? "by us" : "by them"}): ${DECLINED_REASON_LABELS[decline!.reason]}${decline!.note?.trim() ? `. ${decline!.note.trim()}` : ""}`
+          : `Proposal "${deal.name}" moved to ${DEAL_STAGE_META[newStage].label}`,
     });
   }
 
   revalidateDealPaths(dealId, deal.lead_id, deal.company_id);
+}
+
+/** Puts a contact on the buying committee in a role, or takes them off with null. */
+export async function setDealPerson(dealId: string, contactId: string, role: CommitteeRole | null): Promise<ActionResult> {
+  if (role !== null && !COMMITTEE_ROLES.some(([key]) => key === role)) return { error: "Choose a role from the list." };
+  const supabase = await createClient();
+  const { data: deal, error: dealError } = await supabase.from("deals").select("lead_id, company_id").eq("id", dealId).single();
+  if (dealError) return { error: "That proposal wasn't found." };
+  if (role === null) {
+    const { error } = await supabase.from("deal_people").delete().eq("deal_id", dealId).eq("contact_id", contactId);
+    if (error) return { error: "That didn't save. Please try again." };
+  } else {
+    // Only someone at the proposal's company can sit on its committee.
+    const { data: contact } = await supabase.from("contacts").select("lead_id").eq("id", contactId).maybeSingle();
+    if (!contact || contact.lead_id !== deal.lead_id) return { error: "That contact isn't at this company." };
+    const { error } = await supabase.from("deal_people").upsert({ deal_id: dealId, contact_id: contactId, role }, { onConflict: "deal_id,contact_id" });
+    if (error) return { error: "That didn't save. Please try again." };
+  }
+  revalidateDealPaths(dealId, deal.lead_id, deal.company_id);
+  return {};
 }
 
 export type DealDetailsPatch = {
@@ -175,6 +216,7 @@ export type DealDetailsPatch = {
   nextStepDueDate?: string | null;
   notes?: string | null;
   declinedReason?: string | null;
+  declined?: { by: DeclinedBy; reason: string };
 };
 
 /** Saves any of a proposal's details. Each field is checked before anything is written. */
@@ -211,6 +253,11 @@ export async function updateDealDetails(dealId: string, patch: DealDetailsPatch)
   if (patch.nextStep !== undefined) update.next_step = patch.nextStep?.trim() || null;
   if (patch.notes !== undefined) update.notes = patch.notes?.trim() || null;
   if (patch.declinedReason !== undefined) update.lost_reason = patch.declinedReason?.trim() || null;
+  if (patch.declined !== undefined) {
+    if (!isDeclinedReason(patch.declined.by, patch.declined.reason)) return { error: "Choose who declined and why." };
+    update.declined_by = patch.declined.by;
+    update.declined_reason = patch.declined.reason;
+  }
   if (Object.keys(update).length === 0) return {};
 
   const supabase = await createClient();
