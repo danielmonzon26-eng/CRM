@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState, useTransition } from "react";
 import Link from "next/link";
 import { ExternalLink, Link2, Plus, Trash2, Unlink, Wallet } from "lucide-react";
 import { deleteBudgetItem, saveBudgetItem } from "@/app/actions/budgets";
-import { createEventBudgetLine, loadEventBudget, saveMarketingItem, setEventBudgetLine, type EventBudget } from "@/app/actions/event-budget";
+import { createEventBudgetLine, deleteEventMarketingItem, loadEventBudget, saveMarketingItem, setEventBudgetLine, type EventBudget } from "@/app/actions/event-budget";
 import { buttonClass } from "@/components/ui/button";
 import { formatMoney } from "@/lib/budgets/money";
 import { EVENT_COST_PRESETS } from "@/lib/budgets/event-presets";
@@ -83,7 +83,7 @@ export function EventBudgetStep({
   return (
     <div className="space-y-3">
       {data.linked ? (
-        <LinkedLine linked={data.linked} pending={pending} run={run} eventId={eventId} eventDay={data.eventDay} />
+        <LinkedLine linked={data.linked} pending={pending} run={run} eventId={eventId} eventDay={data.eventDay} marketingItems={data.marketingItems} />
       ) : (
         <SetUp data={data} eventId={eventId} pending={pending} run={run} />
       )}
@@ -100,12 +100,14 @@ export function LinkedLine({
   linked,
   eventId,
   eventDay,
+  marketingItems,
   pending,
   run,
 }: {
   linked: NonNullable<EventBudget["linked"]>;
   eventId: string;
   eventDay: string | null;
+  marketingItems: EventBudget["marketingItems"];
   pending: boolean;
   run: (action: () => Promise<{ error?: string }>) => void;
 }) {
@@ -152,7 +154,7 @@ export function LinkedLine({
         </div>
       </div>
 
-      <MarketingItems linked={linked} eventId={eventId} eventDay={eventDay} pending={pending} run={run} />
+      <MarketingItems linked={linked} items={marketingItems} eventId={eventId} eventDay={eventDay} pending={pending} run={run} />
 
       <h3 className="border-t border-slate-100 px-4 pb-1 pt-3 text-sm font-semibold text-slate-900">Other costs</h3>
       <table className="w-full text-sm">
@@ -595,18 +597,19 @@ function MarketingFields({
 /** Marketing costs on the event's line, each with a category and delivery date. They show in Marketing. */
 function MarketingItems({
   linked,
+  items,
   eventId,
   eventDay,
   pending,
   run,
 }: {
   linked: NonNullable<EventBudget["linked"]>;
+  items: EventBudget["marketingItems"];
   eventId: string;
   eventDay: string | null;
   pending: boolean;
   run: (action: () => Promise<{ error?: string }>) => void;
 }) {
-  const items = linked.items.filter((i) => i.category);
   const [draft, setDraft] = useState<MarketingDraft>(BLANK_MARKETING);
   const total = items.reduce((s, i) => s + i.amount, 0);
 
@@ -617,7 +620,7 @@ function MarketingItems({
           Marketing items
         </h3>
         <p className="text-xs text-slate-500">
-          {items.length ? `${formatMoney(total)} · ` : ""}Booked into Marketing with their delivery dates
+          {items.length ? `${formatMoney(total)} · ` : ""}Shown in the Marketing planner as Event items
         </p>
       </div>
       {items.length > 0 && <MarketingHeader />}
@@ -630,7 +633,7 @@ function MarketingItems({
               aria-label={`Remove ${item.name}`}
               disabled={pending || item.spent > 0}
               title={item.spent > 0 ? "Has expenses recorded against it" : undefined}
-              onClick={() => run(() => deleteBudgetItem(item.id, linked.lineId))}
+              onClick={() => run(() => deleteEventMarketingItem(eventId, item.id))}
               className="mt-1.5 rounded-md p-1 text-slate-400 hover:bg-rose-50 hover:text-rose-700 disabled:opacity-30"
             >
               <Trash2 className="h-3.5 w-3.5" strokeWidth={2} />
@@ -665,7 +668,7 @@ function SavedMarketingItem({
   eventDay,
   run,
 }: {
-  item: NonNullable<EventBudget["linked"]>["items"][number];
+  item: EventBudget["marketingItems"][number];
   eventId: string;
   lineId: string;
   eventDay: string | null;
@@ -673,7 +676,7 @@ function SavedMarketingItem({
 }) {
   const initial: MarketingDraft = {
     category: item.category ?? "",
-    description: item.name === MARKETING_CATEGORY_LABELS[item.category as MarketingCategory] ? "" : item.name,
+    description: item.description,
     amount: String(item.amount),
     timing: item.timing ?? "2_weeks",
     deliveryOn: item.deliveryOn ?? "",

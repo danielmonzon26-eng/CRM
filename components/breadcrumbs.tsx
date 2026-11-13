@@ -23,6 +23,7 @@ const LABELS: Record<string, string> = {
   marketing: "Marketing",
   approvals: "Approvals",
   planner: "Planner",
+  social: "Social",
   promotion: "Promotion",
   deliverables: "Marketing items",
   initiatives: "Initiatives",

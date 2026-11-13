@@ -554,6 +554,40 @@ export type Database = {
         Update: Partial<Database["public"]["Tables"]["marketing_promotions"]["Insert"]>;
         Relationships: [];
       };
+      marketing_items: {
+        Row: {
+          id: string;
+          stream: "catapult" | "event" | "sponsorship";
+          item_type: "social" | "online_advertising" | "production" | "creative";
+          description: string;
+          event_id: string | null;
+          sponsor_company_id: string | null;
+          amount: number;
+          budget_line_id: string | null;
+          budget_item_id: string | null;
+          delivery_timing: string | null;
+          delivery_on: string | null;
+          status: "planned" | "in_progress" | "done";
+          created_by: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          stream: "catapult" | "event" | "sponsorship";
+          item_type: "social" | "online_advertising" | "production" | "creative";
+          description?: string;
+          event_id?: string | null;
+          sponsor_company_id?: string | null;
+          amount?: number;
+          budget_line_id?: string | null;
+          delivery_timing?: string | null;
+          delivery_on?: string | null;
+          status?: "planned" | "in_progress" | "done";
+        };
+        Update: Partial<Database["public"]["Tables"]["marketing_items"]["Insert"]>;
+        Relationships: [];
+      };
       marketing_initiatives: {
         Row: {
           id: string;

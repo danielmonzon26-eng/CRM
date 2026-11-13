@@ -50,7 +50,7 @@ export async function getMarketingDashboard(now = new Date()): Promise<Marketing
       .lte("starts_at", horizon)
       .order("starts_at"),
     // The items panel is a bonus; the rest of the overview doesn't depend on it.
-    getMarketingItems(now).catch((e) => {
+    getMarketingItems().catch((e) => {
       console.error("Marketing items for the overview failed:", e);
       return [] as MarketingItem[];
     }),

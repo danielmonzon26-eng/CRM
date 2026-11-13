@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { PenLine } from "lucide-react";
+import { ListPlus, PenLine } from "lucide-react";
 import { MarketingTabs } from "@/components/marketing/marketing-tabs";
 import { RequestPostButton } from "@/components/marketing/request-post";
 import { buttonClass } from "@/components/ui/button";
@@ -15,14 +15,18 @@ export default async function MarketingLayout({ children }: { children: React.Re
     <Page>
       <PageHeader
         title="Marketing"
-        subtitle="Plan initiatives and social posts, and get them approved before they go out."
+        subtitle="Plan Catapult, event and sponsorship marketing, from creative and production to ads and social posts."
         actions={
           <>
-            <Link href="/marketing/posts/new" className={buttonClass("secondary")}>
+            <Link href="/marketing/planner?view=table" className={buttonClass("secondary")}>
+              <ListPlus className="h-4 w-4" strokeWidth={2} />
+              Marketing items
+            </Link>
+            <RequestPostButton variant="secondary" />
+            <Link href="/marketing/posts/new" className={buttonClass("primary")}>
               <PenLine className="h-4 w-4" strokeWidth={2} />
               Write a post
             </Link>
-            <RequestPostButton />
           </>
         }
       />
