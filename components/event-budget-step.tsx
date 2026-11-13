@@ -9,6 +9,7 @@ import { buttonClass } from "@/components/ui/button";
 import { formatMoney } from "@/lib/budgets/money";
 import { EVENT_COST_PRESETS } from "@/lib/budgets/event-presets";
 import { deliveryDate, DELIVERY_TIMINGS, MARKETING_CATEGORIES, MARKETING_CATEGORY_LABELS, type DeliveryTiming, type MarketingCategory } from "@/lib/budgets/marketing-items";
+import { DateInput } from "@/components/ui/date-input";
 
 // No width here: each use sets its own, so flex rows lay out side by side.
 const INPUT =
@@ -586,7 +587,7 @@ function MarketingFields({
           ))}
         </select>
         {value.timing === "custom" && (
-          <input aria-label="Delivery date" type="date" value={value.deliveryOn} onChange={(e) => change({ deliveryOn: e.target.value }, !!e.target.value)} className={`${SMALL} min-w-0 flex-1`} />
+          <DateInput aria-label="Delivery date" value={value.deliveryOn} onChange={(e) => change({ deliveryOn: e.target.value }, !!e.target.value)} className={`${SMALL} min-w-0 flex-1`} />
         )}
       </div>
       {due && value.timing !== "custom" && <p className="text-xs text-slate-500 sm:col-span-3 lg:col-span-4">Due {dueLabel(due)}</p>}

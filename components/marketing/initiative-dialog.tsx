@@ -6,6 +6,7 @@ import { Pencil, Plus } from "lucide-react";
 import { saveInitiative, type InitiativeInput } from "@/app/actions/marketing";
 import { buttonClass } from "@/components/ui/button";
 import { useFeedback } from "@/components/ui/feedback";
+import { DateInput } from "@/components/ui/date-input";
 
 const FIELD =
   "mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-brand-600 focus:outline-none focus:ring-2 focus:ring-brand-100";
@@ -98,11 +99,11 @@ function InitiativeDialog({
           <div className="grid gap-4 sm:grid-cols-2">
             <label className={LABEL}>
               Starts
-              <input type="date" value={values.startsOn} onChange={(e) => set({ startsOn: e.target.value })} className={FIELD} />
+              <DateInput value={values.startsOn} onChange={(e) => set({ startsOn: e.target.value })} className={FIELD} />
             </label>
             <label className={LABEL}>
               Ends
-              <input type="date" min={values.startsOn || undefined} value={values.endsOn} onChange={(e) => set({ endsOn: e.target.value })} className={FIELD} />
+              <DateInput min={values.startsOn || undefined} value={values.endsOn} onChange={(e) => set({ endsOn: e.target.value })} className={FIELD} />
             </label>
             <label className={LABEL}>
               Owner

@@ -13,6 +13,7 @@ import { formatMoney, sumMoney } from "@/lib/budgets/money";
 import { quarterLabel, quarterOf } from "@/lib/budgets/quarters";
 import { calgaryDateKey } from "@/lib/events/format";
 import type { BudgetRevenueKind, BudgetRevenueStatus } from "@/lib/supabase/types";
+import { DateInput } from "@/components/ui/date-input";
 
 const CARD = "rounded-xl border border-slate-200 bg-white shadow-card";
 const INPUT = "w-full rounded-lg border border-[#8493a8] bg-white px-2.5 py-2 text-sm";
@@ -78,7 +79,7 @@ function AddRevenueForm({ budgetId, onDone }: { budgetId: string; onDone: () => 
       </label>
       <label className={LABEL}>
         Expected or received
-        <input required type="date" value={expectedOn} onChange={(e) => setExpectedOn(e.target.value)} className={`${INPUT} mt-1`} />
+        <DateInput required value={expectedOn} onChange={(e) => setExpectedOn(e.target.value)} className={`${INPUT} mt-1`} />
       </label>
       <div className="flex flex-wrap items-center gap-2 sm:col-span-2 lg:col-span-5">
         <button type="submit" disabled={isPending} className={buttonClass("primary", "sm")}>{isPending ? "Adding..." : "Add revenue"}</button>
@@ -118,13 +119,12 @@ function RevenueRow({ entry, onDeleted }: { entry: BudgetRevenueEntry; onDeleted
         </span>
       </td>
       <td className="px-3 py-1">
-        <input
-          type="date"
+        <DateInput
           aria-label={`${entry.source} date`}
           defaultValue={entry.expected_on}
           key={entry.expected_on}
-          aria-busy={isPending}
-          onBlur={(e) => {
+          disabled={isPending}
+          onChange={(e) => {
             if (e.target.value && e.target.value !== entry.expected_on) change({ expectedOn: e.target.value });
           }}
           className={INLINE}

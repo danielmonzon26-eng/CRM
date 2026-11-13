@@ -21,6 +21,7 @@ import { monthLabel } from "@/lib/budgets/history";
 import { formatMoney } from "@/lib/budgets/money";
 import type { ExpenseListItem, ItemSummary, LineSummary } from "@/lib/budgets/queries";
 import type { ExpenseStatus } from "@/lib/supabase/types";
+import { DateInput } from "@/components/ui/date-input";
 
 const INPUT = "w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm focus:border-brand-400 focus:outline-none focus:ring-2 focus:ring-brand-100";
 const LABEL = "text-xs font-medium text-slate-600";
@@ -284,7 +285,7 @@ export function ExpenseRow({ expense, lineId, items }: { expense: ExpenseListIte
                 <option value="committed">Committed (promised, not yet paid)</option>
               </select>
             </label>
-            <label className={LABEL}>Date<input required type="date" value={incurredOn} onChange={(e) => setIncurredOn(e.target.value)} className={`${INPUT} mt-1`} /></label>
+            <label className={LABEL}>Date<DateInput required value={incurredOn} onChange={(e) => setIncurredOn(e.target.value)} className={`${INPUT} mt-1`} /></label>
             {items.length > 0 && (
               <label className={LABEL}>
                 Budget item

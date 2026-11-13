@@ -15,6 +15,7 @@ import { ProgramPicker } from "@/components/program-picker";
 import type { Program } from "@/app/actions/programs";
 import { parseQuestions } from "@/lib/events/questions";
 import { getMissingForPublish, getPublishReminders, normalizeWebUrl, type EventInput } from "@/lib/events/validation";
+import { DateInput } from "@/components/ui/date-input";
 
 const INPUT =
   "mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-brand-600 focus:outline-none focus:ring-2 focus:ring-brand-100";
@@ -400,7 +401,7 @@ export function EventWizard({
                         Starts <span className="text-brand-600">*</span>
                       </legend>
                       <div className="grid grid-cols-[1fr_130px] gap-2">
-                        <input id="startsAt" aria-label="Start date" type="date" value={startDate} onChange={(e) => set("startsAt", joinDateTime(e.target.value, startTime))} className={INPUT} />
+                        <DateInput id="startsAt" aria-label="Start date" value={startDate} onChange={(e) => set("startsAt", joinDateTime(e.target.value, startTime))} className={INPUT} />
                         <input
                           aria-label="Start time"
                           type="time"
@@ -415,10 +416,9 @@ export function EventWizard({
                     <fieldset>
                       <legend className={LABEL}>Ends</legend>
                       <div className="grid grid-cols-[1fr_130px] gap-2">
-                        <input
+                        <DateInput
                           id="endsAt"
                           aria-label="End date"
-                          type="date"
                           min={startDate || undefined}
                           value={endDate}
                           onChange={(e) => set("endsAt", e.target.value ? joinDateTime(e.target.value, endTime || startTime) : "")}
@@ -542,10 +542,9 @@ export function EventWizard({
                 <fieldset>
                   <legend className={LABEL}>Registration opens</legend>
                   <div className="grid grid-cols-[1fr_130px] gap-2">
-                    <input
+                    <DateInput
                       id="registrationOpensAt"
                       aria-label="Registration opens, date"
-                      type="date"
                       value={splitDateTime(values.registrationOpensAt)[0]}
                       onChange={(e) => set("registrationOpensAt", joinDateTime(e.target.value, splitDateTime(values.registrationOpensAt)[1]))}
                       className={INPUT}
@@ -564,10 +563,9 @@ export function EventWizard({
                 <fieldset>
                   <legend className={LABEL}>Registration closes</legend>
                   <div className="grid grid-cols-[1fr_130px] gap-2">
-                    <input
+                    <DateInput
                       id="registrationClosesAt"
                       aria-label="Registration closes, date"
-                      type="date"
                       value={splitDateTime(values.registrationClosesAt)[0]}
                       onChange={(e) => set("registrationClosesAt", joinDateTime(e.target.value, splitDateTime(values.registrationClosesAt)[1], "23:59"))}
                       className={INPUT}
@@ -645,7 +643,7 @@ export function EventWizard({
                         <fieldset className="sm:col-span-2">
                           <legend className={LABEL}>Starts</legend>
                           <div className="grid grid-cols-[1fr_130px] gap-2">
-                            <input aria-label="Start date" type="date" value={splitDateTime(values.startsAt)[0]} onChange={(e) => set("startsAt", joinDateTime(e.target.value, splitDateTime(values.startsAt)[1]))} className={INPUT} />
+                            <DateInput aria-label="Start date" value={splitDateTime(values.startsAt)[0]} onChange={(e) => set("startsAt", joinDateTime(e.target.value, splitDateTime(values.startsAt)[1]))} className={INPUT} />
                             <input aria-label="Start time" type="time" step={900} value={splitDateTime(values.startsAt)[1]} onChange={(e) => set("startsAt", joinDateTime(splitDateTime(values.startsAt)[0], e.target.value))} className={INPUT} />
                           </div>
                         </fieldset>

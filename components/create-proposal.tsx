@@ -10,6 +10,7 @@ import { useFeedback } from "@/components/ui/feedback";
 import { DEAL_STAGE_META, OPEN_DEAL_STAGES } from "@/lib/deals/stages";
 import { MAX_PROPOSAL_FILE_BYTES, uploadProposalFile } from "@/lib/deals/upload";
 import type { DealPayment, DealStage } from "@/lib/supabase/types";
+import { DateInput } from "@/components/ui/date-input";
 
 const FIELD =
   "mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-normal text-slate-900 focus:border-brand-600 focus:outline-none focus:ring-2 focus:ring-brand-100";
@@ -185,7 +186,7 @@ function CreateProposalDialog({
             </label>
             <label className="block text-sm font-medium text-slate-700">
               Decision expected by
-              <input required type="date" value={decisionBy} onChange={(e) => setDecisionBy(e.target.value)} className={FIELD} />
+              <DateInput required value={decisionBy} onChange={(e) => setDecisionBy(e.target.value)} className={FIELD} />
             </label>
           </div>
 
@@ -209,7 +210,7 @@ function CreateProposalDialog({
           {stage === "sent" && (
             <label className="block text-sm font-medium text-slate-700">
               Date sent
-              <input required type="date" value={sentOn} max={localDate()} onChange={(e) => setSentOn(e.target.value)} className={FIELD} />
+              <DateInput required value={sentOn} max={localDate()} onChange={(e) => setSentOn(e.target.value)} className={FIELD} />
             </label>
           )}
 

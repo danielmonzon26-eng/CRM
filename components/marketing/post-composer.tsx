@@ -13,6 +13,7 @@ import { autoRequestLabel, countHashtags, IMAGE_TYPES, INSTAGRAM_HASHTAG_LIMIT, 
 import type { Channel, PostItem } from "@/lib/marketing/queries";
 import { uploadPostImage } from "@/lib/marketing/upload";
 import type { SocialPlatform } from "@/lib/supabase/types";
+import { DateInput } from "@/components/ui/date-input";
 
 const FIELD =
   "mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-brand-600 focus:outline-none focus:ring-2 focus:ring-brand-100";
@@ -366,7 +367,7 @@ export function PostComposer({
             <div className="grid gap-3 sm:grid-cols-[1fr_160px_auto] sm:items-end">
               <label className={LABEL}>
                 Date
-                <input type="date" value={values.date} onChange={(e) => set({ date: e.target.value, time: e.target.value && !values.time ? "09:00" : values.time })} className={FIELD} />
+                <DateInput value={values.date} onChange={(e) => set({ date: e.target.value, time: e.target.value && !values.time ? "09:00" : values.time })} className={FIELD} />
               </label>
               <label className={LABEL}>
                 Time (Calgary)

@@ -7,6 +7,7 @@ import { buttonClass } from "@/components/ui/button";
 import { useFeedback } from "@/components/ui/feedback";
 import { calgaryDateKey } from "@/lib/events/format";
 import type { ExpenseStatus } from "@/lib/supabase/types";
+import { DateInput } from "@/components/ui/date-input";
 
 const INPUT = "w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm focus:border-brand-400 focus:outline-none focus:ring-2 focus:ring-brand-100";
 const LABEL = "text-xs font-medium text-slate-600";
@@ -133,7 +134,7 @@ export function ExpenseForm({ lineId, items, onAdded }: { lineId: string; items:
       </div>
       <div>
         <label className={LABEL} htmlFor="expenseDate">Date</label>
-        <input id="expenseDate" type="date" required value={incurredOn} onChange={(e) => setIncurredOn(e.target.value)} className={`${INPUT} mt-1`} />
+        <DateInput id="expenseDate" required value={incurredOn} onChange={(e) => setIncurredOn(e.target.value)} className={`${INPUT} mt-1`} />
       </div>
       {items.length > 0 && (
         <div>
@@ -222,7 +223,7 @@ export function RevenueForm({ eventId }: { eventId: string }) {
       </div>
       <div>
         <label className={LABEL} htmlFor="revenueDate">Received</label>
-        <input id="revenueDate" type="date" value={receivedOn} onChange={(e) => setReceivedOn(e.target.value)} className={`${INPUT} mt-1`} />
+        <DateInput id="revenueDate" value={receivedOn} onChange={(e) => setReceivedOn(e.target.value)} className={`${INPUT} mt-1`} />
       </div>
       <button type="submit" disabled={isPending} className={buttonClass("secondary")}>
         <Plus className="h-4 w-4" strokeWidth={2.25} />

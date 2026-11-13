@@ -8,6 +8,7 @@ import { buttonClass } from "@/components/ui/button";
 import { useFeedback } from "@/components/ui/feedback";
 import type { DealDetail } from "@/lib/deals/queries";
 import type { DealPayment } from "@/lib/supabase/types";
+import { DateInput } from "@/components/ui/date-input";
 
 const FIELD =
   "mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-normal text-slate-900 focus:border-brand-600 focus:outline-none focus:ring-2 focus:ring-brand-100";
@@ -124,12 +125,11 @@ export function ProposalDetailsForm({ deal, staff }: { deal: DealDetail; staff: 
         <div className="grid gap-4 sm:grid-cols-3">
           <label className={LABEL}>
             Date sent
-            <input type="date" value={values.sentOn} onChange={(e) => set({ sentOn: e.target.value })} className={FIELD} />
+            <DateInput value={values.sentOn} onChange={(e) => set({ sentOn: e.target.value })} className={FIELD} />
           </label>
           <label className={LABEL}>
             Date accepted
-            <input
-              type="date"
+            <DateInput
               value={values.acceptedOn}
               disabled={deal.stage !== "accepted"}
               title={deal.stage !== "accepted" ? "Set when the proposal is marked Accepted" : undefined}
@@ -139,7 +139,7 @@ export function ProposalDetailsForm({ deal, staff }: { deal: DealDetail; staff: 
           </label>
           <label className={LABEL}>
             Decision expected by
-            <input required type="date" value={values.expectedCloseDate} onChange={(e) => set({ expectedCloseDate: e.target.value })} className={FIELD} />
+            <DateInput required value={values.expectedCloseDate} onChange={(e) => set({ expectedCloseDate: e.target.value })} className={FIELD} />
           </label>
         </div>
 
@@ -157,7 +157,7 @@ export function ProposalDetailsForm({ deal, staff }: { deal: DealDetail; staff: 
           </label>
           <label className={LABEL}>
             Next step due
-            <input type="date" value={values.nextStepDueDate} onChange={(e) => set({ nextStepDueDate: e.target.value })} className={FIELD} />
+            <DateInput value={values.nextStepDueDate} onChange={(e) => set({ nextStepDueDate: e.target.value })} className={FIELD} />
           </label>
         </div>
 
