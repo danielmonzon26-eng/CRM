@@ -135,22 +135,16 @@ export async function getEngagementSummaries(filters: LeadFilters): Promise<Enga
 }
 
 /** How many leads each saved view holds under the current filters. */
+/** How many leads each saved view holds with the other filters applied, in one query. */
 export async function getViewCounts(filters: LeadFilters): Promise<Record<string, number>> {
   const supabase = await createClient();
-  const entries = await Promise.all(
-    LEAD_VIEWS.map(async ([view]) => {
-      const { data, error } = await supabase.rpc("crm_search_leads", {
-        ...filterArgs(filters),
-        p_view: view,
-        p_statuses: filters.status ? [filters.status] : null,
-        p_limit: 1,
-        p_offset: 0,
-      });
-      if (error) throw error;
-      return [view, data.length ? Number(data[0].total_count) : 0] as const;
-    })
-  );
-  return Object.fromEntries(entries);
+  const { p_view: _view, ...args } = filterArgs(filters);
+  const { data, error } = await supabase.rpc("crm_lead_view_counts", {
+    ...args,
+    p_statuses: filters.status ? [filters.status] : null,
+  });
+  if (error) throw error;
+  return Object.fromEntries(LEAD_VIEWS.map(([view]) => [view, Number((data ?? []).find((r) => r.view === view)?.lead_count ?? 0)]));
 }
 
 export async function getLeadFacets(): Promise<LeadFacets> {

@@ -1083,6 +1083,22 @@ export type Database = {
           total_count: number;
         }[];
       };
+      crm_lead_view_counts: {
+        Args: {
+          p_search?: string | null;
+          p_statuses?: string[] | null;
+          p_engagement?: string | null;
+          p_industry?: string | null;
+          p_community?: string | null;
+          p_min_score?: number | null;
+          p_contact?: string | null;
+          p_event_id?: string | null;
+          p_client_type?: string | null;
+          p_program?: string | null;
+          p_proposal?: string | null;
+        };
+        Returns: { view: string; lead_count: number }[];
+      };
       crm_lead_stage_counts: {
         Args: {
           p_search?: string | null;
