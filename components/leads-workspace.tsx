@@ -18,6 +18,7 @@ import { bulkChangeLeadProgram, bulkUpdateLeads, exportLeadsBatch } from "@/app/
 import { ProgramChips } from "@/components/lead-badges";
 import { LeadQuickEdit } from "@/components/lead-quick-edit";
 import { LeadsDashboard } from "@/components/leads-dashboard";
+import { daysSince, HEALTH_DOT, LEAD_VIEWS, touchHealth, touchLabel } from "@/lib/leads/touch";
 import { EngagementSelect, StatusSelect } from "@/components/status-select";
 import { buttonClass } from "@/components/ui/button";
 import { useFeedback } from "@/components/ui/feedback";
@@ -61,6 +62,22 @@ function FitBadge({ score }: { score: number }) {
 function BmcBadge({ score }: { score: number }) {
   const tone = score >= 75 ? "bg-emerald-50 text-emerald-800" : score >= 50 ? "bg-sky-50 text-sky-800" : score >= 25 ? "bg-amber-50 text-amber-800" : "bg-slate-100 text-slate-600";
   return <span title="Canvas covered in the latest discovery call" className={`whitespace-nowrap rounded px-1.5 py-0.5 text-[11px] font-semibold tabular-nums ${tone}`}>{Math.round(score)}%</span>;
+}
+
+/** When someone last talked with the lead, coloured by how long ago, plus who's waiting on whom. */
+function TouchCell({ lead }: { lead: LeadRow }) {
+  const days = daysSince(lead.lastTouchAt);
+  const health = touchHealth(days);
+  return (
+    <div className="min-w-28">
+      <span className="flex items-center gap-1.5 whitespace-nowrap text-sm text-slate-700">
+        <span aria-hidden="true" className={`h-2 w-2 shrink-0 rounded-full ${HEALTH_DOT[health]}`} />
+        {touchLabel(days)}
+      </span>
+      {lead.awaitingUs && <span className="mt-0.5 inline-block whitespace-nowrap rounded bg-brand-50 px-1.5 py-0.5 text-[10px] font-semibold text-brand-800" title="They emailed last and haven't had a reply">Waiting on us</span>}
+      {!lead.awaitingUs && lead.overdue && <span className="mt-0.5 inline-block rounded bg-rose-50 px-1.5 py-0.5 text-[10px] font-semibold text-rose-800">Overdue follow-up</span>}
+    </div>
+  );
 }
 
 function SortHeader({
@@ -225,6 +242,7 @@ function LeadsTable({
               <SortHeader label="Client type" sort="client_type" state={state} href={href} />
               <th scope="col" className="px-2 py-2.5 font-medium">Work</th>
               <th scope="col" className="px-2 py-2.5 font-medium">Industry</th>
+              <SortHeader label="Last touch" sort="touch" state={state} href={href} />
               <SortHeader label="Fit" sort="score" state={state} href={href} />
               <th scope="col" className="px-2 py-2.5 font-medium" title="Business Model Canvas covered in the latest discovery call">BMC</th>
               <SortHeader label="Stage" sort="status" state={state} href={href} />
@@ -277,6 +295,7 @@ function LeadsTable({
                   <span title={lead.industry ?? undefined} className="block truncate">{parseIndustry(lead.industry)?.subsector ?? lead.industry ?? "—"}</span>
                   {lead.community && <span className="block truncate text-xs text-slate-500">{lead.community}</span>}
                 </td>
+                <td className="px-2 py-2.5"><TouchCell lead={lead} /></td>
                 <td className="px-2 py-2.5">{lead.score > 0 ? <FitBadge score={lead.score} /> : <span className="text-slate-500">—</span>}</td>
                 <td className="px-2 py-2.5">{lead.bmcScore != null ? <BmcBadge score={lead.bmcScore} /> : <span className="text-slate-500">—</span>}</td>
                 <td className="px-2 py-2">
@@ -339,6 +358,7 @@ export function LeadsWorkspace({
   table,
   stages,
   engagements,
+  viewCounts,
   facets,
   members,
   events,
@@ -347,6 +367,7 @@ export function LeadsWorkspace({
   table: { rows: LeadRow[]; total: number };
   stages: StageSummary[];
   engagements: EngagementSummary[];
+  viewCounts: Record<string, number>;
   facets: LeadFacets;
   members: Member[];
   events: { id: string; title: string }[];
@@ -406,8 +427,8 @@ export function LeadsWorkspace({
       } while (rows.length < Math.min(total, EXPORT_CAP));
 
       downloadCsv("leads.csv", [
-        ["Name", "Title", "Email", "Contacts", "Company", "Client type", "Work", "Industry", "Community", "Fit score", "BMC %", "Stage", "Status", "Added"],
-        ...rows.map((r) => [r.primaryName, r.primaryTitle, r.primaryEmail, r.contactCount, r.companyName, clientTypeLabel(r.clientType), r.programs.map(programLabel).join("; "), r.industry, r.community, r.score, r.bmcScore == null ? "" : Math.round(r.bmcScore), STATUS_LABELS[r.status], ENGAGEMENT_LABELS[r.engagement], r.createdAt.slice(0, 10)]),
+        ["Name", "Title", "Email", "Contacts", "Company", "Client type", "Work", "Industry", "Community", "Last touch", "Waiting on us", "Fit score", "BMC %", "Stage", "Status", "Added"],
+        ...rows.map((r) => [r.primaryName, r.primaryTitle, r.primaryEmail, r.contactCount, r.companyName, clientTypeLabel(r.clientType), r.programs.map(programLabel).join("; "), r.industry, r.community, r.lastTouchAt ? r.lastTouchAt.slice(0, 10) : "", r.awaitingUs ? "Yes" : "", r.score, r.bmcScore == null ? "" : Math.round(r.bmcScore), STATUS_LABELS[r.status], ENGAGEMENT_LABELS[r.engagement], r.createdAt.slice(0, 10)]),
       ]);
       toast(total > EXPORT_CAP ? `Exported the first ${EXPORT_CAP.toLocaleString()} leads` : `Exported ${rows.length.toLocaleString()} leads`);
     } catch {
@@ -418,6 +439,28 @@ export function LeadsWorkspace({
 
   return (
     <div>
+      <nav aria-label="Saved views" className="mb-3 flex gap-1 overflow-x-auto border-b border-slate-200">
+        {LEAD_VIEWS.map(([key, label, hint]) => {
+          const active = (state.view || "needs_me") === key;
+          return (
+            <button
+              key={key}
+              type="button"
+              title={hint}
+              aria-current={active ? "page" : undefined}
+              onClick={() => go({ view: key === "needs_me" ? "" : key })}
+              className={`-mb-px shrink-0 border-b-2 px-3 py-2 text-sm font-medium transition-colors ${
+                active ? "border-brand-600 text-slate-900" : "border-transparent text-slate-500 hover:text-slate-900"
+              }`}
+            >
+              {label}
+              <span className={`ml-1.5 rounded-full px-1.5 py-0.5 text-xs tabular-nums ${active ? "bg-brand-50 text-brand-800" : "bg-slate-100 text-slate-600"}`}>
+                {(viewCounts[key] ?? 0).toLocaleString()}
+              </span>
+            </button>
+          );
+        })}
+      </nav>
       <LeadsDashboard
         stages={stages}
         engagements={engagements}

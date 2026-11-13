@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { ALL_ENGAGEMENTS, ALL_STATUSES, TABLE_PAGE_SIZE, type LeadFilters, type LeadSort, type LeadViewState } from "@/lib/leads/filters";
 import type { LeadEngagement, LeadStatus } from "@/lib/supabase/types";
+import { LEAD_VIEWS } from "@/lib/leads/touch";
 
 export type LeadRow = {
   id: string;
@@ -24,6 +25,9 @@ export type LeadRow = {
   proposalStage: string | null;
   /** Completion % of the latest discovery call, if there's been one. */
   bmcScore: number | null;
+  lastTouchAt: string | null;
+  awaitingUs: boolean;
+  overdue: boolean;
 };
 
 export type StageSummary = { status: LeadStatus; count: number; openValue: number };
@@ -43,6 +47,7 @@ function filterArgs(filters: LeadFilters) {
     p_client_type: filters.clientType || null,
     p_program: filters.program || null,
     p_proposal: filters.proposal || null,
+    p_view: filters.view || "needs_me",
   };
 }
 
@@ -84,6 +89,9 @@ export async function searchLeads(
       proposalId: r.proposal_id,
       proposalStage: r.proposal_stage,
       bmcScore: null,
+      lastTouchAt: r.last_touch_at,
+      awaitingUs: r.awaiting_us,
+      overdue: r.overdue,
     })),
   };
 }
@@ -124,6 +132,25 @@ export async function getEngagementSummaries(filters: LeadFilters): Promise<Enga
     })
   );
   return results;
+}
+
+/** How many leads each saved view holds under the current filters. */
+export async function getViewCounts(filters: LeadFilters): Promise<Record<string, number>> {
+  const supabase = await createClient();
+  const entries = await Promise.all(
+    LEAD_VIEWS.map(async ([view]) => {
+      const { data, error } = await supabase.rpc("crm_search_leads", {
+        ...filterArgs(filters),
+        p_view: view,
+        p_statuses: filters.status ? [filters.status] : null,
+        p_limit: 1,
+        p_offset: 0,
+      });
+      if (error) throw error;
+      return [view, data.length ? Number(data[0].total_count) : 0] as const;
+    })
+  );
+  return Object.fromEntries(entries);
 }
 
 export async function getLeadFacets(): Promise<LeadFacets> {

@@ -1,4 +1,5 @@
 import { isClientType, isLeadProgram } from "@/lib/leads/classification";
+import { isLeadView } from "@/lib/leads/touch";
 import type { LeadEngagement, LeadStatus } from "@/lib/supabase/types";
 
 /** Funnel stages, in order. Stored in leads.status and shown as "Stage". */
@@ -61,7 +62,7 @@ export function isLeadEngagement(value: unknown): value is LeadEngagement {
   return ALL_ENGAGEMENTS.includes(value as LeadEngagement);
 }
 
-export type LeadSort = "score" | "name" | "created" | "status" | "client_type";
+export type LeadSort = "score" | "name" | "created" | "status" | "client_type" | "touch";
 
 /** Everything that narrows the list. Kept in the URL, so a view can be shared or bookmarked. */
 export type LeadFilters = {
@@ -77,11 +78,13 @@ export type LeadFilters = {
   proposal: string;
   /** Empty means Engaged (the default view); "all" means every status. */
   engagement: string;
+  /** Saved view; empty means Needs me today, the default. */
+  view: string;
 };
 
 export type LeadViewState = LeadFilters & { sort: LeadSort; desc: boolean; page: number };
 
-const SORTS: LeadSort[] = ["score", "name", "created", "status", "client_type"];
+const SORTS: LeadSort[] = ["score", "name", "created", "status", "client_type", "touch"];
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export function parseLeadView(params: Record<string, string | undefined>): LeadViewState {
@@ -97,6 +100,7 @@ export function parseLeadView(params: Record<string, string | undefined>): LeadV
     clientType: params.clientType === "none" || isClientType(params.clientType) ? params.clientType! : "",
     program: params.program === "none" || isLeadProgram(params.program) ? params.program! : "",
     proposal: params.proposal === "has" || params.proposal === "none" ? params.proposal : "",
+    view: isLeadView(params.view) && params.view !== "needs_me" ? params.view : "",
     engagement: params.engagement === "all" || (isLeadEngagement(params.engagement) && params.engagement !== "engaged") ? params.engagement! : "",
     sort,
     desc: params.dir ? params.dir === "desc" : sort === "score" || sort === "created",
@@ -106,7 +110,7 @@ export function parseLeadView(params: Record<string, string | undefined>): LeadV
 
 export function leadViewToParams(state: LeadViewState): URLSearchParams {
   const sp = new URLSearchParams();
-  (["q", "industry", "community", "score", "contact", "event", "status", "clientType", "program", "proposal", "engagement"] as const).forEach((key) => {
+  (["q", "industry", "community", "score", "contact", "event", "status", "clientType", "program", "proposal", "engagement", "view"] as const).forEach((key) => {
     if (state[key]) sp.set(key, state[key]);
   });
   if (state.sort !== "score") sp.set("sort", state.sort);
