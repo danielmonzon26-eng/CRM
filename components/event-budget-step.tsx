@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState, useTransition } from "react";
 import Link from "next/link";
 import { ExternalLink, Link2, Plus, Trash2, Unlink, Wallet } from "lucide-react";
 import { deleteBudgetItem, saveBudgetItem } from "@/app/actions/budgets";
-import { createEventBudgetLine, deleteEventMarketingItem, loadEventBudget, saveMarketingItem, setEventBudgetLine, type EventBudget } from "@/app/actions/event-budget";
+import { createEventBudgetLine, deleteEventMarketingItem, loadEventBudget, saveMarketingItem, setEventBudgetLine, setEventSetAside, type EventBudget } from "@/app/actions/event-budget";
 import { buttonClass } from "@/components/ui/button";
 import { formatMoney } from "@/lib/budgets/money";
 import { EVENT_COST_PRESETS } from "@/lib/budgets/event-presets";
@@ -155,6 +155,8 @@ export function LinkedLine({
         </div>
       </div>
 
+      <SetAside linked={linked} eventId={eventId} pending={pending} run={run} />
+
       <MarketingItems linked={linked} items={marketingItems} eventId={eventId} eventDay={eventDay} pending={pending} run={run} />
 
       <h3 className="border-t border-slate-100 px-4 pb-1 pt-3 text-sm font-semibold text-slate-900">Other costs</h3>
@@ -283,6 +285,7 @@ export function SetUp({
   const [rows, setRows] = useState<Draft[]>([{ name: "Materials", amount: "" }]);
   const [marketingRows, setMarketingRows] = useState<MarketingDraft[]>([{ ...BLANK_MARKETING, category: "online_advertising", description: "Ad spend" }]);
   const [lineToLink, setLineToLink] = useState("");
+  const [setAside, setSetAside] = useState("");
   const total = [...rows, ...marketingRows].reduce((sum, r) => sum + (Number(r.amount) || 0), 0);
 
   if (data.budgets.length === 0) {
@@ -314,15 +317,15 @@ export function SetUp({
               })),
             ...rows.filter((r) => r.name.trim()).map((r) => ({ name: r.name.trim(), amount: Number(r.amount) || 0 })),
           ];
-          run(() => createEventBudgetLine({ eventId, budgetId, section, items }));
+          run(() => createEventBudgetLine({ eventId, budgetId, section, items, setAside: setAside.trim() === "" ? null : Number(setAside) }));
         }}
         className="space-y-3 rounded-xl border border-slate-200 p-4"
       >
         <div>
-          <p className="text-sm font-medium text-slate-900">Plan this event&apos;s costs</p>
+          <p className="text-sm font-medium text-slate-900">Add this event to the budget</p>
           <p className="text-xs text-slate-500">They&apos;re added to a budget as this event&apos;s line, in the month the event happens.</p>
         </div>
-        <div className="grid gap-3 sm:grid-cols-2">
+        <div className="grid gap-3 sm:grid-cols-3">
           <label className="block text-sm font-medium text-slate-700">
             Budget
             <select
@@ -349,6 +352,19 @@ export function SetUp({
                 <option key={s} value={s} />
               ))}
             </datalist>
+          </label>
+          <label className="block text-sm font-medium text-slate-700">
+            Set aside for this event ($)
+            <input
+              type="number"
+              min={0}
+              step="0.01"
+              inputMode="decimal"
+              placeholder="e.g. 2500"
+              value={setAside}
+              onChange={(e) => setSetAside(e.target.value)}
+              className={`${INPUT} mt-1 w-full text-right tabular-nums`}
+            />
           </label>
         </div>
 
@@ -689,4 +705,99 @@ function SavedMarketingItem({
     run(() => saveMarketingItem({ eventId, lineId, itemId: item.id, ...next, category: next.category }));
   };
   return <MarketingFields value={value} onChange={setValue} eventDay={eventDay} onCommit={save} />;
+}
+
+/**
+ * What the budget sets aside for the event, against its cost breakdown: set aside, costs
+ * planned, spent, and what's left. The set-aside amount is edited right here.
+ */
+function SetAside({
+  linked,
+  eventId,
+  pending,
+  run,
+}: {
+  linked: NonNullable<EventBudget["linked"]>;
+  eventId: string;
+  pending: boolean;
+  run: (action: () => Promise<{ error?: string }>) => void;
+}) {
+  const [value, setValue] = useState(linked.plannedAmount === null ? "" : String(linked.plannedAmount));
+  const planned = linked.plannedAmount;
+  const left = planned === null ? null : planned - linked.amount;
+  const save = () => {
+    const now = value.trim();
+    if (now === (planned === null ? "" : String(planned))) return;
+    run(() => setEventSetAside(eventId, linked.lineId, now));
+  };
+  const pctOf = (part: number) => (planned && planned > 0 ? Math.min(100, (part / planned) * 100) : 0);
+  return (
+    <section aria-labelledby="set-aside-title" className="border-b border-slate-100 bg-slate-50/60 px-4 py-3">
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h3 id="set-aside-title" className="text-sm font-semibold text-slate-900">
+            Budget for this event
+          </h3>
+          <p className="text-xs text-slate-500">
+            From {linked.budgetName}. The costs below are its breakdown.
+          </p>
+        </div>
+        <dl className="flex flex-wrap items-end gap-x-6 gap-y-2 text-sm">
+          <div>
+            <dt className="text-xs text-slate-500">
+              <label htmlFor={`set-aside-${linked.lineId}`}>Set aside</label>
+            </dt>
+            <dd>
+              <span className="relative inline-block">
+                <span aria-hidden="true" className="pointer-events-none absolute inset-y-0 left-2.5 flex items-center text-sm text-slate-400">
+                  $
+                </span>
+                <input
+                  id={`set-aside-${linked.lineId}`}
+                  type="number"
+                  min={0}
+                  step="0.01"
+                  inputMode="decimal"
+                  placeholder="Not set"
+                  disabled={pending}
+                  value={value}
+                  onChange={(e) => setValue(e.target.value)}
+                  onBlur={save}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      save();
+                    }
+                  }}
+                  className={`${INPUT} w-32 py-1.5 pl-6 text-right font-semibold tabular-nums`}
+                />
+              </span>
+            </dd>
+          </div>
+          <div>
+            <dt className="text-xs text-slate-500">Costs planned</dt>
+            <dd className="py-1.5 font-semibold tabular-nums text-slate-900">{formatMoney(linked.amount)}</dd>
+          </div>
+          <div>
+            <dt className="text-xs text-slate-500">Spent</dt>
+            <dd className="py-1.5 font-semibold tabular-nums text-slate-900">{formatMoney(linked.spent)}</dd>
+          </div>
+          <div>
+            <dt className="text-xs text-slate-500">{left !== null && left < 0 ? "Over" : "Left"}</dt>
+            <dd className={`py-1.5 font-semibold tabular-nums ${left === null ? "text-slate-400" : left < 0 ? "text-rose-700" : "text-emerald-700"}`}>
+              {left === null ? "—" : formatMoney(Math.abs(left))}
+            </dd>
+          </div>
+        </dl>
+      </div>
+      {planned !== null && planned > 0 ? (
+        <div className="mt-2 flex h-2 overflow-hidden rounded-full bg-slate-200" role="img" aria-label={`${Math.round(pctOf(linked.amount))}% of the set-aside amount is planned`}>
+          <span className="bg-violet-500" style={{ width: `${pctOf(linked.spent)}%` }} />
+          <span className={linked.amount > planned ? "bg-rose-500" : "bg-brand-400"} style={{ width: `${Math.max(0, pctOf(linked.amount) - pctOf(linked.spent))}%` }} />
+        </div>
+      ) : (
+        <p className="mt-1 text-xs text-amber-800">Enter what the budget sets aside for this event to see how the costs compare.</p>
+      )}
+    </section>
+  );
 }

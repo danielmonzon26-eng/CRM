@@ -16,6 +16,8 @@ export type EventBudget = {
     section: string;
     planMonth: string | null;
     amount: number;
+    /** What the budget sets aside for the event; null when not set yet. */
+    plannedAmount: number | null;
     spent: number;
     items: {
       id: string;
@@ -59,7 +61,7 @@ function revalidate(eventId: string, lineId?: string) {
 export async function loadEventBudget(eventId: string): Promise<EventBudget> {
   const supabase = await createClient();
   const [{ data: line }, budgets, defaultBudgetId, { data: allLines }, { data: event }] = await Promise.all([
-    supabase.from("budget_lines").select("id, budget_id, section, plan_month, amount").eq("event_id", eventId).maybeSingle(),
+    supabase.from("budget_lines").select("id, budget_id, section, plan_month, amount, planned_amount").eq("event_id", eventId).maybeSingle(),
     getBudgetList(),
     getSelectedBudgetId(),
     supabase.from("budget_lines").select("id, budget_id, kind, section, name, amount, event_id"),
@@ -87,6 +89,7 @@ export async function loadEventBudget(eventId: string): Promise<EventBudget> {
       section: line.section,
       planMonth: line.plan_month,
       amount: Number(line.amount),
+      plannedAmount: line.planned_amount === null ? null : Number(line.planned_amount),
       spent: (expenses ?? []).reduce((sum, e) => sum + Number(e.amount), 0),
       items: (items ?? []).map((i) => ({
         id: i.id,
@@ -134,6 +137,8 @@ export async function createEventBudgetLine(input: {
   budgetId: string;
   section: string;
   items: { name: string; amount: number; category?: string | null; timing?: string | null; deliveryOn?: string | null }[];
+  /** What the budget sets aside for the event. */
+  setAside?: number | null;
 }): Promise<Result & { lineId?: string }> {
   const section = input.section.trim();
   if (!section) return { error: "Choose or type a section, such as Events." };
@@ -171,6 +176,9 @@ export async function createEventBudgetLine(input: {
   if (linkError) {
     await supabase.from("budget_lines").delete().eq("id", lineId);
     return { error: "The budget line wasn't linked. Please try again." };
+  }
+  if (input.setAside != null && Number.isFinite(input.setAside) && input.setAside >= 0) {
+    await supabase.from("budget_lines").update({ planned_amount: Math.round(input.setAside * 100) / 100 }).eq("id", lineId);
   }
 
   if (input.items.length) {
@@ -211,8 +219,10 @@ export async function createEventBudgetLine(input: {
 export async function setEventBudgetLine(eventId: string, lineId: string | null): Promise<Result> {
   const supabase = await createClient();
   if (lineId) {
-    const { data: line, error } = await supabase.from("budget_lines").update({ event_id: eventId }).eq("id", lineId).is("event_id", null).select("amount").single();
+    const { data: line, error } = await supabase.from("budget_lines").update({ event_id: eventId }).eq("id", lineId).is("event_id", null).select("amount, planned_amount").single();
     if (error || !line) return { error: error?.code === "23505" ? "This event already has a budget line." : "That line is already linked to another event." };
+    // A line planned under Budgets keeps its amount as what's set aside for the event.
+    if (line.planned_amount === null) await supabase.from("budget_lines").update({ planned_amount: line.amount }).eq("id", lineId);
     await supabase.from("events").update({ budget_amount: line.amount }).eq("id", eventId);
     revalidate(eventId, lineId);
     return {};
@@ -282,5 +292,22 @@ export async function deleteEventMarketingItem(eventId: string, itemId: string):
   const { error } = await supabase.from("marketing_items").delete().eq("id", itemId).eq("event_id", eventId);
   if (error) return { error: "That wasn't deleted. Please try again." };
   revalidate(eventId);
+  return {};
+}
+
+/** Sets (or clears) what the budget sets aside for the event. */
+export async function setEventSetAside(eventId: string, lineId: string, amount: string): Promise<Result> {
+  const value = amount.trim() === "" ? null : Number(amount);
+  if (value !== null && (!Number.isFinite(value) || value < 0)) return { error: "Enter the amount in dollars, or leave it blank." };
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("budget_lines")
+    .update({ planned_amount: value === null ? null : Math.round(value * 100) / 100 })
+    .eq("id", lineId)
+    .eq("event_id", eventId)
+    .select("id")
+    .single();
+  if (error) return { error: "That didn't save. Please try again." };
+  revalidate(eventId, lineId);
   return {};
 }
