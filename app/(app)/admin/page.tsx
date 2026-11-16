@@ -9,11 +9,11 @@ export const dynamic = "force-dynamic";
 export default async function AdminPage() {
   const currentUser = await getCurrentUser();
 
-  if (currentUser?.role !== "admin") {
+  if (!currentUser?.canManageUsers) {
     return (
       <Page width="form">
         <PageHeader title="Admin" />
-        <p className="text-sm text-slate-600">Only admins can open this page. Ask an admin to give you access.</p>
+        <p className="text-sm text-slate-600">Only account managers can open this page.</p>
         <Link href="/" className="mt-4 inline-block text-sm font-medium text-brand-700 hover:underline">Back to overview</Link>
       </Page>
     );
@@ -23,7 +23,7 @@ export default async function AdminPage() {
 
   return (
     <Page width="form">
-      <PageHeader title="Admin" subtitle="Add and remove the people who can use Catapult. Everyone has the same full admin access." />
+      <PageHeader title="Admin" subtitle="Create the people who can use Catapult, set their passwords, and remove access. Only account managers see this page." />
       <AdminUsers users={users} currentUserId={currentUser.id} canManage={canManageAccounts()} />
     </Page>
   );

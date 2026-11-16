@@ -13,7 +13,8 @@ export async function AppShell({ children }: { children: React.ReactNode }) {
   const [user, cookieStore] = await Promise.all([getCurrentUser(), cookies()]);
   // Only the nav badges depend on these, so a failure hides that badge and is logged; the
   // pages themselves show their own errors.
-  const isAdmin = user?.role === "admin";
+  // The Admin link is for account managers only.
+  const isAdmin = !!user?.canManageUsers;
   const [openTaskCount, unseenMailCount, waitingApprovalCount] = user
     ? await Promise.all([
         getOpenTaskCount().catch((e) => {
@@ -25,7 +26,7 @@ export async function AppShell({ children }: { children: React.ReactNode }) {
           return 0;
         }),
         // Only admins approve, so only they see the count.
-        isAdmin
+        user.role === "admin"
           ? getWaitingApprovalCount().catch((e) => {
               console.error("Waiting approval count failed:", e);
               return 0;
