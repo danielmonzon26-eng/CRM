@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState, useTransition } from "react";
-import { Check, Copy, Mail, UserPlus } from "lucide-react";
-import { addUser, createUserLink, giveAdminAccess, setUserAccess, setUserName } from "@/app/actions/team";
+import { Check, Copy, Eye, EyeOff, KeyRound, Mail, UserPlus } from "lucide-react";
+import { addUser, createUserLink, giveAdminAccess, setUserAccess, setUserName, setUserPassword } from "@/app/actions/team";
 import { buttonClass } from "@/components/ui/button";
 import { useFeedback } from "@/components/ui/feedback";
 import { getInitials } from "@/lib/text";
@@ -23,6 +23,7 @@ const lastSignIn = new Intl.DateTimeFormat("en-CA", { dateStyle: "medium", timeZ
 type SharedLink = { name: string; email: string | null; link: string; isNew: boolean };
 
 export function AdminUsers({ users, currentUserId, canManage }: { users: AdminUser[]; currentUserId: string; canManage: boolean }) {
+  const { toast } = useFeedback();
   const [adding, setAdding] = useState(false);
   const [shared, setShared] = useState<SharedLink | null>(null);
 
@@ -49,6 +50,10 @@ export function AdminUsers({ users, currentUserId, canManage }: { users: AdminUs
 
       {adding && (
         <AddUserDialog
+          onCreated={(name) => {
+            setAdding(false);
+            toast(`${name} can sign in now.`);
+          }}
           onClosed={() => setAdding(false)}
           onAdded={(link) => {
             setAdding(false);
@@ -63,6 +68,7 @@ export function AdminUsers({ users, currentUserId, canManage }: { users: AdminUs
 
 function UserRow({ user, isSelf, canManage, onLink }: { user: AdminUser; isSelf: boolean; canManage: boolean; onLink: (link: SharedLink) => void }) {
   const { confirm, toast, promptText } = useFeedback();
+  const [settingPassword, setSettingPassword] = useState(false);
   const [isPending, startTransition] = useTransition();
   const name = personName(user.fullName, user.email, "Unnamed user");
   const status = user.status === "unknown" ? null : STATUS[user.status];
@@ -139,6 +145,12 @@ function UserRow({ user, isSelf, canManage, onLink }: { user: AdminUser; isSelf:
           </button>
         )}
         {canManage && user.status !== "removed" && (
+          <button type="button" disabled={isPending} aria-label={`Set a password for ${name}`} onClick={() => setSettingPassword(true)} className={buttonClass("secondary", "sm")}>
+            <KeyRound className="h-3.5 w-3.5" strokeWidth={2} />
+            Set password
+          </button>
+        )}
+        {canManage && user.status !== "removed" && (
           <button type="button" disabled={isPending} aria-label={`Get a sign-in link for ${name}`} onClick={getLink} className={buttonClass("secondary", "sm")}>
             Get link
           </button>
@@ -154,6 +166,7 @@ function UserRow({ user, isSelf, canManage, onLink }: { user: AdminUser; isSelf:
           </button>
         )}
       </div>
+      {settingPassword && <SetPasswordDialog userId={user.id} name={name} onClosed={() => setSettingPassword(false)} />}
     </li>
   );
 }
@@ -166,12 +179,39 @@ function useModal() {
   return ref;
 }
 
-function AddUserDialog({ onClosed, onAdded }: { onClosed: () => void; onAdded: (link: SharedLink) => void }) {
+/** A password field with a show/hide toggle. */
+function PasswordField({ value, onChange, label = "Password", autoFocus = false }: { value: string; onChange: (v: string) => void; label?: string; autoFocus?: boolean }) {
+  const [shown, setShown] = useState(false);
+  return (
+    <label className="mt-3 block text-sm font-medium text-slate-700">
+      {label}
+      <span className="relative mt-1 block">
+        <input
+          type={shown ? "text" : "password"}
+          autoFocus={autoFocus}
+          autoComplete="new-password"
+          minLength={8}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          className={`${FIELD} mt-0 pr-10`}
+        />
+        <button type="button" onClick={() => setShown(!shown)} aria-label={shown ? "Hide password" : "Show password"} className="absolute inset-y-0 right-0 flex w-10 items-center justify-center text-slate-500 hover:text-slate-800">
+          {shown ? <EyeOff className="h-4 w-4" strokeWidth={2} /> : <Eye className="h-4 w-4" strokeWidth={2} />}
+        </button>
+      </span>
+    </label>
+  );
+}
+
+function AddUserDialog({ onClosed, onAdded, onCreated }: { onClosed: () => void; onAdded: (link: SharedLink) => void; onCreated: (name: string) => void }) {
   const dialogRef = useModal();
-  const [name, setName] = useState("");
+  const [first, setFirst] = useState("");
+  const [last, setLast] = useState("");
   const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isSaving, startSaving] = useTransition();
+  const name = `${first.trim()} ${last.trim()}`.trim();
 
   return (
     <dialog ref={dialogRef} aria-labelledby="add-user-title" onClose={onClosed} className={DIALOG}>
@@ -181,9 +221,11 @@ function AddUserDialog({ onClosed, onAdded }: { onClosed: () => void; onAdded: (
           setError(null);
           startSaving(async () => {
             try {
-              const result = await addUser(name, email);
-              if (result.link) onAdded({ name: name.trim(), email: email.trim(), link: result.link, isNew: true });
-              else setError(result.error ?? "That user wasn't added. Please try again.");
+              const result = await addUser({ firstName: first, lastName: last, email, password });
+              if (result.error) setError(result.error);
+              else if (result.created) onCreated(name);
+              else if (result.link) onAdded({ name, email: email.trim(), link: result.link, isNew: true });
+              else setError("That user wasn't added. Please try again.");
             } catch {
               setError("That user wasn't added. Please try again.");
             }
@@ -191,22 +233,67 @@ function AddUserDialog({ onClosed, onAdded }: { onClosed: () => void; onAdded: (
         }}
       >
         <h2 id="add-user-title" className="text-lg font-semibold text-slate-900">Add user</h2>
-        <p className="mt-1 text-sm text-slate-600">They&apos;ll have full admin access. You&apos;ll get a link to send them so they can set a password.</p>
+        <p className="mt-1 text-sm text-slate-600">They&apos;ll have full access to Catapult. Set a password to share with them, or leave it blank to get a link they use to set their own.</p>
 
-        <label className="mt-4 block text-sm font-medium text-slate-700">
-          Name
-          <input autoFocus required autoComplete="off" value={name} onChange={(e) => setName(e.target.value)} className={FIELD} />
-        </label>
+        <div className="mt-4 grid gap-3 sm:grid-cols-2">
+          <label className="block text-sm font-medium text-slate-700">
+            First name
+            <input autoFocus required autoComplete="off" value={first} onChange={(e) => setFirst(e.target.value)} className={FIELD} />
+          </label>
+          <label className="block text-sm font-medium text-slate-700">
+            Last name
+            <input required autoComplete="off" value={last} onChange={(e) => setLast(e.target.value)} className={FIELD} />
+          </label>
+        </div>
         <label className="mt-3 block text-sm font-medium text-slate-700">
           Email
           <input required type="email" autoComplete="off" value={email} onChange={(e) => setEmail(e.target.value)} className={FIELD} />
         </label>
+        <PasswordField value={password} onChange={setPassword} label="Password (optional)" />
+        <p className="mt-1 text-xs text-slate-500">At least 8 characters. Share it with them privately.</p>
 
         {error && <p role="alert" className="mt-3 rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-800">{error}</p>}
 
         <div className="mt-5 flex justify-end gap-2">
           <button type="button" onClick={() => dialogRef.current?.close()} className={buttonClass("secondary")}>Cancel</button>
-          <button type="submit" disabled={isSaving} className={buttonClass("primary")}>{isSaving ? "Adding..." : "Add user"}</button>
+          <button type="submit" disabled={isSaving} className={buttonClass("primary")}>{isSaving ? "Adding..." : password ? "Create user" : "Create user and get link"}</button>
+        </div>
+      </form>
+    </dialog>
+  );
+}
+
+function SetPasswordDialog({ userId, name, onClosed }: { userId: string; name: string; onClosed: () => void }) {
+  const dialogRef = useModal();
+  const { toast } = useFeedback();
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [isSaving, startSaving] = useTransition();
+  return (
+    <dialog ref={dialogRef} aria-labelledby="set-password-title" onClose={onClosed} className={DIALOG}>
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          setError(null);
+          startSaving(async () => {
+            try {
+              const result = await setUserPassword(userId, password);
+              if (result.error) return setError(result.error);
+              toast(`${name}'s password was changed.`);
+              dialogRef.current?.close();
+            } catch {
+              setError("The password wasn't changed. Please try again.");
+            }
+          });
+        }}
+      >
+        <h2 id="set-password-title" className="text-lg font-semibold text-slate-900">Set {name}&apos;s password</h2>
+        <p className="mt-1 text-sm text-slate-600">They can sign in with it straight away. Share it with them privately.</p>
+        <PasswordField value={password} onChange={setPassword} label="New password" autoFocus />
+        {error && <p role="alert" className="mt-3 rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-800">{error}</p>}
+        <div className="mt-5 flex justify-end gap-2">
+          <button type="button" onClick={() => dialogRef.current?.close()} className={buttonClass("secondary")}>Cancel</button>
+          <button type="submit" disabled={isSaving || password.length < 8} className={buttonClass("primary")}>{isSaving ? "Saving..." : "Set password"}</button>
         </div>
       </form>
     </dialog>

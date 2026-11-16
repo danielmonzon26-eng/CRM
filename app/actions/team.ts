@@ -20,7 +20,17 @@ type LinkResult = ActionResult & { link?: string };
  */
 async function requireAdmin() {
   const user = await getCurrentUser();
-  return user?.role === "admin" ? user : null;
+  // Only account managers (Steve and Dan) manage accounts.
+  return user?.canManageUsers ? user : null;
+}
+
+const NOT_MANAGER = "Only account managers can do this.";
+const MIN_PASSWORD = 8;
+
+function passwordProblem(password: string): string | null {
+  if (password.length < MIN_PASSWORD) return `Use at least ${MIN_PASSWORD} characters for the password.`;
+  if (password.length > 72) return "Keep the password under 72 characters.";
+  return null;
 }
 
 async function acceptLink(tokenHash: string, type: "invite" | "recovery"): Promise<string> {
@@ -28,17 +38,37 @@ async function acceptLink(tokenHash: string, type: "invite" | "recovery"): Promi
   return `${await getSiteUrl()}/auth/accept?${params}`;
 }
 
-/** Creates the account with admin access and returns a one-time link for them to set a password. */
-export async function addUser(fullName: string, email: string): Promise<LinkResult> {
-  if (!(await requireAdmin())) return { error: "Only admins can add users." };
+/**
+ * Creates the account with admin access. With a password, they can sign in straight away;
+ * without one, this returns a one-time link for them to set their own.
+ */
+export async function addUser(input: { firstName: string; lastName: string; email: string; password?: string }): Promise<LinkResult & { created?: boolean }> {
+  if (!(await requireAdmin())) return { error: NOT_MANAGER };
   if (!canManageAccounts()) return { error: NO_KEY };
 
-  const name = fullName.trim();
-  const address = email.trim().toLowerCase();
-  if (!name) return { error: "Enter their name." };
+  const first = input.firstName.trim();
+  const last = input.lastName.trim();
+  const name = `${first} ${last}`.trim().replace(/\s+/g, " ");
+  const address = input.email.trim().toLowerCase();
+  const password = input.password ?? "";
+  if (!first || !last) return { error: "Enter their first and last name." };
   if (!EMAIL_PATTERN.test(address)) return { error: "Enter a valid email address." };
 
   const admin = createAdminClient();
+
+  if (password) {
+    const problem = passwordProblem(password);
+    if (problem) return { error: problem };
+    const { data, error } = await admin.auth.admin.createUser({ email: address, password, email_confirm: true, user_metadata: { full_name: name } });
+    if (error || !data.user) {
+      return { error: error?.code === "email_exists" ? "That email already has an account." : "That user wasn't added. Please try again." };
+    }
+    const { error: profileError } = await admin.from("profiles").update({ role: "admin", full_name: name }).eq("id", data.user.id);
+    revalidatePath("/admin");
+    if (profileError) return { error: "The account was created, but it doesn't have admin access yet. Use Give admin access on the list." };
+    return { created: true };
+  }
+
   const { data, error } = await admin.auth.admin.generateLink({
     type: "invite",
     email: address,
@@ -57,7 +87,7 @@ export async function addUser(fullName: string, email: string): Promise<LinkResu
 
 /** Replaces an expired invite, or lets someone reset a password without email. */
 export async function createUserLink(userId: string): Promise<LinkResult> {
-  if (!(await requireAdmin())) return { error: "Only admins can do this." };
+  if (!(await requireAdmin())) return { error: NOT_MANAGER };
   if (!canManageAccounts()) return { error: NO_KEY };
 
   const admin = createAdminClient();
@@ -70,7 +100,7 @@ export async function createUserLink(userId: string): Promise<LinkResult> {
 }
 
 export async function giveAdminAccess(userId: string): Promise<ActionResult> {
-  if (!(await requireAdmin())) return { error: "Only admins can do this." };
+  if (!(await requireAdmin())) return { error: NOT_MANAGER };
 
   const supabase = await createClient();
   const { error } = await supabase.from("profiles").update({ role: "admin" }).eq("id", userId);
@@ -82,7 +112,7 @@ export async function giveAdminAccess(userId: string): Promise<ActionResult> {
 /** Blocks or restores sign-in. Accounts aren't deleted, so their leads, deals and history stay intact. */
 export async function setUserAccess(userId: string, hasAccess: boolean): Promise<ActionResult> {
   const currentUser = await requireAdmin();
-  if (!currentUser) return { error: "Only admins can do this." };
+  if (!currentUser) return { error: NOT_MANAGER };
   if (!canManageAccounts()) return { error: NO_KEY };
   if (userId === currentUser.id) return { error: "You can't remove your own access." };
 
@@ -94,7 +124,7 @@ export async function setUserAccess(userId: string, hasAccess: boolean): Promise
 
 /** Sets a team member's full name, shown wherever people are listed or assigned. */
 export async function setUserName(userId: string, fullName: string): Promise<ActionResult> {
-  if (!(await requireAdmin())) return { error: "Only admins can change names." };
+  if (!(await requireAdmin())) return { error: NOT_MANAGER };
   const name = fullName.trim().replace(/\s+/g, " ");
   if (!name) return { error: "Enter their first and last name." };
   if (name.length > 120) return { error: "Keep the name under 120 characters." };
@@ -102,5 +132,16 @@ export async function setUserName(userId: string, fullName: string): Promise<Act
   const { data, error } = await supabase.from("profiles").update({ full_name: name }).eq("id", userId).select("id");
   if (error || !data?.length) return { error: "The name wasn't saved. Please try again." };
   revalidatePath("/", "layout");
+  return {};
+}
+
+/** Sets a new password for someone, so they can sign in with it straight away. */
+export async function setUserPassword(userId: string, password: string): Promise<ActionResult> {
+  if (!(await requireAdmin())) return { error: NOT_MANAGER };
+  if (!canManageAccounts()) return { error: NO_KEY };
+  const problem = passwordProblem(password);
+  if (problem) return { error: problem };
+  const { error } = await createAdminClient().auth.admin.updateUserById(userId, { password });
+  if (error) return { error: "The password wasn't changed. Please try again." };
   return {};
 }

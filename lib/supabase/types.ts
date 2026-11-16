@@ -710,6 +710,7 @@ export type Database = {
           role: UserRole;
           created_at: string;
           updated_at: string;
+          can_manage_users: boolean;
         };
         Insert: {
           id: string;
@@ -718,6 +719,7 @@ export type Database = {
           role?: UserRole;
           created_at?: string;
           updated_at?: string;
+          can_manage_users?: boolean;
         };
         Update: Partial<Database["public"]["Tables"]["profiles"]["Insert"]>;
         Relationships: [];
