@@ -37,3 +37,21 @@ and, once signed in, read CRM data. Accounts added on the Admin page work with i
 
 Adding and removing users needs `SUPABASE_SERVICE_ROLE_KEY`, which is set on Vercel.
 Without it, such as on a local copy, the page lists users but can't change accounts.
+
+## Password and invite links (Supabase URL settings)
+
+Reset and invite emails only open the live site if Supabase allows it. In Supabase →
+Authentication → URL Configuration:
+
+- **Site URL:** `https://crm-two-delta-91.vercel.app`
+- **Redirect URLs:** `https://crm-two-delta-91.vercel.app/**` and `http://localhost:3000/**`
+
+If the live address is missing, Supabase falls back to the Site URL, so links open
+`localhost:3000` instead of the live site.
+
+## Deploys
+
+The live site updates when a change lands on `claude/calgary-business-leads-qgm9oy`.
+The Vercel project is on the free (Hobby) plan, which caps deploys per day; when it's hit,
+merges show "Deployment rate limited" and nothing publishes until the next change after
+the limit resets (there's no Create Deployment button on Hobby).
