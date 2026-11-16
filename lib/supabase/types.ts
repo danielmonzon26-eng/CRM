@@ -655,6 +655,12 @@ export type Database = {
         Update: Partial<Database["public"]["Tables"]["social_posts"]["Insert"]>;
         Relationships: [];
       };
+      calendar_key_dates: {
+        Row: { id: string; title: string; on_date: string; notes: string | null; assigned_to: string | null; created_by: string | null; created_at: string; updated_at: string };
+        Insert: { id?: string; title: string; on_date: string; notes?: string | null; assigned_to?: string | null; created_by?: string | null };
+        Update: Partial<Database["public"]["Tables"]["calendar_key_dates"]["Insert"]>;
+        Relationships: [];
+      };
       social_post_channels: {
         Row: { post_id: string; channel_id: string };
         Insert: { post_id: string; channel_id: string };
