@@ -10,13 +10,13 @@ import interactionPlugin, { type DateClickArg, type EventResizeDoneArg } from "@
 import listPlugin from "@fullcalendar/list";
 import luxon3Plugin from "@fullcalendar/luxon3";
 import timeGridPlugin from "@fullcalendar/timegrid";
-import { AlertTriangle, CheckSquare2, ChevronLeft, ChevronRight, ExternalLink, MapPin, MonitorPlay, Plus, Users, X } from "lucide-react";
-import { rescheduleEvent, rescheduleTask } from "@/app/actions/calendar";
+import { AlertTriangle, CheckSquare2, ChevronLeft, ChevronRight, ExternalLink, Flag, MapPin, Megaphone, MonitorPlay, Plus, Trash2, Users, X } from "lucide-react";
+import { createKeyDate, deleteKeyDate, moveKeyDate, rescheduleEvent, rescheduleTask } from "@/app/actions/calendar";
 import { buttonClass } from "@/components/ui/button";
 import { useFeedback } from "@/components/ui/feedback";
 import { useDismiss } from "@/components/ui/use-dismiss";
 import { describeConflict, findConflicts } from "@/lib/calendar/conflicts";
-import type { CalendarEvent, CalendarTask } from "@/lib/calendar/queries";
+import type { CalendarEvent, CalendarKeyDate, CalendarMarketing, CalendarTask } from "@/lib/calendar/queries";
 import { EVENT_TIME_ZONE, EVENT_TIME_ZONE_LABEL, FORMAT_LABELS, STATUS_LABELS, STATUS_STYLES, fromDateTimeInput, toDateTimeInput } from "@/lib/events/format";
 
 const VIEWS = [
@@ -35,6 +35,17 @@ const PROGRAM_COLORS: [string, string][] = [
   ["Elevate IP", "#A21CAF"],
 ];
 const OTHER_COLOR = "#64748B";
+const MARKETING_COLOR = "#DB2777";
+const KEY_DATE_COLOR = "#0F172A";
+
+/** What the calendar can show; all on by default. */
+const LAYERS = [
+  ["events", "Events"],
+  ["marketing", "Marketing"],
+  ["tasks", "Tasks"],
+  ["keyDates", "Key dates"],
+] as const;
+type Layer = (typeof LAYERS)[number][0];
 const programColor = (program: string | null) => PROGRAM_COLORS.find(([name]) => name === program)?.[1] ?? OTHER_COLOR;
 
 const TIME_ZONES = [
@@ -51,7 +62,11 @@ const VIEW_KEY = "catapult-calendar-view";
 type Panel =
   | { kind: "event"; event: CalendarEvent }
   | { kind: "task"; task: CalendarTask }
+  | { kind: "marketing"; item: CalendarMarketing }
+  | { kind: "keyDate"; keyDate: CalendarKeyDate }
   | { kind: "day"; label: string; start: string };
+
+type ItemKind = "event" | "task" | "marketing" | "keyDate";
 
 function formatInZone(iso: string, timeZone: string): string {
   const calgary = timeZone === EVENT_TIME_ZONE;
@@ -70,7 +85,7 @@ function formatInZone(iso: string, timeZone: string): string {
 
 function renderEventContent(arg: EventContentArg) {
   const { kind, color, status, completed, hasConflict } = arg.event.extendedProps as {
-    kind: "event" | "task";
+    kind: ItemKind;
     color: string;
     status?: string;
     completed?: boolean;
@@ -86,6 +101,8 @@ function renderEventContent(arg: EventContentArg) {
       style={{ borderLeftColor: color }}
     >
       {kind === "task" && <CheckSquare2 className="h-3 w-3 shrink-0 text-slate-500" strokeWidth={2} aria-label="Task" />}
+      {kind === "marketing" && <Megaphone className="h-3 w-3 shrink-0" style={{ color }} strokeWidth={2} aria-label="Marketing" />}
+      {kind === "keyDate" && <Flag className="h-3 w-3 shrink-0 text-slate-700" strokeWidth={2} aria-label="Key date" />}
       {hasConflict && <AlertTriangle className="h-3 w-3 shrink-0 text-amber-600" strokeWidth={2.25} aria-label="Scheduling conflict" />}
       {arg.timeText && kind === "event" && <span className="shrink-0 text-slate-500">{arg.timeText}</span>}
       <span className={`truncate ${struck ? "line-through" : ""}`}>{arg.event.title}</span>
@@ -96,10 +113,14 @@ function renderEventContent(arg: EventContentArg) {
 export function OperationsCalendar({
   events,
   tasks,
+  marketing = [],
+  keyDates = [],
   members,
 }: {
   events: CalendarEvent[];
   tasks: CalendarTask[];
+  marketing?: CalendarMarketing[];
+  keyDates?: CalendarKeyDate[];
   members: { id: string; name: string }[];
 }) {
   const router = useRouter();
@@ -109,8 +130,9 @@ export function OperationsCalendar({
   const [timeZone, setTimeZone] = useState<string>(EVENT_TIME_ZONE);
   const [program, setProgram] = useState("");
   const [memberId, setMemberId] = useState("");
-  const [showEvents, setShowEvents] = useState(true);
-  const [showTasks, setShowTasks] = useState(true);
+  const [layers, setLayers] = useState<Record<Layer, boolean>>({ events: true, marketing: true, tasks: true, keyDates: true });
+  const showEvents = layers.events;
+  const showTasks = layers.tasks;
   const [panel, setPanel] = useState<Panel | null>(null);
   const [notice, setNotice] = useState<{ tone: "error" | "ok"; text: string } | null>(null);
   const { confirm, toast } = useFeedback();
@@ -145,6 +167,8 @@ export function OperationsCalendar({
 
   const eventById = useMemo(() => new Map(events.map((e) => [e.id, e])), [events]);
   const taskById = useMemo(() => new Map(tasks.map((t) => [t.id, t])), [tasks]);
+  const marketingById = useMemo(() => new Map(marketing.map((m) => [`${m.kind}-${m.id}`, m])), [marketing]);
+  const keyDateById = useMemo(() => new Map(keyDates.map((k) => [k.id, k])), [keyDates]);
 
   const conflictedIds = useMemo(
     () => new Set(events.filter((e) => findConflicts(e, e.startsAt, e.endsAt, events).length > 0).map((e) => e.id)),
@@ -190,12 +214,56 @@ export function OperationsCalendar({
         });
       }
     }
+    if (layers.marketing && !program) {
+      for (const m of marketing) {
+        if (memberId && m.assignedTo !== memberId) continue;
+        items.push({
+          id: `marketing-${m.kind}-${m.id}`,
+          title: `${m.label}: ${m.title}`,
+          start: m.day,
+          allDay: true,
+          editable: false,
+          backgroundColor: "transparent",
+          borderColor: "transparent",
+          extendedProps: { kind: "marketing", sourceId: `${m.kind}-${m.id}`, color: MARKETING_COLOR, completed: m.done },
+        });
+      }
+    }
+    if (layers.keyDates && !program) {
+      for (const k of keyDates) {
+        if (memberId && k.assignedTo !== memberId) continue;
+        items.push({
+          id: `keydate-${k.id}`,
+          title: k.title,
+          start: k.day,
+          allDay: true,
+          editable: true,
+          durationEditable: false,
+          backgroundColor: "transparent",
+          borderColor: "transparent",
+          extendedProps: { kind: "keyDate", sourceId: k.id, color: KEY_DATE_COLOR },
+        });
+      }
+    }
     return items;
-  }, [events, tasks, program, memberId, showEvents, showTasks, conflictedIds]);
+  }, [events, tasks, marketing, keyDates, program, memberId, showEvents, showTasks, layers, conflictedIds]);
 
   async function applyMove(arg: EventDropArg | EventResizeDoneArg) {
-    const { kind, sourceId } = arg.event.extendedProps as { kind: "event" | "task"; sourceId: string };
+    const { kind, sourceId } = arg.event.extendedProps as { kind: ItemKind; sourceId: string };
     setNotice(null);
+
+    if (kind === "keyDate") {
+      const result = await moveKeyDate(sourceId, arg.event.startStr.slice(0, 10));
+      if (result.error) {
+        arg.revert();
+        setNotice({ tone: "error", text: `That key date didn't move: ${result.error}` });
+      } else router.refresh();
+      return;
+    }
+    if (kind === "marketing") {
+      arg.revert();
+      return;
+    }
 
     if (kind === "task") {
       const day = arg.event.startStr.slice(0, 10);
@@ -240,10 +308,16 @@ export function OperationsCalendar({
   }
 
   function handleEventClick(arg: EventClickArg) {
-    const { kind, sourceId } = arg.event.extendedProps as { kind: "event" | "task"; sourceId: string };
+    const { kind, sourceId } = arg.event.extendedProps as { kind: ItemKind; sourceId: string };
     if (kind === "event") {
       const event = eventById.get(sourceId);
       if (event) setPanel({ kind: "event", event });
+    } else if (kind === "marketing") {
+      const item = marketingById.get(sourceId);
+      if (item) setPanel({ kind: "marketing", item });
+    } else if (kind === "keyDate") {
+      const keyDate = keyDateById.get(sourceId);
+      if (keyDate) setPanel({ kind: "keyDate", keyDate });
     } else {
       const task = taskById.get(sourceId);
       if (task) setPanel({ kind: "task", task });
@@ -296,21 +370,28 @@ export function OperationsCalendar({
           <option value="">Program: All</option>
           {programs.map((p) => <option key={p} value={p}>{p}</option>)}
         </select>
-        <select aria-label="Team member" value={memberId} onChange={(e) => setMemberId(e.target.value)} className={SELECT}>
-          <option value="">Team: Everyone</option>
+        <select aria-label="Person" value={memberId} onChange={(e) => setMemberId(e.target.value)} className={SELECT}>
+          <option value="">Person: Everyone</option>
           {members.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
         </select>
         <select aria-label="Time zone" value={timeZone} onChange={(e) => setTimeZone(e.target.value)} className={SELECT}>
           {TIME_ZONES.map(([zone, label]) => <option key={zone} value={zone}>Time zone: {label}</option>)}
         </select>
-        <label className="flex items-center gap-1.5 px-1 text-sm text-slate-700">
-          <input type="checkbox" checked={showEvents} onChange={(e) => setShowEvents(e.target.checked)} className="h-4 w-4 accent-brand-600" />
-          Events
-        </label>
-        <label className="flex items-center gap-1.5 px-1 text-sm text-slate-700">
-          <input type="checkbox" checked={showTasks} onChange={(e) => setShowTasks(e.target.checked)} className="h-4 w-4 accent-brand-600" />
-          Task deadlines
-        </label>
+        <div role="group" aria-label="Show" className="flex flex-wrap gap-1.5">
+          {LAYERS.map(([key, label]) => (
+            <button
+              key={key}
+              type="button"
+              aria-pressed={layers[key]}
+              onClick={() => setLayers({ ...layers, [key]: !layers[key] })}
+              className={`rounded-full border px-3 py-1.5 text-sm font-medium transition-colors ${
+                layers[key] ? "border-brand-600 bg-brand-50 text-brand-800" : "border-slate-200 bg-white text-slate-500 hover:text-slate-800"
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
         <Link href="/events/new" className={`${buttonClass("primary")} ml-auto`}>
           <Plus className="h-4 w-4" strokeWidth={2.25} />
           New event
@@ -366,6 +447,8 @@ export function OperationsCalendar({
           </span>
         ))}
         <span className="flex items-center gap-1"><CheckSquare2 className="h-3 w-3 text-slate-500" strokeWidth={2} />Task</span>
+        <span className="flex items-center gap-1"><Megaphone className="h-3 w-3" style={{ color: MARKETING_COLOR }} strokeWidth={2} />Marketing</span>
+        <span className="flex items-center gap-1"><Flag className="h-3 w-3 text-slate-700" strokeWidth={2} />Key date</span>
         <span className="rounded border border-dashed border-slate-400 px-1.5">Draft</span>
         <span className="line-through">Cancelled</span>
         <span className="flex items-center gap-1"><AlertTriangle className="h-3 w-3 text-amber-600" strokeWidth={2.25} />Conflict</span>
@@ -451,6 +534,41 @@ export function OperationsCalendar({
             </>
           )}
 
+          {panel.kind === "marketing" && (
+            <>
+              <p className="flex items-center gap-1.5 pr-8 text-xs font-medium" style={{ color: MARKETING_COLOR }}>
+                <Megaphone className="h-3.5 w-3.5" strokeWidth={2} />
+                {panel.item.label}
+              </p>
+              <h3 className="mt-1 pr-8 text-lg font-semibold text-slate-900">{panel.item.title}</h3>
+              <dl className="mt-4 space-y-3 text-sm">
+                <div>
+                  <dt className="text-xs text-slate-500">{panel.item.kind === "post" ? "Goes out" : "Due"}</dt>
+                  <dd className="text-slate-900">{new Date(`${panel.item.day}T12:00:00Z`).toLocaleDateString("en-CA", { weekday: "short", month: "short", day: "numeric", year: "numeric", timeZone: "UTC" })}</dd>
+                </div>
+                {panel.item.context && (
+                  <div>
+                    <dt className="text-xs text-slate-500">For</dt>
+                    <dd className="text-slate-900">{panel.item.context}</dd>
+                  </div>
+                )}
+                <div>
+                  <dt className="text-xs text-slate-500">{panel.item.kind === "post" ? "Requested by" : "Assigned to"}</dt>
+                  <dd className="text-slate-900">{memberName(panel.item.assignedTo)}</dd>
+                </div>
+                <div>
+                  <dt className="text-xs text-slate-500">Status</dt>
+                  <dd className="text-slate-900">{panel.item.status}</dd>
+                </div>
+              </dl>
+              <div className="mt-5"><Link href={panel.item.href} className={buttonClass("primary")}>Open</Link></div>
+            </>
+          )}
+
+          {panel.kind === "keyDate" && (
+            <KeyDatePanel keyDate={panel.keyDate} memberName={memberName} onDone={() => { closePanel(); router.refresh(); }} />
+          )}
+
           {panel.kind === "day" && (
             <>
               <p className="pr-8 text-xs font-medium text-slate-600">Create</p>
@@ -460,12 +578,104 @@ export function OperationsCalendar({
                   <Plus className="h-4 w-4" strokeWidth={2.25} />
                   New event
                 </Link>
-                <Link href="/tasks" className={buttonClass("secondary")}>Go to tasks</Link>
+                <Link href="/tasks" className={buttonClass("secondary")}>Go to assignments</Link>
               </div>
+              <AddKeyDate day={panel.start.slice(0, 10)} members={members} onDone={() => { closePanel(); router.refresh(); }} />
             </>
           )}
         </aside>
       )}
     </div>
+  );
+}
+
+const FIELD = "mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-brand-600 focus:outline-none focus:ring-2 focus:ring-brand-100";
+
+/** Adds a key date on the chosen day. */
+function AddKeyDate({ day, members, onDone }: { day: string; members: { id: string; name: string }[]; onDone: () => void }) {
+  const { toast } = useFeedback();
+  const [title, setTitle] = useState("");
+  const [assignedTo, setAssignedTo] = useState("");
+  const [notes, setNotes] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+  return (
+    <form
+      className="mt-6 space-y-3 border-t border-slate-100 pt-5"
+      onSubmit={async (e) => {
+        e.preventDefault();
+        setError(null);
+        setSaving(true);
+        const result = await createKeyDate({ day, title, assignedTo: assignedTo || null, notes }).catch(() => ({ error: "That wasn't saved. Please try again." }));
+        setSaving(false);
+        if (result.error) return setError(result.error);
+        toast("Key date added.");
+        onDone();
+      }}
+    >
+      <p className="flex items-center gap-1.5 text-sm font-semibold text-slate-900"><Flag className="h-4 w-4 text-slate-500" strokeWidth={2} />Add a key date</p>
+      <label className="block text-sm font-medium text-slate-700">
+        What is it
+        <input required maxLength={200} value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. Board meeting, grant deadline" className={FIELD} />
+      </label>
+      <label className="block text-sm font-medium text-slate-700">
+        Person (optional)
+        <select value={assignedTo} onChange={(e) => setAssignedTo(e.target.value)} className={FIELD}>
+          <option value="">No one</option>
+          {members.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
+        </select>
+      </label>
+      <label className="block text-sm font-medium text-slate-700">
+        Notes (optional)
+        <textarea rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} className={FIELD} />
+      </label>
+      {error && <p role="alert" className="rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-800">{error}</p>}
+      <button type="submit" disabled={saving || !title.trim()} className={buttonClass("primary")}>{saving ? "Adding..." : "Add key date"}</button>
+    </form>
+  );
+}
+
+function KeyDatePanel({ keyDate, memberName, onDone }: { keyDate: CalendarKeyDate; memberName: (id: string | null) => string; onDone: () => void }) {
+  const { confirm, toast } = useFeedback();
+  return (
+    <>
+      <p className="flex items-center gap-1.5 pr-8 text-xs font-medium text-slate-600"><Flag className="h-3.5 w-3.5" strokeWidth={2} />Key date</p>
+      <h3 className="mt-1 pr-8 text-lg font-semibold text-slate-900">{keyDate.title}</h3>
+      <dl className="mt-4 space-y-3 text-sm">
+        <div>
+          <dt className="text-xs text-slate-500">Date</dt>
+          <dd className="text-slate-900">{new Date(`${keyDate.day}T12:00:00Z`).toLocaleDateString("en-CA", { weekday: "short", month: "short", day: "numeric", year: "numeric", timeZone: "UTC" })}</dd>
+        </div>
+        <div>
+          <dt className="text-xs text-slate-500">Person</dt>
+          <dd className="text-slate-900">{keyDate.assignedTo ? memberName(keyDate.assignedTo) : "No one"}</dd>
+        </div>
+        {keyDate.notes && (
+          <div>
+            <dt className="text-xs text-slate-500">Notes</dt>
+            <dd className="whitespace-pre-line text-slate-900">{keyDate.notes}</dd>
+          </div>
+        )}
+      </dl>
+      <p className="mt-4 text-xs text-slate-500">Drag it on the calendar to move it.</p>
+      <div className="mt-4">
+        <button
+          type="button"
+          onClick={async () => {
+            if (!(await confirm({ title: `Remove "${keyDate.title}"?`, confirmLabel: "Remove", danger: true }))) return;
+            const result = await deleteKeyDate(keyDate.id).catch(() => ({ error: "That wasn't removed." }));
+            if (result.error) toast(result.error, "error");
+            else {
+              toast("Key date removed.");
+              onDone();
+            }
+          }}
+          className="inline-flex items-center gap-1.5 text-sm font-medium text-rose-700 hover:underline"
+        >
+          <Trash2 className="h-4 w-4" strokeWidth={2} />
+          Remove key date
+        </button>
+      </div>
+    </>
   );
 }
