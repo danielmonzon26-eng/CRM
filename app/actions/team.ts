@@ -25,6 +25,15 @@ async function requireAdmin() {
 }
 
 const NOT_MANAGER = "Only account managers can do this.";
+
+/**
+ * Profile edits from Admin. The database only lets the old "admin" role edit profiles, and
+ * account managers may not have it, so use the server key once the caller has been checked.
+ * Without the key (local), fall back to the signed-in user's own access.
+ */
+async function profilesWriter() {
+  return canManageAccounts() ? createAdminClient() : await createClient();
+}
 const MIN_PASSWORD = 8;
 
 function passwordProblem(password: string): string | null {
@@ -102,9 +111,8 @@ export async function createUserLink(userId: string): Promise<LinkResult> {
 export async function giveAdminAccess(userId: string): Promise<ActionResult> {
   if (!(await requireAdmin())) return { error: NOT_MANAGER };
 
-  const supabase = await createClient();
-  const { error } = await supabase.from("profiles").update({ role: "admin" }).eq("id", userId);
-  if (error) return { error: "Admin access wasn't given. Please try again." };
+  const { data, error } = await (await profilesWriter()).from("profiles").update({ role: "admin" }).eq("id", userId).select("id");
+  if (error || !data?.length) return { error: "Admin access wasn't given. Please try again." };
   revalidatePath("/admin");
   return {};
 }
@@ -128,8 +136,7 @@ export async function setUserName(userId: string, fullName: string): Promise<Act
   const name = fullName.trim().replace(/\s+/g, " ");
   if (!name) return { error: "Enter their first and last name." };
   if (name.length > 120) return { error: "Keep the name under 120 characters." };
-  const supabase = await createClient();
-  const { data, error } = await supabase.from("profiles").update({ full_name: name }).eq("id", userId).select("id");
+  const { data, error } = await (await profilesWriter()).from("profiles").update({ full_name: name }).eq("id", userId).select("id");
   if (error || !data?.length) return { error: "The name wasn't saved. Please try again." };
   revalidatePath("/", "layout");
   return {};
