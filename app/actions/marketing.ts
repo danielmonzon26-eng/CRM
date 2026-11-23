@@ -137,6 +137,46 @@ export async function savePost(input: PostInput): Promise<Result> {
   return { id: id! };
 }
 
+/**
+ * Changes only where a post goes, from the quick view. Like the full editor, changing the
+ * channels of an approved post sends it back for approval unless an admin does it.
+ */
+export async function setPostChannels(postId: string, channelIds: string[]): Promise<Result> {
+  const user = await getCurrentUser();
+  if (!user) return { error: "Sign in first." };
+  if (!UUID.test(postId)) return { error: "That post wasn't found." };
+  const ids = [...new Set(channelIds)];
+  if (ids.some((c) => !UUID.test(c))) return { error: "Choose channels from the list." };
+
+  const supabase = await createClient();
+  const platforms = await platformsFor(supabase, ids);
+  if (platforms === null) return { error: "One of those channels no longer exists. Refresh and try again." };
+  const [{ data: post, error }, { data: links, error: linksError }] = await Promise.all([
+    supabase.from("social_posts").select("status").eq("id", postId).maybeSingle(),
+    supabase.from("social_post_channels").select("channel_id").eq("post_id", postId),
+  ]);
+  if (error || linksError) return { error: SAVE_FAILED };
+  if (!post) return { error: "That post wasn't found. It may have been deleted." };
+
+  const existing = (links ?? []).map((l) => l.channel_id);
+  const removed = existing.filter((c) => !ids.includes(c));
+  const added = ids.filter((c) => !existing.includes(c));
+  if (!removed.length && !added.length) return { id: postId };
+  if (removed.length) {
+    const { error: e } = await supabase.from("social_post_channels").delete().eq("post_id", postId).in("channel_id", removed);
+    if (e) return { error: SAVE_FAILED };
+  }
+  if (added.length) {
+    const { error: e } = await supabase.from("social_post_channels").insert(added.map((channel_id) => ({ post_id: postId, channel_id })));
+    if (e) return { error: SAVE_FAILED };
+  }
+  if (post.status === "approved" && user.role !== "admin") {
+    await supabase.from("social_posts").update({ status: "waiting_approval" }).eq("id", postId);
+  }
+  revalidate();
+  return { id: postId };
+}
+
 /** Approve, send back with a note, or submit, straight from the approvals board. */
 export async function setPostStatus(postId: string, next: SocialPostStatus, note?: string): Promise<Result> {
   const user = await getCurrentUser();

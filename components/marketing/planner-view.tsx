@@ -11,7 +11,7 @@ import { RequestPostDialog } from "@/components/marketing/request-post";
 import { PostStatusPill } from "@/components/marketing/status-pill";
 import { buttonClass } from "@/components/ui/button";
 import { PLATFORMS, POST_STATUSES, POST_STATUS_META } from "@/lib/marketing/constants";
-import type { PostItem } from "@/lib/marketing/queries";
+import type { Channel, PostItem } from "@/lib/marketing/queries";
 import type { SocialPlatform, SocialPostStatus } from "@/lib/supabase/types";
 
 type Day = { key: string; day: number; inMonth: boolean; isToday: boolean; isPast: boolean };
@@ -31,6 +31,7 @@ export function PlannerView({
   unscheduled,
   items = [],
   basePath = "/marketing/social",
+  channels = [],
 }: {
   monthLabel: string;
   month: string;
@@ -44,6 +45,8 @@ export function PlannerView({
   items?: MarketingItem[];
   /** Where month navigation points. */
   basePath?: string;
+  /** Active channels, so a post's channels can be picked from the quick view. */
+  channels?: Channel[];
 }) {
   const [platforms, setPlatforms] = useState<SocialPlatform[]>([]);
   const [statuses, setStatuses] = useState<SocialPostStatus[]>([]);
@@ -288,7 +291,7 @@ export function PlannerView({
         </aside>
       </div>
       {requestDay !== null && <RequestPostDialog date={requestDay} onClose={() => setRequestDay(null)} />}
-      {viewing && <PostQuickView post={viewing} onClose={() => setViewing(null)} />}
+      {viewing && <PostQuickView post={viewing} channels={channels} onClose={() => setViewing(null)} />}
     </div>
   );
 }

@@ -10,7 +10,7 @@ import interactionPlugin, { type DateClickArg, type EventResizeDoneArg } from "@
 import listPlugin from "@fullcalendar/list";
 import luxon3Plugin from "@fullcalendar/luxon3";
 import timeGridPlugin from "@fullcalendar/timegrid";
-import { AlertTriangle, CheckSquare2, ChevronLeft, ChevronRight, ExternalLink, Flag, MapPin, Megaphone, MonitorPlay, Plus, Trash2, Users, X } from "lucide-react";
+import { AlertTriangle, CheckSquare2, ChevronLeft, ChevronRight, ExternalLink, Flag, MapPin, Megaphone, MessageCircle, MonitorPlay, Plus, Trash2, Users, X } from "lucide-react";
 import { createKeyDate, deleteKeyDate, moveKeyDate, rescheduleEvent, rescheduleTask } from "@/app/actions/calendar";
 import { buttonClass } from "@/components/ui/button";
 import { useFeedback } from "@/components/ui/feedback";
@@ -36,6 +36,8 @@ const PROGRAM_COLORS: [string, string][] = [
 ];
 const OTHER_COLOR = "#64748B";
 const MARKETING_COLOR = "#DB2777";
+/** Social posts get their own colour and icon, so they stand out from other marketing items. */
+const SOCIAL_COLOR = "#0284C7";
 const KEY_DATE_COLOR = "#0F172A";
 
 /** What the calendar can show; all on by default. */
@@ -84,8 +86,9 @@ function formatInZone(iso: string, timeZone: string): string {
 }
 
 function renderEventContent(arg: EventContentArg) {
-  const { kind, color, status, completed, hasConflict } = arg.event.extendedProps as {
+  const { kind, color, status, completed, hasConflict, social } = arg.event.extendedProps as {
     kind: ItemKind;
+    social?: boolean;
     color: string;
     status?: string;
     completed?: boolean;
@@ -101,7 +104,8 @@ function renderEventContent(arg: EventContentArg) {
       style={{ borderLeftColor: color }}
     >
       {kind === "task" && <CheckSquare2 className="h-3 w-3 shrink-0 text-slate-500" strokeWidth={2} aria-label="Task" />}
-      {kind === "marketing" && <Megaphone className="h-3 w-3 shrink-0" style={{ color }} strokeWidth={2} aria-label="Marketing" />}
+      {kind === "marketing" && social && <MessageCircle className="h-3 w-3 shrink-0" style={{ color }} strokeWidth={2.25} aria-label="Social post" />}
+      {kind === "marketing" && !social && <Megaphone className="h-3 w-3 shrink-0" style={{ color }} strokeWidth={2} aria-label="Marketing" />}
       {kind === "keyDate" && <Flag className="h-3 w-3 shrink-0 text-slate-700" strokeWidth={2} aria-label="Key date" />}
       {hasConflict && <AlertTriangle className="h-3 w-3 shrink-0 text-amber-600" strokeWidth={2.25} aria-label="Scheduling conflict" />}
       {arg.timeText && kind === "event" && <span className="shrink-0 text-slate-500">{arg.timeText}</span>}
@@ -219,13 +223,13 @@ export function OperationsCalendar({
         if (memberId && m.assignedTo !== memberId) continue;
         items.push({
           id: `marketing-${m.kind}-${m.id}`,
-          title: `${m.label}: ${m.title}`,
+          title: m.kind === "post" ? m.title : `${m.label}: ${m.title}`,
           start: m.day,
           allDay: true,
           editable: false,
           backgroundColor: "transparent",
           borderColor: "transparent",
-          extendedProps: { kind: "marketing", sourceId: `${m.kind}-${m.id}`, color: MARKETING_COLOR, completed: m.done },
+          extendedProps: { kind: "marketing", sourceId: `${m.kind}-${m.id}`, color: m.kind === "post" ? SOCIAL_COLOR : MARKETING_COLOR, social: m.kind === "post", completed: m.done },
         });
       }
     }
@@ -448,6 +452,7 @@ export function OperationsCalendar({
         ))}
         <span className="flex items-center gap-1"><CheckSquare2 className="h-3 w-3 text-slate-500" strokeWidth={2} />Task</span>
         <span className="flex items-center gap-1"><Megaphone className="h-3 w-3" style={{ color: MARKETING_COLOR }} strokeWidth={2} />Marketing</span>
+        <span className="flex items-center gap-1"><MessageCircle className="h-3 w-3" style={{ color: SOCIAL_COLOR }} strokeWidth={2.25} />Social post</span>
         <span className="flex items-center gap-1"><Flag className="h-3 w-3 text-slate-700" strokeWidth={2} />Key date</span>
         <span className="rounded border border-dashed border-slate-400 px-1.5">Draft</span>
         <span className="line-through">Cancelled</span>
@@ -536,8 +541,8 @@ export function OperationsCalendar({
 
           {panel.kind === "marketing" && (
             <>
-              <p className="flex items-center gap-1.5 pr-8 text-xs font-medium" style={{ color: MARKETING_COLOR }}>
-                <Megaphone className="h-3.5 w-3.5" strokeWidth={2} />
+              <p className="flex items-center gap-1.5 pr-8 text-xs font-medium" style={{ color: panel.item.kind === "post" ? SOCIAL_COLOR : MARKETING_COLOR }}>
+                {panel.item.kind === "post" ? <MessageCircle className="h-3.5 w-3.5" strokeWidth={2.25} /> : <Megaphone className="h-3.5 w-3.5" strokeWidth={2} />}
                 {panel.item.label}
               </p>
               <h3 className="mt-1 pr-8 text-lg font-semibold text-slate-900">{panel.item.title}</h3>

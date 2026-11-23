@@ -1,7 +1,7 @@
 import { PlannerView } from "@/components/marketing/planner-view";
 import { LoadError } from "@/components/ui/load-error";
 import { calgaryDateKey, fromDateTimeInput } from "@/lib/events/format";
-import { getPosts } from "@/lib/marketing/queries";
+import { getChannels, getPosts } from "@/lib/marketing/queries";
 import { settle } from "@/lib/settle";
 
 export const dynamic = "force-dynamic";
@@ -35,7 +35,7 @@ export default async function MarketingPlannerPage({ searchParams }: { searchPar
   const dayAfterGrid = new Date(Date.UTC(y, m - 1, 1 - lead + cells)).toISOString().slice(0, 10);
   const from = fromDateTimeInput(`${days[0].key}T00:00`);
   const to = fromDateTimeInput(`${dayAfterGrid}T00:00`);
-  const posts = await settle(getPosts({ from, to, includeUnscheduled: true }));
+  const [posts, channels] = await Promise.all([settle(getPosts({ from, to, includeUnscheduled: true })), getChannels().catch(() => [])]);
   if (!posts.ok) return <LoadError what="The planner" />;
 
   return (
@@ -48,6 +48,7 @@ export default async function MarketingPlannerPage({ searchParams }: { searchPar
       days={days}
       posts={posts.value.filter((p) => p.scheduledAt)}
       unscheduled={posts.value.filter((p) => !p.scheduledAt)}
+      channels={channels}
     />
   );
 }
